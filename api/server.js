@@ -3,6 +3,8 @@ const { CONNECT_DB } = require("./db");
 require("dotenv").config();
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { ObjectId } = require("mongodb");
+const e = require("express");
 
 const START_SERVER = async () => {
   const app = express();
@@ -82,9 +84,253 @@ const START_SERVER = async () => {
     //API lay thong tin va thu hang cua cac doi bong
     app.get("/api/leagues", async (req, res) => {
       try {
+        teams = await db.collection("teams").find().toArray();
+        res.json(teams);
       } catch (error) {
         console.error("Error get leagues: ", error);
         res.status(500).json({ message: "Internal server error" });
+      }
+    });
+    //API POST 1 team
+    app.post("/api/teams", authenticateToken, async (req, res) => {
+      const {
+        team_name,
+        logo_url,
+        team_points,
+        goals_scored,
+        goals_conceded,
+        team_wins,
+        team_draws,
+        team_losses,
+      } = req.body;
+      try {
+        if (
+          !team_name ||
+          !logo_url ||
+          !team_points ||
+          !goals_scored ||
+          !goals_conceded ||
+          !team_wins ||
+          !team_draws ||
+          !team_losses
+        )
+          return res.status(400).json({ message: "All fields are required" });
+        if (typeof team_name !== "string" || typeof logo_url !== "string")
+          return res
+            .status(400)
+            .json({ message: "team name and logo url must be string" });
+        if (
+          typeof team_points !== "number" ||
+          typeof goals_scored !== "number" ||
+          typeof goals_conceded !== "number" ||
+          typeof team_wins !== "number" ||
+          typeof team_draws !== "number" ||
+          typeof team_losses !== "number"
+        )
+          return res.status(400).json({
+            message:
+              "team points, goals scored, goals conceded, team wins, team draws, team losses must be number",
+          });
+        const result = await db.collection("teams").insertOne({
+          team_name,
+          logo_url,
+          team_points,
+          goals_scored,
+          goals_conceded,
+          team_wins,
+          team_draws,
+          team_losses,
+        });
+        res.status(201).json({
+          message: "Created team successfully",
+          id: result.insertedId,
+        });
+      } catch (error) {
+        console.error("Error add team: ", error);
+        res.status(500).json({ message: "Failed to add a team" });
+      }
+    });
+    //API PUT 1 team
+    app.put("/api/teams/:id", authenticateToken, async (req, res) => {
+      const {
+        team_name,
+        logo_url,
+        team_points,
+        goals_scored,
+        goals_conceded,
+        team_wins,
+        team_draws,
+        team_losses,
+      } = req.body;
+      try {
+        if (
+          !team_name ||
+          !logo_url ||
+          !team_points ||
+          !goals_scored ||
+          !goals_conceded ||
+          !team_wins ||
+          !team_draws ||
+          !team_losses
+        )
+          return res.status(400).json({ message: "All fields are required" });
+        if (typeof team_name !== "string" || typeof logo_url !== "string")
+          return res
+            .status(400)
+            .json({ message: "team name and logo url must be string" });
+        if (
+          typeof team_points !== "number" ||
+          typeof goals_scored !== "number" ||
+          typeof goals_conceded !== "number" ||
+          typeof team_wins !== "number" ||
+          typeof team_draws !== "number" ||
+          typeof team_losses !== "number"
+        )
+          return res.status(400).json({
+            message:
+              "team points, goals scored, goals conceded, team wins, team draws, team losses must be number",
+          });
+        const team_id = new ObjectId(req.params.id);
+        const existingTeam = await db
+          .collection("teams")
+          .findOne({ _id: team_id });
+        if (!existingTeam) {
+          return res
+            .status(404)
+            .json({ message: "Team not found before update" });
+        }
+        const result = await db.collection("teams").findOneAndUpdate(
+          {
+            _id: team_id,
+          },
+          {
+            $set: {
+              team_name,
+              logo_url,
+              team_points,
+              goals_scored,
+              goals_conceded,
+              team_wins,
+              team_draws,
+              team_losses,
+            },
+          },
+          { returnDocument: "after" }
+        );
+        console.log("Update result:", result);
+        console.log(result);
+        console.log("Team ID being updated:", team_id);
+        if (!result) return res.status(404).json({ message: "Team not found" });
+        res.json(result.value);
+      } catch (error) {
+        console.error("Error update team: ", error);
+        res.status(500).json({ message: "Failed to update a team" });
+      }
+    });
+    //API tao mua giai
+    app.post("/api/seasons", authenticateToken, async (req, res) => {
+      const { season_name, start_date, end_date, status } = req.body;
+      try {
+        if (!season_name || !start_date || !end_date || !status)
+          return res.status(400).json({ message: "All fields are required" });
+        if (typeof season_name !== "string" || typeof status !== "string")
+          return res
+            .status(400)
+            .json({ message: "Season name and status must be string" });
+        if (isNaN(Date.parse(start_date)) || isNaN(Date.parse(end_date)))
+          return res.status(400).json({ message: "Invalid date format" });
+        const result = await db.collection("seasons").insertOne({
+          season_name,
+          start_date,
+          end_date,
+          status,
+        });
+        res.status(201).json({
+          message: "Created season successfully",
+          id: result.insertedId,
+        });
+      } catch (error) {
+        console.error("Error add season: ", error);
+        res.status(500).json({ message: "Failed to add a season" });
+      }
+    });
+    //API cap nhat mua giai
+    app.put("/api/seasons/:id", authenticateToken, async (req, res) => {
+      const { season_name, start_date, end_date, status } = req.body;
+      try {
+        if (!season_name || !start_date || !end_date || !status) {
+          return res.status(400).json({ message: "All fields are required" });
+        }
+
+        if (typeof season_name !== "string" || typeof status !== "string") {
+          return res
+            .status(400)
+            .json({ message: "Season name and status must be string" });
+        }
+
+        if (isNaN(Date.parse(start_date)) || isNaN(Date.parse(end_date))) {
+          return res.status(400).json({ message: "Invalid date format" });
+        }
+
+        if (Date.parse(start_date) > Date.parse(end_date)) {
+          return res
+            .status(400)
+            .json({ message: "Start date must be before end date" });
+        }
+
+        const season_id = new ObjectId(req.params.id);
+
+        if (!ObjectId.isValid(req.params.id)) {
+          return res.status(400).json({ message: "Invalid season ID" });
+        }
+
+        // Logging data before updating
+        console.log("Updating season with ID:", season_id);
+        console.log("Data to update:", {
+          season_name,
+          start_date,
+          end_date,
+          status,
+        });
+
+        const result = await db
+          .collection("seasons")
+          .findOneAndUpdate(
+            { _id: season_id },
+            { $set: { season_name, start_date, end_date, status } },
+            { returnDocument: "after" }
+          );
+
+        // If no result was found, return 404
+        if (!result) {
+          return res.status(404).json({ message: "Season not found" });
+        }
+
+        // Logging successful update
+        console.log("Updated season:", result.value);
+        res.json(result.value); // Make sure to send response back
+      } catch (error) {
+        console.error("Error updating season:", error);
+        res.status(500).json({ message: "Failed to update a season" });
+      }
+    });
+    //API xóa mùa giải
+    app.delete("/api/seasons/:id", authenticateToken, async (req, res) => {
+      const season_id = new ObjectId(req.params.id);
+      try {
+        const isSeasonExist = await db.collection("seasons").findOne({
+          _id: season_id,
+        });
+        if (!isSeasonExist)
+          return res.status(404).json({ message: "Season not found" });
+        const result = await db
+          .collection("seasons")
+          .findOneAndDelete({ _id: season_id });
+        console.log("Updated season:", result);
+        return res.status(204).send();
+      } catch (error) {
+        console.error("Error deleting season:", error);
+        res.status(500).json({ message: "Failed to delete a season" });
       }
     });
 
