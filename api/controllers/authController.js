@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { GET_DB } = require("../config/db");
 
+// Đăng ký tài khoản
 const registerUser = async (req, res) => {
   try {
     console.log("📌 [DEBUG] Nhận request đăng ký:", req.body);
@@ -44,11 +45,11 @@ const registerUser = async (req, res) => {
       .json({ message: "Internal server error", error: error.message });
   }
 };
-
+// Đăng nhập tài khoản
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
   try {
-    const db = getDB();
+    const db = GET_DB();
     const user = await db.collection("users").findOne({ email });
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res

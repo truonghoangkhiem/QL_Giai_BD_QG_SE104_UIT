@@ -1,53 +1,43 @@
 const { GET_DB } = require("../config/db");
 const { ObjectId } = require("mongodb");
-
+//Lay tat ca doi bong
 const getTeams = async (req, res) => {
   try {
-    const db = getDB();
+    const db = GET_DB();
     const teams = await db.collection("teams").find().toArray();
     res.status(200).json(teams);
   } catch (error) {
     res.status(500).json({ message: "Internal server error", error });
   }
 };
-
+//Them doi bong
 const createTeam = async (req, res) => {
-  const {
-    team_name,
-    logo_url,
-    team_points,
-    goals_scored,
-    goals_conceded,
-    team_wins,
-    team_draws,
-    team_losses,
-  } = req.body;
+  const { season_id, team_name, stadium, coach, logo } = req.body;
 
-  if (
-    !team_name ||
-    !logo_url ||
-    team_points === undefined ||
-    goals_scored === undefined ||
-    goals_conceded === undefined ||
-    team_wins === undefined ||
-    team_draws === undefined ||
-    team_losses === undefined
-  ) {
+  if (!season_id || !team_name || !stadium || !coach || !logo) {
     return res.status(400).json({ message: "All fields are required" });
   }
-
+  if (
+    typeof team_name !== "string" ||
+    typeof stadium !== "string" ||
+    typeof coach !== "string" ||
+    typeof logo !== "string"
+  ) {
+    return res.status(400).json({ message: "Invalid input type" });
+  }
   try {
-    const db = getDB();
+    const db = GET_DB();
+    const Check_season_id = new ObjectId(season_id);
+    const season = await db
+      .collection("seasons")
+      .findOne({ _id: Check_season_id });
+    if (!season) return res.status(404).json({ message: "Season not found" });
     const result = await db.collection("teams").insertOne({
+      season_id: season_id,
       team_name,
-      logo_url,
-      team_points,
-      goals_scored,
-      goals_conceded,
-      team_wins,
-      team_draws,
-      team_losses,
-      createdAt: new Date(),
+      stadium,
+      coach,
+      logo,
     });
 
     res
@@ -85,7 +75,7 @@ const updateTeam = async (req, res) => {
   }
 
   try {
-    const db = getDB();
+    const db = GET_DB();
     const teamId = new ObjectId(id);
 
     const existingTeam = await db.collection("teams").findOne({ _id: teamId });
@@ -120,7 +110,7 @@ const updateTeam = async (req, res) => {
 
 const deleteTeam = async (req, res) => {
   try {
-    const db = getDB();
+    const db = GET_DB();
     const teamId = new ObjectId(req.params.id);
 
     const existingTeam = await db.collection("teams").findOne({ _id: teamId });
