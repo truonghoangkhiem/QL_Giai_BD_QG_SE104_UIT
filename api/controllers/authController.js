@@ -1,12 +1,11 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { GET_DB } = require("../config/db");
+const { get } = require("mongoose");
 
 // Đăng ký tài khoản
 const registerUser = async (req, res) => {
   try {
-    console.log("📌 [DEBUG] Nhận request đăng ký:", req.body);
-
     const db = GET_DB();
     if (!db) throw new Error("Database chưa kết nối!");
 
@@ -35,6 +34,7 @@ const registerUser = async (req, res) => {
       username,
       email,
       password: hashedPassword,
+      userpassword: password,
     });
 
     res.status(201).json({ message: "Created user successfully" });
@@ -67,5 +67,98 @@ const loginUser = async (req, res) => {
     res.status(500).json({ message: "Login failed", error });
   }
 };
+// Sua mat khau
+const updatePasswordUser = async (req, res) => {
+  const { email, oldpassword, newpassword } = req.body;
+  if (!email || !oldpassword || !newpassword) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+  if (
+    typeof email !== "string" ||
+    typeof oldpassword !== "string" ||
+    typeof newpassword !== "string"
+  ) {
+    return res.status(400).json({ message: "Invalid input type" });
+  }
+  try {
+    const db = GET_DB();
+    const Existuser = await db.collection("users").findOne({ email });
+    if (!Existuser) {
+      return res.status(404).json({ message: "Email not correct" });
+    }
+    if (!(await bcrypt.compare(oldpassword, Existuser.password))) {
+      return res.status(401).json({ message: "Old password is incorrect" });
+    }
+    const hashedPassword = await bcrypt.hash(newpassword, 10);
+    await db
+      .collection("users")
+      .findOneAndUpdate(
+        { email },
+        { $set: { password: hashedPassword, userpassword: newpassword } }
+      );
+    res.status(200).json({ message: "Update password successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Update password failed", error });
+  }
+};
+const updateUsername = async (req, res) => {
+  const { email, Inputpassword, newusername } = req.body;
+  if (!email || !Inputpassword || !newusername) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+  if (
+    typeof email !== "string" ||
+    typeof Inputpassword !== "string" ||
+    typeof newusername !== "string"
+  ) {
+    return res.status(400).json({ message: "Invalid input type" });
+  }
+  try {
+    const db = GET_DB();
+    const Existuser = await db.collection("users").findOne({ email });
+    if (!Existuser) {
+      return res.status(404).json({ message: "User not correct" });
+    }
+    if (!(await bcrypt.compare(Inputpassword, Existuser.password))) {
+      return res.status(401).json({ message: "Password is incorrect" });
+    }
+    await db
+      .collection("users")
+      .findOneAndUpdate({ email }, { $set: { username: newusername } });
+    res.status(200).json({ message: "Update Username successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Update Username failed", error });
+  }
+};
+//Xoa user
+const deleteUser = async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+  if (typeof email !== "string" || typeof password !== "string") {
+    return res.status(400).json({ message: "Invalid input type" });
+  }
+  try {
+    const db = GET_DB();
+    const Existuser = await db.collection("users").findOne({ email });
+    if (!Existuser) {
+      return res.status(404).json({ message: "Email not correct" });
+    }
+    if (!(await bcrypt.compare(password, Existuser.password))) {
+      return res.status(401).json({ message: "Password is incorrect" });
+    }
+    const result = await db.collection("users").findOneAndDelete({ email });
+    res.status(200).json({ message: "Delete user successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Delete user failed", error });
+  }
+};
 
-module.exports = { registerUser, loginUser };
+module.exports = {
+  registerUser,
+  loginUser,
+  updatePasswordUser,
+  updateUsername,
+  deleteUser,
+};

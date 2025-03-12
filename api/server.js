@@ -3,6 +3,7 @@ const { CONNECT_DB } = require("./config/db");
 const authRoutes = require("./routes/authRoutes"); // Import routes
 const teamRoutes = require("./routes/teamRoutes");
 const seasonRoutes = require("./routes/seasonRoutes");
+const matchRoutes = require("./routes/matchRoutes");
 
 require("dotenv").config();
 
@@ -22,6 +23,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/teams", teamRoutes);
 app.use("/api/seasons", seasonRoutes);
+app.use("/api/matches", matchRoutes);
 
 // API Mặc định để kiểm tra server đang chạy
 app.get("/", (req, res) => {
