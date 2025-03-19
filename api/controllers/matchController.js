@@ -23,6 +23,7 @@ const getMatchesById = async (req, res) => {
     res.status(500).json({ message: "Internal server error", error });
   }
 };
+//Tao tran dau
 const createMatch = async (req, res) => {
   const { season_id, matchperday } = req.body;
   if (!season_id || !matchperday) {
@@ -115,10 +116,59 @@ const createMatch = async (req, res) => {
   }
 };
 
+const updateMatch = async (req, res) => {
+  const { team1, team2, date, stadium, score, goalDetails } = req.body;
+  const match_id = new ObjectId(req.params.id);
+  try {
+    const db = GET_DB();
+    const match = await db.collection("matches").findOne({ _id: match_id });
+    if (!match) return res.status(404).json({ message: "Match not found" });
+    const Updatefile = {};
+    if (team1) Updatefile.team1 = team1;
+    if (team2) Updatefile.team2 = team2;
+    if (date) Updatefile.date = date;
+    if (stadium) Updatefile.stadium = stadium;
+    if (score) Updatefile.score = score;
+    if (goalDetails) {
+      for (const goal of goalDetails) {
+        // Kiểm tra tất cả các trường trong goalDetails
+        if (!goal.playerId || !goal.teamId || !goal.minute || !goal.goalType) {
+          return res
+            .status(400)
+            .json({ message: "Incomplete goalDetails fields" });
+        }
+      }
+    }
+    if (goalDetails) Updatefile.goalDetails = goalDetails;
+    const result = await db
+      .collection("matches")
+      .updateOne({ _id: match_id }, { $set: Updatefile });
+    if (result.modifiedCount > 0)
+      return res.status(200).json({ message: "Updated match successfully" });
+    else return res.status(400).json({ message: "Failed to update match" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update match", error });
+  }
+};
+const deleteMatch = async (req, res) => {
+  const match_id = new ObjectId(req.params.id);
+  try {
+    const db = GET_DB();
+    if (!db.collection("matches").findOne({ _id: match_id }))
+      return res.status(404).json({ message: "Match not found" });
+    const result = await db
+      .collection("matches")
+      .findOneAndDelete({ _id: match_id });
+    res.status(204).json({ message: "Deleted match successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to delete match", error });
+  }
+};
+
 module.exports = {
   getMatches,
   getMatchesById,
   createMatch,
-  //   updateMatch,
-  //   deleteMatch,
+  updateMatch,
+  deleteMatch,
 };
