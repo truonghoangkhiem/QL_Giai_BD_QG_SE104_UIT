@@ -4,6 +4,7 @@ const authRoutes = require("./routes/authRoutes"); // Import routes
 const teamRoutes = require("./routes/teamRoutes");
 const seasonRoutes = require("./routes/seasonRoutes");
 const matchRoutes = require("./routes/matchRoutes");
+const playerRoutes = require("./routes/playerRoutes");
 
 require("dotenv").config();
 
@@ -24,6 +25,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/teams", teamRoutes);
 app.use("/api/seasons", seasonRoutes);
 app.use("/api/matches", matchRoutes);
+app.use("/api/player", playerRoutes);
 
 // API Mặc định để kiểm tra server đang chạy
 app.get("/", (req, res) => {
