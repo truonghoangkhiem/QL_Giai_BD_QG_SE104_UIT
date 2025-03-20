@@ -57,7 +57,7 @@ const createPlayer = async (req, res) => {
     }
     await db
       .collection("players")
-      .insertOne({ team_id, name, dob, nationality, position, isForeigner });
+      .insertOne({ TeamID, name, dob, nationality, position, isForeigner });
     res.status(201).json({ message: "Created player successfully" });
   } catch (error) {
     res.status(500).json({ message: "Failed to add a player", error });
@@ -72,8 +72,8 @@ const updatePlayer = async (req, res) => {
   try {
     const db = GET_DB();
     const TeamID = new ObjectId(team_id);
-    const team = await db.collection("players").findOne({ _id: player_id });
-    if (!team) return res.status(404).json({ message: "Team not found" });
+    const player = await db.collection("players").findOne({ _id: player_id });
+    if (!player) return res.status(404).json({ message: "player not found" });
     const Updatedfile = {};
     if (name) Updatedfile.name = name;
     if (dob) Updatedfile.dob = dob;
@@ -104,10 +104,28 @@ const deletePlayer = async (req, res) => {
     res.status(500).json({ message: "Failed to delete player", error });
   }
 };
+//Lay cau thu theo id doi
+const getPlayersByIdTeam = async (req, res) => {
+  const team_id = new ObjectId(req.params.id);
+  if (!team_id) return res.status(400).json({ message: "Team ID is required" });
+  try {
+    const db = GET_DB();
+    const team = await db.collection("teams").findOne({ _id: team_id });
+    if (!team) return res.status(404).json({ message: "Team not found" });
+    const players = await db
+      .collection("players")
+      .find({ TeamID: team_id })
+      .toArray();
+    res.status(200).json(players);
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error", error });
+  }
+};
 module.exports = {
   getPlayers,
   getPlayerById,
   createPlayer,
   updatePlayer,
   deletePlayer,
+  getPlayersByIdTeam,
 };

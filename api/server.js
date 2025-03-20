@@ -25,7 +25,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/teams", teamRoutes);
 app.use("/api/seasons", seasonRoutes);
 app.use("/api/matches", matchRoutes);
-app.use("/api/player", playerRoutes);
+app.use("/api/players", playerRoutes);
 
 // API Mặc định để kiểm tra server đang chạy
 app.get("/", (req, res) => {
