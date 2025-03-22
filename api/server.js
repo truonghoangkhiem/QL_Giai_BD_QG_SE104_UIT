@@ -5,6 +5,7 @@ const teamRoutes = require("./routes/teamRoutes");
 const seasonRoutes = require("./routes/seasonRoutes");
 const matchRoutes = require("./routes/matchRoutes");
 const playerRoutes = require("./routes/playerRoutes");
+const regulationRoutes = require("./routes/regulationRoutes");
 
 require("dotenv").config();
 
@@ -26,7 +27,7 @@ app.use("/api/teams", teamRoutes);
 app.use("/api/seasons", seasonRoutes);
 app.use("/api/matches", matchRoutes);
 app.use("/api/players", playerRoutes);
-
+app.use("/api/regulations", regulationRoutes);
 // API Mặc định để kiểm tra server đang chạy
 app.get("/", (req, res) => {
   res.send("⚽ API Football League is running...");

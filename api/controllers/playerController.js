@@ -55,9 +55,49 @@ const createPlayer = async (req, res) => {
     ) {
       isForeigner = false;
     }
+    const seasonRegulation = await db.collection("regulations").findOne({
+      season_id: team.season_id,
+      regulation_name: "Age Regulation",
+    });
+    if (!seasonRegulation) {
+      return res.status(500).json({ message: "Regulation not found" });
+    }
+    const { minAge, maxAge, maxForeignPlayers, maxPlayersPerTeam } =
+      seasonRegulation.rules;
+
+    // Kiểm tra tuổi cầu thủ
+    const birthYear = new Date(dob).getFullYear();
+    const currentYear = new Date().getFullYear();
+    const playerAge = currentYear - birthYear;
+
+    if (playerAge < minAge || playerAge > maxAge) {
+      return res.status(400).json({
+        message: `Player age must be between ${minAge} and ${maxAge}`,
+      });
+    }
+
+    // Kiểm tra số lượng cầu thủ của đội
+    const teamPlayers = await db
+      .collection("players")
+      .find({ team_id })
+      .toArray();
+    if (teamPlayers.length >= maxPlayersPerTeam) {
+      return res.status(400).json({
+        message: `Team already has maximum ${maxPlayersPerTeam} players`,
+      });
+    }
+
+    // Kiểm tra số lượng cầu thủ nước ngoài
+    const foreignPlayers = teamPlayers.filter((p) => p.isForeigner).length;
+    if (isForeigner && foreignPlayers >= maxForeignPlayers) {
+      return res.status(400).json({
+        message: `Team can have only ${maxForeignPlayers} foreign players`,
+      });
+    }
+
     await db
       .collection("players")
-      .insertOne({ TeamID, name, dob, nationality, position, isForeigner });
+      .insertOne({ team_id, name, dob, nationality, position, isForeigner });
     res.status(201).json({ message: "Created player successfully" });
   } catch (error) {
     res.status(500).json({ message: "Failed to add a player", error });
