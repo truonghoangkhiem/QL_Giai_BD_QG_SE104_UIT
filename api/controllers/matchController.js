@@ -128,7 +128,12 @@ const updateMatch = async (req, res) => {
     if (team2) Updatefile.team2 = team2;
     if (date) Updatefile.date = date;
     if (stadium) Updatefile.stadium = stadium;
-    if (score) Updatefile.score = score;
+    if (score) {
+      const regrex = /^[0-9]-[0-9]$/;
+      if (!regrex.test(score))
+        return res.status(400).json({ message: "Invalid score format" });
+      Updatefile.score = score;
+    }
     if (goalDetails) {
       for (const goal of goalDetails) {
         // Kiểm tra tất cả các trường trong goalDetails
