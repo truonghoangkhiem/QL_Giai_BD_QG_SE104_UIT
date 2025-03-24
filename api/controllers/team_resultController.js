@@ -117,18 +117,19 @@ const updateTeamResults = async (
   const teamResult = await db
     .collection("team_results")
     .findOne({ team_id: Check_team_id, season_id: Check_season_id });
+
   if (!teamResult) {
     throw new Error("Team result not found");
   }
 
   // Cập nhật số trận đã chơi
-  const updatedMatchesPlayed = teamResult.matchesPlayed + 1;
+  const updatedMatchesPlayed = teamResult.matchplayed + 1;
 
   // Cập nhật kết quả trận đấu
   const updatedGoalsFor = teamResult.goalsFor + team_score;
   const updatedGoalsAgainst = teamResult.goalsAgainst + opponent_score;
   const updatedGoalDifference =
-    teamResult.goalDifference + updatedGoalsFor - updatedGoalsAgainst;
+    teamResult.goalDifference + team_score - opponent_score;
 
   let updatedPoints = teamResult.points;
   let updatedWins = teamResult.wins;
@@ -143,7 +144,7 @@ const updateTeamResults = async (
   }
   const pointforwin = seasonRegulation.rules.winPoints;
   const pointfordraw = seasonRegulation.rules.drawPoints;
-  const pointforloss = seasonRegulation.rules.lossPoints;
+  const pointforloss = seasonRegulation.rules.losePoints;
   // Cập nhật kết quả thắng thua hòa và điểm số
   if (team_score > opponent_score) {
     updatedPoints += pointforwin; // 3 điểm cho chiến thắng
@@ -158,14 +159,14 @@ const updateTeamResults = async (
 
   // Cập nhật kết quả đội
   await db.collection("team_results").updateOne(
-    { teamid: new ObjectId(team_id), season_id },
+    { team_id: Check_team_id, season_id: Check_season_id },
     {
       $set: {
-        matchesPlayed: updatedMatchesPlayed,
+        matchplayed: updatedMatchesPlayed,
         goalsFor: updatedGoalsFor,
         goalsAgainst: updatedGoalsAgainst,
         goalDifference: updatedGoalDifference,
-        points: updatedPoints,
+        points: 0,
         wins: updatedWins,
         losses: updatedLosses,
         draws: updatedDraws,
@@ -175,7 +176,7 @@ const updateTeamResults = async (
 };
 
 const updateTeamResultsByMatch = async (req, res) => {
-  const match_id = new ObjectId(req.params.matchId);
+  const match_id = new ObjectId(req.params.matchid);
   const db = GET_DB();
 
   try {
