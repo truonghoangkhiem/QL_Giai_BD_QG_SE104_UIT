@@ -115,7 +115,7 @@ const createMatch = async (req, res) => {
     res.status(500).json({ message: "Failed to create match", error });
   }
 };
-
+//Cap nhat tran dau
 const updateMatch = async (req, res) => {
   const { team1, team2, date, stadium, score, goalDetails } = req.body;
   const match_id = new ObjectId(req.params.id);
@@ -134,6 +134,11 @@ const updateMatch = async (req, res) => {
         return res.status(400).json({ message: "Invalid score format" });
       Updatefile.score = score;
     }
+    const regulationseason = await db
+      .collection("regulations")
+      .findOne({ season_id: match.season_id, regulation_name: "Goal Rules" });
+    maxtimeforgoal = regulationseason.rules.goalTimeLimit.maxMinute;
+    checkTypeofGoal = regulationseason.rules.goalTypes;
     if (goalDetails) {
       for (const goal of goalDetails) {
         // Kiểm tra tất cả các trường trong goalDetails
@@ -141,6 +146,14 @@ const updateMatch = async (req, res) => {
           return res
             .status(400)
             .json({ message: "Incomplete goalDetails fields" });
+        }
+        if (goal.minute > maxtimeforgoal) {
+          return res.status(400).json({
+            message: "Goal minute must be less than Max time of regulation",
+          });
+        }
+        if (!checkTypeofGoal.includes(goal.goalType)) {
+          return res.status(400).json({ message: "Invalid goal type" });
         }
       }
     }

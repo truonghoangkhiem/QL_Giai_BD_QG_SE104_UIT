@@ -122,7 +122,7 @@ const createRegulation = async (req, res) => {
     res.status(500).json({ message: "Failed to create regulation", error });
   }
 };
-
+// API lấy danh sách quy định
 const getRegulations = async (req, res) => {
   try {
     const db = GET_DB();
@@ -132,7 +132,7 @@ const getRegulations = async (req, res) => {
     res.status(500).json({ message: "Failed to get regulations", error });
   }
 };
-
+// API lấy quy định theo id
 const getRegulationById = async (req, res) => {
   const id = req.params;
   if (!ObjectId.isValid(id)) {
@@ -151,7 +151,7 @@ const getRegulationById = async (req, res) => {
     res.status(500).json({ message: "Failed to get regulation", error });
   }
 };
-
+// API cập nhật quy định
 const updateRegulation = async (req, res) => {
   const { rules } = req.body;
   const { id } = req.params;
@@ -174,7 +174,7 @@ const updateRegulation = async (req, res) => {
     res.status(500).json({ message: "Failed to update regulation", error });
   }
 };
-
+// API xóa quy định
 const deleteRegulation = async (req, res) => {
   const { id } = req.params;
   if (!ObjectId.isValid(id)) {
@@ -194,7 +194,7 @@ const deleteRegulation = async (req, res) => {
     res.status(500).json({ message: "Failed to delete regulation", error });
   }
 };
-
+// API lấy id quy định
 const getIdRegulations = async (req, res) => {
   const { season_id, regulation_name } = req.body;
   if (!season_id || !regulation_name) {

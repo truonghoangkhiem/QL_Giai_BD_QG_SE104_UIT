@@ -1,6 +1,6 @@
 const { GET_DB } = require("../config/db");
 const { ObjectId } = require("mongodb");
-
+//Tao ket qua doi bong
 const createTeamResult = async (req, res) => {
   const { team_id, season_id } = req.body;
   if (!team_id || !season_id)
@@ -47,7 +47,7 @@ const createTeamResult = async (req, res) => {
     res.status(500).json({ message: "Failed to add a team result", error });
   }
 };
-
+//Lay ket qua doi bong theo mua giai
 const getTeamResultsbySeasonId = async (req, res) => {
   const { season_id } = req.params;
   if (!season_id)
@@ -66,7 +66,7 @@ const getTeamResultsbySeasonId = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch team results", error });
   }
 };
-
+//Lay ket qua doi bong theo id
 const getTeamResultsById = async (req, res) => {
   const { id } = req.params;
   if (!id) return res.status(400).json({ message: "Id is required" });
@@ -83,7 +83,7 @@ const getTeamResultsById = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch team result", error });
   }
 };
-
+//Lay id ket qua doi bong
 const getId = async (req, res) => {
   const { team_id, season_id } = req.body;
   if (!team_id || !season_id)
@@ -104,7 +104,7 @@ const getId = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch team result", error });
   }
 };
-
+//Cập nhật kết quả đội bóng (hàm hỗ trợ)
 const updateTeamResults = async (
   team_id,
   season_id,
@@ -174,7 +174,7 @@ const updateTeamResults = async (
     }
   );
 };
-
+//API Cập nhật kết quả đội bóng theo trận đấu
 const updateTeamResultsByMatch = async (req, res) => {
   const match_id = new ObjectId(req.params.matchid);
   const db = GET_DB();
