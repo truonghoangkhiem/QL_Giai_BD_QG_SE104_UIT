@@ -1,6 +1,6 @@
 const { GET_DB } = require("../config/db");
 const { ObjectId } = require("mongodb");
-//Tao ket qua doi bong
+
 const createTeamResult = async (req, res) => {
   const { team_id, season_id } = req.body;
   if (!team_id || !season_id)
@@ -28,8 +28,9 @@ const createTeamResult = async (req, res) => {
     const losses = 0;
     const goalsFor = 0;
     const goalsAgainst = 0;
-    const goalDifference = 0;
+    const goalsDifference = 0;
     const points = 0;
+    const goalsForAway = 0;
     await db.collection("team_results").insertOne({
       team_id: Check_team_id,
       season_id: Check_season_id,
@@ -39,8 +40,9 @@ const createTeamResult = async (req, res) => {
       losses,
       goalsFor,
       goalsAgainst,
-      goalDifference,
+      goalsDifference,
       points,
+      goalsForAway,
     });
     res.status(201).json({ message: "Created team result successfully" });
   } catch (error) {
@@ -104,12 +106,13 @@ const getId = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch team result", error });
   }
 };
-//Cập nhật kết quả đội bóng (hàm hỗ trợ)
+
 const updateTeamResults = async (
   team_id,
   season_id,
   team_score,
-  opponent_score
+  opponent_score,
+  isHome
 ) => {
   const db = GET_DB();
   Check_team_id = new ObjectId(team_id);
@@ -130,7 +133,10 @@ const updateTeamResults = async (
   const updatedGoalsAgainst = teamResult.goalsAgainst + opponent_score;
   const updatedGoalDifference =
     teamResult.goalDifference + team_score - opponent_score;
-
+  let updatedGoalsForAway = teamResult.goalsForAway;
+  if (isHome === false) {
+    updatedGoalsForAway = teamResult.goalsForAway + team_score;
+  }
   let updatedPoints = teamResult.points;
   let updatedWins = teamResult.wins;
   let updatedLosses = teamResult.losses;
@@ -165,11 +171,12 @@ const updateTeamResults = async (
         matchplayed: updatedMatchesPlayed,
         goalsFor: updatedGoalsFor,
         goalsAgainst: updatedGoalsAgainst,
-        goalDifference: updatedGoalDifference,
-        points: 0,
+        goalsDifference: updatedGoalDifference,
+        points: updatedPoints,
         wins: updatedWins,
         losses: updatedLosses,
         draws: updatedDraws,
+        goalsForAway: updatedGoalsForAway,
       },
     }
   );
@@ -187,10 +194,10 @@ const updateTeamResultsByMatch = async (req, res) => {
     const { team1, team2, season_id } = match;
 
     // Cập nhật kết quả cho team1
-    await updateTeamResults(team1, season_id, team1_score, team2_score);
+    await updateTeamResults(team1, season_id, team1_score, team2_score, true);
 
     // Cập nhật kết quả cho team2
-    await updateTeamResults(team2, season_id, team2_score, team1_score);
+    await updateTeamResults(team2, season_id, team2_score, team1_score, false);
 
     return res.status(200).json({ message: "Team results updated" });
   } catch (err) {
