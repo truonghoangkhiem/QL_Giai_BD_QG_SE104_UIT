@@ -1,6 +1,6 @@
 const { GET_DB } = require("../config/db");
 const { ObjectId } = require("mongodb");
-
+// Them ket qua doi bong
 const createTeamResult = async (req, res) => {
   const { team_id, season_id } = req.body;
   if (!team_id || !season_id)
@@ -43,6 +43,7 @@ const createTeamResult = async (req, res) => {
       goalsDifference,
       points,
       goalsForAway,
+      headToHeadPoints: {},
     });
     res.status(201).json({ message: "Created team result successfully" });
   } catch (error) {
@@ -112,11 +113,13 @@ const updateTeamResults = async (
   season_id,
   team_score,
   opponent_score,
-  isHome
+  isHome,
+  opponent_team_id
 ) => {
   const db = GET_DB();
   Check_team_id = new ObjectId(team_id);
   Check_season_id = new ObjectId(season_id);
+  const Check_opponent_team_id = new ObjectId(opponent_team_id);
   const teamResult = await db
     .collection("team_results")
     .findOne({ team_id: Check_team_id, season_id: Check_season_id });
@@ -141,6 +144,11 @@ const updateTeamResults = async (
   let updatedWins = teamResult.wins;
   let updatedLosses = teamResult.losses;
   let updatedDraws = teamResult.draws;
+  let updatedHeadToHeadPoints = teamResult.headToHeadPoints || {};
+  const opponentKey = Check_opponent_team_id.toString();
+  if (!updatedHeadToHeadPoints[opponentKey]) {
+    updatedHeadToHeadPoints[opponentKey] = 0;
+  }
 
   const seasonRegulation = await db
     .collection("regulations")
@@ -155,12 +163,15 @@ const updateTeamResults = async (
   if (team_score > opponent_score) {
     updatedPoints += pointforwin; // 3 điểm cho chiến thắng
     updatedWins += 1;
+    updatedHeadToHeadPoints[opponentKey] += 3; // Thắng: 3 điểm đối đầu
   } else if (team_score < opponent_score) {
     updatedPoints += pointforloss; // 0 điểm cho thua
     updatedLosses += 1;
+    updatedHeadToHeadPoints[opponentKey] += 0; // Thua: 0 điểm đối đầu
   } else {
     updatedPoints += pointfordraw; // 1 điểm cho hòa
     updatedDraws += 1;
+    updatedHeadToHeadPoints[opponentKey] += 1; // Hòa: 1 điểm đối đầu
   }
 
   // Cập nhật kết quả đội
@@ -177,6 +188,7 @@ const updateTeamResults = async (
         losses: updatedLosses,
         draws: updatedDraws,
         goalsForAway: updatedGoalsForAway,
+        headToHeadPoints: updatedHeadToHeadPoints,
       },
     }
   );
@@ -194,10 +206,24 @@ const updateTeamResultsByMatch = async (req, res) => {
     const { team1, team2, season_id } = match;
 
     // Cập nhật kết quả cho team1
-    await updateTeamResults(team1, season_id, team1_score, team2_score, true);
+    await updateTeamResults(
+      team1,
+      season_id,
+      team1_score,
+      team2_score,
+      true,
+      team2
+    );
 
     // Cập nhật kết quả cho team2
-    await updateTeamResults(team2, season_id, team2_score, team1_score, false);
+    await updateTeamResults(
+      team2,
+      season_id,
+      team2_score,
+      team1_score,
+      false,
+      team1
+    );
 
     return res.status(200).json({ message: "Team results updated" });
   } catch (err) {
