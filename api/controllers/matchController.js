@@ -124,8 +124,8 @@ const updateMatch = async (req, res) => {
     const match = await db.collection("matches").findOne({ _id: match_id });
     if (!match) return res.status(404).json({ message: "Match not found" });
     const Updatefile = {};
-    if (team1) Updatefile.team1 = team1;
-    if (team2) Updatefile.team2 = team2;
+    if (team1) Updatefile.team1 = new ObjectId(team1);
+    if (team2) Updatefile.team2 = new ObjectId(team2);
     if (date) Updatefile.date = date;
     if (stadium) Updatefile.stadium = stadium;
     if (score) {
@@ -142,7 +142,12 @@ const updateMatch = async (req, res) => {
     if (goalDetails) {
       for (const goal of goalDetails) {
         // Kiểm tra tất cả các trường trong goalDetails
-        if (!goal.playerId || !goal.teamId || !goal.minute || !goal.goalType) {
+        if (
+          !goal.player_id ||
+          !goal.team_id ||
+          !goal.minute ||
+          !goal.goalType
+        ) {
           return res
             .status(400)
             .json({ message: "Incomplete goalDetails fields" });

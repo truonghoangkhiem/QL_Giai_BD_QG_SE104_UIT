@@ -6,8 +6,10 @@ const seasonRoutes = require("./routes/seasonRoutes");
 const matchRoutes = require("./routes/matchRoutes");
 const playerRoutes = require("./routes/playerRoutes");
 const regulationRoutes = require("./routes/regulationRoutes");
-const team_resultRoutes = require("./routes/team_resultRoutes");
+const team_resultsRoutes = require("./routes/team_resultsRoutes");
 const rankingRoutes = require("./routes/rankingRoutes");
+const player_resultsRoutes = require("./routes/player_resultsRoutes");
+const player_rankingsRoutes = require("./routes/player_rankingsRoutes");
 
 require("dotenv").config();
 
@@ -30,8 +32,10 @@ app.use("/api/seasons", seasonRoutes);
 app.use("/api/matches", matchRoutes);
 app.use("/api/players", playerRoutes);
 app.use("/api/regulations", regulationRoutes);
-app.use("/api/team_results", team_resultRoutes);
+app.use("/api/team_results", team_resultsRoutes);
 app.use("/api/rankings", rankingRoutes);
+app.use("/api/player_results", player_resultsRoutes);
+app.use("/api/player_rankings", player_rankingsRoutes);
 // API Mặc định để kiểm tra server đang chạy
 app.get("/", (req, res) => {
   res.send("⚽ API Football League is running...");

@@ -27,13 +27,15 @@ const getPlayerById = async (req, res) => {
 };
 //Them cau thu
 const createPlayer = async (req, res) => {
-  const { team_id, name, dob, nationality, position, isForeigner } = req.body;
+  const { team_id, name, dob, nationality, position, isForeigner, number } =
+    req.body;
   if (
     !team_id ||
     !name ||
     !dob ||
     !nationality ||
     !position ||
+    !number ||
     isForeigner === undefined
   ) {
     return res.status(400).json({ message: "All fields are required" });
@@ -43,8 +45,10 @@ const createPlayer = async (req, res) => {
     const TeamID = new ObjectId(team_id);
     const team = await db.collection("teams").findOne({ _id: TeamID });
     if (!team) return res.status(404).json({ message: "Team not found" });
-    if (typeof name !== "string") {
-      return res.status(400).json({ message: "typeof Name must is string" });
+    if (typeof name !== "string" && typeof number !== "string") {
+      return res
+        .status(400)
+        .json({ message: "typeof Name and Number must is string" });
     }
     if (isNaN(Date.parse(dob)))
       return res.status(400).json({ message: "Invalid date format" });
@@ -59,6 +63,12 @@ const createPlayer = async (req, res) => {
       season_id: team.season_id,
       regulation_name: "Age Regulation",
     });
+    const checkExistPlayer = await db
+      .collection("players")
+      .findOne({ team_id: TeamID, number: number });
+    if (checkExistPlayer) {
+      return res.status(400).json({ message: "Player number already exists" });
+    }
     if (!seasonRegulation) {
       return res.status(500).json({ message: "Regulation not found" });
     }
@@ -95,9 +105,15 @@ const createPlayer = async (req, res) => {
       });
     }
 
-    await db
-      .collection("players")
-      .insertOne({ team_id, name, dob, nationality, position, isForeigner });
+    await db.collection("players").insertOne({
+      team_id,
+      name,
+      dob,
+      nationality,
+      position,
+      isForeigner,
+      number,
+    });
     res.status(201).json({ message: "Created player successfully" });
   } catch (error) {
     res.status(500).json({ message: "Failed to add a player", error });
@@ -105,7 +121,8 @@ const createPlayer = async (req, res) => {
 };
 //Sua cau thu
 const updatePlayer = async (req, res) => {
-  const { team_id, name, dob, nationality, position, isForeigner } = req.body;
+  const { team_id, name, dob, nationality, position, isForeigner, number } =
+    req.body;
   const player_id = new ObjectId(req.params.id);
   if (!player_id)
     return res.status(400).json({ message: "Player ID is required" });
@@ -121,6 +138,19 @@ const updatePlayer = async (req, res) => {
     if (position) Updatedfile.position = position;
     if (isForeigner) Updatedfile.isForeigner = isForeigner;
     if (team_id) Updatedfile.team_id = TeamID;
+    if (number) {
+      const checkExistPlayer = await db
+        .collection("players")
+        .findOne({ team_id: TeamID, number: number });
+      if (checkExistPlayer) {
+        return res
+          .status(400)
+          .json({ message: "Player number already exists" });
+      }
+      Updatedfile.number = number;
+    }
+    if (isNaN(Date.parse(dob)))
+      return res.status(400).json({ message: "Invalid date format" });
     await db
       .collection("players")
       .updateOne({ _id: player_id }, { $set: Updatedfile });
