@@ -4,14 +4,14 @@ const {
   createPlayerRankings,
   updatePlayerRankingsafterMatch,
   deletePlayerRankings,
+  getPlayerRankingsbySeasonIdAndDate,
 } = require("../controllers/player_rankingsController");
 const { authenticateToken } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
 router.post("/", authenticateToken, createPlayerRankings);
-// router.get("/season/:seasonid", getPlayerResultbySeasonId);
-// router.get("/player/:playerid", getPlayerResultsById);
+router.get("/season/:seasonid", getPlayerRankingsbySeasonIdAndDate);
 router.put(
   "/match/:matchid",
   authenticateToken,
