@@ -1,21 +1,14 @@
 require("dotenv").config();
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const mongoose = require("mongoose");
 
-let DatabaseQuanLyGiaiBDQG = null;
-
-const mongoClientInstance = new MongoClient(process.env.MONGODB_URI, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  },
-});
+let DatabaseQuanLyGiaiBDQG; // Khai báo biến ngoài hàm
 
 const CONNECT_DB = async () => {
   try {
+    console.log(process.env); // Kiểm tra xem các biến môi trường có được đọc đúng không
+    console.log("MONGODB_URI:", process.env.MONGODB_URI); // Thêm dòng này để debug
     console.log("📌 [DEBUG] Đang kết nối MongoDB...");
-    await mongoClientInstance.connect();
-    DatabaseQuanLyGiaiBDQG = mongoClientInstance.db(process.env.DATABASE_NAME);
+    DatabaseQuanLyGiaiBDQG = await mongoose.connect(process.env.MONGODB_URI);
     console.log("✅ [DEBUG] Đã kết nối MongoDB:", process.env.DATABASE_NAME);
     return DatabaseQuanLyGiaiBDQG;
   } catch (error) {
