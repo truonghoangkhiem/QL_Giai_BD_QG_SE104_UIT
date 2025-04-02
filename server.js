@@ -45,6 +45,7 @@ app.use(errorMiddleware);
 app.get("/", (req, res) => {
   res.send("⚽ API Football League is running...");
 });
+console.log("Môi trường hiện tại:", process.env.NODE_ENV || "chưa thiết lập");
 
 // Kết nối MongoDB trước khi chạy server
 connectDB()
