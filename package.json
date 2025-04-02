@@ -7,7 +7,7 @@
     "dev": "node server.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "Khiem Truong Hoang",
   "license": "MIT",
   "dependencies": {
     "bcryptjs": "^3.0.2",
