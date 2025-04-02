@@ -12,12 +12,12 @@ const { errorMiddleware } = require("../../middleware/errorMiddleware");
 
 const router = express.Router();
 
-router.get("/", getTeams); //
-router.post("/", authenticateToken, createTeam); //
-router.put("/:id", authenticateToken, updateTeam); //
-router.delete("/:id", authenticateToken, deleteTeam); //
-router.get("/:id", getTeamsByID); //
-router.get("/seasons/:id", getTeamsByIDSeason); //
+router.get("/", getTeams); ///
+router.post("/", authenticateToken, createTeam); ///
+router.put("/:id", authenticateToken, updateTeam); ///
+router.delete("/:id", authenticateToken, deleteTeam); ///
+router.get("/:id", getTeamsByID); ///
+router.get("/seasons/:id", getTeamsByIDSeason); ///
 router.use(errorMiddleware); // Đảm bảo mọi lỗi đều được xử lý bởi errorMiddleware
 
 module.exports = router;

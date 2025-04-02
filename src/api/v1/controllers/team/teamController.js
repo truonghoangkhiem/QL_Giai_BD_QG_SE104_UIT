@@ -1,66 +1,100 @@
-const { GET_DB } = require("../../../config/db");
-
-const { ObjectId } = require("mongodb");
+const Team = require("../../../../models/Team");
+const Season = require("../../../../models/Season");
 const { successResponse } = require("../../../../utils/responseFormat");
+const {
+  CreateTeamSchema,
+  UpdateTeamSchema,
+  TeamIdSchema,
+  SeasonIdSchema,
+} = require("../../../../schemas/teamSchema");
+const mongoose = require("mongoose");
 
 // Lấy tất cả đội bóng
 const getTeams = async (req, res, next) => {
   try {
-    const db = GET_DB();
-    const teams = await db.collection("teams").find().toArray();
+    const teams = await Team.find();
     return successResponse(res, teams, "Fetched teams successfully");
   } catch (error) {
-    return next(error); // Chuyển lỗi vào middleware xử lý lỗi
+    return next(error);
   }
 };
 
 // Lấy đội bóng theo ID
 const getTeamsByID = async (req, res, next) => {
   try {
-    const db = GET_DB();
-    const team_id = new ObjectId(req.params.id);
-    const team = await db.collection("teams").findOne({ _id: team_id });
-    if (!team) return next(new Error("Team not found"));
+    const { success, error } = TeamIdSchema.safeParse({ id: req.params.id });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const team_id = new mongoose.Types.ObjectId(req.params.id);
+    const team = await Team.findById(team_id);
+    if (!team) {
+      const error = new Error("Team not found");
+      error.status = 404;
+      return next(error);
+    }
     return successResponse(res, team, "Team found successfully");
   } catch (error) {
-    return next(error); // Chuyển lỗi vào middleware xử lý lỗi
+    return next(error);
   }
 };
 
 // Thêm đội bóng
 const createTeam = async (req, res, next) => {
   const { season_id, team_name, stadium, coach, logo } = req.body;
-
-  if (!season_id || !team_name || !stadium || !coach || !logo) {
-    return next(new Error("All fields are required"));
-  }
   try {
-    const db = GET_DB();
-    const Check_season_id = new ObjectId(season_id);
-    const season = await db
-      .collection("seasons")
-      .findOne({ _id: Check_season_id });
-    if (!season) return next(new Error("Season not found"));
-    const existingTeam = await db
-      .collection("teams")
-      .findOne({ team_name, season_id: Check_season_id });
-    if (existingTeam) return next(new Error("Team name already exists"));
-    const result = await db.collection("teams").insertOne({
+    // Validate schema với Zod
+    const { success, error } = CreateTeamSchema.safeParse({
+      season_id,
+      team_name,
+      stadium,
+      coach,
+      logo,
+    });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const Check_season_id = new mongoose.Types.ObjectId(season_id);
+    const season = await Season.findById(Check_season_id);
+    if (!season) {
+      const error = new Error("Season not found");
+      error.status = 404;
+      return next(error);
+    }
+
+    const existingTeam = await Team.findOne({
+      team_name,
+      season_id: Check_season_id,
+    });
+    if (existingTeam) {
+      const error = new Error("Team name already exists");
+      error.status = 400;
+      return next(error);
+    }
+
+    const newTeam = new Team({
       season_id: Check_season_id,
       team_name,
       stadium,
       coach,
       logo,
     });
+    const result = await newTeam.save();
 
     return successResponse(
       res,
-      { id: result.insertedId },
+      { id: result._id },
       "Created team successfully",
       201
     );
   } catch (error) {
-    return next(error); // Chuyển lỗi vào middleware xử lý lỗi
+    return next(error);
   }
 };
 
@@ -68,64 +102,115 @@ const createTeam = async (req, res, next) => {
 const updateTeam = async (req, res, next) => {
   const { team_name, stadium, coach, logo } = req.body;
   try {
-    const db = GET_DB();
-    const teamId = new ObjectId(req.params.id);
+    const { success: idSuccess, error: idError } = TeamIdSchema.safeParse({
+      id: req.params.id,
+    });
+    if (!idSuccess) {
+      const validationError = new Error(idError.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
 
-    const existingTeam = await db.collection("teams").findOne({ _id: teamId });
-    if (!existingTeam) return next(new Error("Team not found"));
+    const { success, error } = UpdateTeamSchema.safeParse({
+      team_name,
+      stadium,
+      coach,
+      logo,
+    });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const teamId = new mongoose.Types.ObjectId(req.params.id);
+    const existingTeam = await Team.findById(teamId);
+    if (!existingTeam) {
+      const error = new Error("Team not found");
+      error.status = 404;
+      return next(error);
+    }
+
     const updatedTeam = {};
     if (team_name) updatedTeam.team_name = team_name;
     if (stadium) updatedTeam.stadium = stadium;
     if (coach) updatedTeam.coach = coach;
     if (logo) updatedTeam.logo = logo;
-    const checkExist = await db.collection("teams").findOne({
-      team_name: updatedTeam.team_name,
-      season_id: existingTeam.season_id,
-    });
-    if (checkExist) return next(new Error("Team name already exists"));
-    const result = await db.collection("teams").updateOne(
-      { _id: teamId },
-      {
-        $set: updateTeam,
-      }
-    );
 
-    if (result.modifiedCount === 0) return next(new Error("No changes made"));
+    if (team_name) {
+      const checkExist = await Team.findOne({
+        team_name,
+        season_id: existingTeam.season_id,
+        _id: { $ne: teamId },
+      });
+      if (checkExist) {
+        const error = new Error("Team name already exists");
+        error.status = 400;
+        return next(error);
+      }
+    }
+
+    const result = await Team.updateOne({ _id: teamId }, { $set: updatedTeam });
+    if (result.modifiedCount === 0) {
+      const error = new Error("No changes made");
+      error.status = 400;
+      return next(error);
+    }
 
     return successResponse(res, null, "Team updated successfully");
   } catch (error) {
-    return next(error); // Chuyển lỗi vào middleware xử lý lỗi
+    return next(error);
   }
 };
 
 // Xóa đội bóng
 const deleteTeam = async (req, res, next) => {
   try {
-    const db = GET_DB();
-    const teamId = new ObjectId(req.params.id);
+    const { success, error } = TeamIdSchema.safeParse({ id: req.params.id });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
 
-    const existingTeam = await db.collection("teams").findOne({ _id: teamId });
-    if (!existingTeam) return next(new Error("Team not found"));
+    const teamId = new mongoose.Types.ObjectId(req.params.id);
+    const existingTeam = await Team.findById(teamId);
+    if (!existingTeam) {
+      const error = new Error("Team not found");
+      error.status = 404;
+      return next(error);
+    }
 
-    await db.collection("teams").deleteOne({ _id: teamId });
+    await Team.deleteOne({ _id: teamId });
     return successResponse(res, null, "Deleted team successfully", 204);
   } catch (error) {
-    return next(error); // Chuyển lỗi vào middleware xử lý lỗi
+    return next(error);
   }
 };
 
 // Lấy đội bóng theo season_id
 const getTeamsByIDSeason = async (req, res, next) => {
   try {
-    const db = GET_DB();
-    const season_id = new ObjectId(req.params.id);
+    const { success, error } = SeasonIdSchema.safeParse({ id: req.params.id });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
 
-    const season = await db.collection("seasons").findOne({ _id: season_id });
-    if (!season) return next(new Error("Season not found"));
+    const season_id = new mongoose.Types.ObjectId(req.params.id);
+    const season = await Season.findById(season_id);
+    if (!season) {
+      const error = new Error("Season not found");
+      error.status = 404;
+      return next(error);
+    }
 
-    const teams = await db.collection("teams").find({ season_id }).toArray();
+    const teams = await Team.find({ season_id });
     if (teams.length === 0) {
-      return next(new Error("No teams found for this season"));
+      const error = new Error("No teams found for this season");
+      error.status = 404;
+      return next(error);
     }
 
     return successResponse(
@@ -134,7 +219,7 @@ const getTeamsByIDSeason = async (req, res, next) => {
       "Fetched teams successfully for this season"
     );
   } catch (error) {
-    return next(error); // Chuyển lỗi vào middleware xử lý lỗi
+    return next(error);
   }
 };
 

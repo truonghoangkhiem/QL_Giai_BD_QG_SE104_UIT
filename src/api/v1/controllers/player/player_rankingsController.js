@@ -1,44 +1,60 @@
-const { GET_DB } = require("../../../config/db");
-const { ObjectId } = require("mongodb");
-const { successResponse } = require("../../../../utils/responseFormat"); // Import các hàm định dạng phản hồi
+const PlayerRanking = require("../../../../models/PlayerRanking");
+const PlayerResult = require("../../../../models/PlayerResult");
+const Match = require("../../../../models/Match");
+const { successResponse } = require("../../../../utils/responseFormat");
+const {
+  CreatePlayerRankingSchema,
+  MatchIdSchema,
+  PlayerRankingIdSchema,
+  GetPlayerRankingsBySeasonIdAndDateSchema,
+} = require("../../../../schemas/playerRankingSchema");
+const mongoose = require("mongoose");
 
 // Tạo bảng xếp hạng cầu thủ
 const createPlayerRankings = async (req, res, next) => {
   const { season_id, player_results_id } = req.body;
-  if (!season_id || !player_results_id) {
-    const error = new Error("All fields are required");
-    error.status = 400;
-    return next(error); // Ném lỗi cho middleware xử lý
-  }
   try {
-    const db = GET_DB();
-    const SeasonID = new ObjectId(season_id);
-    const PlayerResultsID = new ObjectId(player_results_id);
-    const player_results = await db
-      .collection("player_results")
-      .findOne({ _id: PlayerResultsID });
+    const { success, error } = CreatePlayerRankingSchema.safeParse({
+      season_id,
+      player_results_id,
+    });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const SeasonID = new mongoose.Types.ObjectId(season_id);
+    const PlayerResultsID = new mongoose.Types.ObjectId(player_results_id);
+
+    const player_results = await PlayerResult.findById(PlayerResultsID);
     if (!player_results) {
       const error = new Error("Player Result not found");
       error.status = 404;
-      return next(error); // Ném lỗi cho middleware xử lý
+      return next(error);
     }
-    const checkExist = await db
-      .collection("player_rankings")
-      .findOne({ player_results_id: PlayerResultsID });
+
+    const checkExist = await PlayerRanking.findOne({
+      player_results_id: PlayerResultsID,
+    });
     if (checkExist) {
       const error = new Error("Player Ranking already exists");
       error.status = 400;
-      return next(error); // Ném lỗi cho middleware xử lý
+      return next(error);
     }
+
     const date = new Date();
-    date.setUTCHours(0, 0, 0, 0); // Set time to midnight
-    await db.collection("player_rankings").insertOne({
+    date.setUTCHours(0, 0, 0, 0);
+
+    const newPlayerRanking = new PlayerRanking({
       season_id: SeasonID,
       player_results_id: PlayerResultsID,
       player_id: player_results.player_id,
       rank: 0,
-      date: date,
+      date,
     });
+    await newPlayerRanking.save();
+
     return successResponse(
       res,
       null,
@@ -46,73 +62,65 @@ const createPlayerRankings = async (req, res, next) => {
       201
     );
   } catch (error) {
-    return next(error); // Ném lỗi cho middleware xử lý
+    return next(error);
   }
 };
 
-// API cập nhật bảng xếp hạng cầu thủ sau trận đấu
+// Cập nhật bảng xếp hạng cầu thủ sau trận đấu
 const updatePlayerRankingsafterMatch = async (req, res, next) => {
-  const match_id = req.params.matchid;
-  if (!match_id) {
-    const error = new Error("Match ID is required");
-    error.status = 400;
-    return next(error); // Ném lỗi cho middleware xử lý
-  }
+  const { matchid } = req.params;
   try {
-    const db = GET_DB();
-    const MatchID = new ObjectId(match_id);
-    const match = await db.collection("matches").findOne({ _id: MatchID });
+    const { success, error } = MatchIdSchema.safeParse({ matchid });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const MatchID = new mongoose.Types.ObjectId(matchid);
+    const match = await Match.findById(MatchID);
     if (!match) {
       const error = new Error("Match not found");
       error.status = 404;
-      return next(error); // Ném lỗi cho middleware xử lý
+      return next(error);
     }
 
     const matchDate = new Date(match.date);
     matchDate.setUTCHours(0, 0, 0, 0);
 
-    // Lấy kết quả mới nhất từ player_results
-    const player_results = await db
-      .collection("player_results")
-      .aggregate([
-        {
-          $match: {
-            season_id: match.season_id,
-            date: { $lte: matchDate },
-          },
+    const player_results = await PlayerResult.aggregate([
+      {
+        $match: {
+          season_id: match.season_id,
+          date: { $lte: matchDate },
         },
-        {
-          $sort: { date: -1 },
+      },
+      {
+        $sort: { date: -1 },
+      },
+      {
+        $group: {
+          _id: "$player_id",
+          latestResult: { $first: "$$ROOT" },
         },
-        {
-          $group: {
-            _id: "$player_id",
-            latestResult: { $first: "$$ROOT" },
-          },
-        },
-        {
-          $replaceRoot: { newRoot: "$latestResult" },
-        },
-      ])
-      .toArray();
+      },
+      {
+        $replaceRoot: { newRoot: "$latestResult" },
+      },
+    ]);
 
     if (!player_results.length) {
       const error = new Error("Player Result not found");
       error.status = 404;
-      return next(error); // Ném lỗi cho middleware xử lý
+      return next(error);
     }
 
-    // Sắp xếp theo totalGoals giảm dần
     player_results.sort((a, b) => b.totalGoals - a.totalGoals);
 
-    // Kiểm tra rankings hiện tại cho ngày matchDate
-    const existingRankings = await db
-      .collection("player_rankings")
-      .find({
-        season_id: match.season_id,
-        date: matchDate,
-      })
-      .toArray();
+    const existingRankings = await PlayerRanking.find({
+      season_id: match.season_id,
+      date: matchDate,
+    });
 
     const rankingUpdates = [];
     for (let i = 0; i < player_results.length; i++) {
@@ -122,7 +130,6 @@ const updatePlayerRankingsafterMatch = async (req, res, next) => {
       );
 
       if (existingRanking) {
-        // Chỉ cập nhật nếu rank thay đổi
         if (existingRanking.rank !== i + 1) {
           rankingUpdates.push({
             updateOne: {
@@ -132,7 +139,6 @@ const updatePlayerRankingsafterMatch = async (req, res, next) => {
           });
         }
       } else {
-        // Tạo mới nếu chưa có
         rankingUpdates.push({
           insertOne: {
             document: {
@@ -148,7 +154,7 @@ const updatePlayerRankingsafterMatch = async (req, res, next) => {
     }
 
     if (rankingUpdates.length > 0) {
-      await db.collection("player_rankings").bulkWrite(rankingUpdates);
+      await PlayerRanking.bulkWrite(rankingUpdates);
     }
 
     return successResponse(
@@ -157,30 +163,30 @@ const updatePlayerRankingsafterMatch = async (req, res, next) => {
       "Updated player rankings successfully"
     );
   } catch (error) {
-    return next(error); // Ném lỗi cho middleware xử lý
+    return next(error);
   }
 };
 
-// API xóa bảng xếp hạng cầu thủ
+// Xóa bảng xếp hạng cầu thủ
 const deletePlayerRankings = async (req, res, next) => {
-  const player_ranking_id = req.params.id;
-  if (!player_ranking_id) {
-    const error = new Error("Player Ranking ID is required");
-    error.status = 400;
-    return next(error); // Ném lỗi cho middleware xử lý
-  }
+  const { id } = req.params;
   try {
-    const db = GET_DB();
-    const PlayerRankingID = new ObjectId(player_ranking_id);
-    const player_ranking = await db
-      .collection("player_rankings")
-      .findOne({ _id: PlayerRankingID });
+    const { success, error } = PlayerRankingIdSchema.safeParse({ id });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const PlayerRankingID = new mongoose.Types.ObjectId(id);
+    const player_ranking = await PlayerRanking.findById(PlayerRankingID);
     if (!player_ranking) {
       const error = new Error("Player Ranking not found");
       error.status = 404;
-      return next(error); // Ném lỗi cho middleware xử lý
+      return next(error);
     }
-    await db.collection("player_rankings").deleteOne({ _id: PlayerRankingID });
+
+    await PlayerRanking.deleteOne({ _id: PlayerRankingID });
     return successResponse(
       res,
       null,
@@ -188,71 +194,54 @@ const deletePlayerRankings = async (req, res, next) => {
       200
     );
   } catch (error) {
-    return next(error); // Ném lỗi cho middleware xử lý
+    return next(error);
   }
 };
 
-// API lấy bảng xếp hạng cầu thủ theo season_id và ngày
+// Lấy bảng xếp hạng cầu thủ theo season_id và ngày
 const getPlayerRankingsbySeasonIdAndDate = async (req, res, next) => {
-  const { seasonid: season_id } = req.params;
+  const { seasonid } = req.params;
   const { date } = req.body;
-
-  if (!season_id || !date) {
-    const error = new Error("Season ID and Date are required");
-    error.status = 400;
-    return next(error); // Ném lỗi cho middleware xử lý
-  }
-
   try {
-    const db = GET_DB();
-    let seasonId;
-    try {
-      seasonId = new ObjectId(season_id);
-    } catch (e) {
-      const error = new Error("Invalid Season ID format");
-      error.status = 400;
-      return next(error); // Ném lỗi cho middleware xử lý
+    const { success, error } =
+      GetPlayerRankingsBySeasonIdAndDateSchema.safeParse({ seasonid, date });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
     }
 
+    const SeasonID = new mongoose.Types.ObjectId(seasonid);
     const queryDate = new Date(date);
-    if (isNaN(queryDate.getTime())) {
-      const error = new Error("Invalid Date format");
-      error.status = 400;
-      return next(error); // Ném lỗi cho middleware xử lý
-    }
     queryDate.setUTCHours(0, 0, 0, 0);
 
-    // Aggregation để lấy bản ghi gần nhất <= queryDate
-    const playerRankings = await db
-      .collection("player_rankings")
-      .aggregate([
-        {
-          $match: {
-            season_id: seasonId,
-            date: { $lte: queryDate },
-          },
+    const playerRankings = await PlayerRanking.aggregate([
+      {
+        $match: {
+          season_id: SeasonID,
+          date: { $lte: queryDate },
         },
-        {
-          $sort: { date: -1 },
+      },
+      {
+        $sort: { date: -1 },
+      },
+      {
+        $group: {
+          _id: "$player_id",
+          latestRanking: { $first: "$$ROOT" },
         },
-        {
-          $group: {
-            _id: "$player_id",
-            latestRanking: { $first: "$$ROOT" },
-          },
-        },
-        {
-          $replaceRoot: { newRoot: "$latestRanking" },
-        },
-      ])
-      .toArray();
+      },
+      {
+        $replaceRoot: { newRoot: "$latestRanking" },
+      },
+    ]);
 
     if (!playerRankings.length) {
       const error = new Error(
         "No player rankings found for this season and date"
       );
       error.status = 404;
-      return next(error); // Ném lỗi cho middleware xử lý
+      return next(error);
     }
 
     return successResponse(
@@ -261,7 +250,7 @@ const getPlayerRankingsbySeasonIdAndDate = async (req, res, next) => {
       "Latest player rankings retrieved successfully"
     );
   } catch (error) {
-    return next(error); // Ném lỗi cho middleware xử lý
+    return next(error);
   }
 };
 

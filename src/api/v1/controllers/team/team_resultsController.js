@@ -1,76 +1,104 @@
-const { ObjectId } = require("mongodb");
-const { GET_DB } = require("../../../config/db");
-
+const TeamResult = require("../../../../models/TeamResult");
+const Team = require("../../../../models/Team");
+const Season = require("../../../../models/Season");
+const Match = require("../../../../models/Match");
+const Regulation = require("../../../../models/Regulation");
 const { successResponse } = require("../../../../utils/responseFormat");
+const {
+  CreateTeamResultSchema,
+  SeasonIdSchema,
+  TeamResultIdSchema,
+  GetIdSchema,
+  MatchIdSchema,
+} = require("../../../../schemas/teamResultSchema");
+const mongoose = require("mongoose");
 
 // Thêm kết quả đội bóng
 const createTeamResults = async (req, res, next) => {
   const { team_id, season_id } = req.body;
-  if (!team_id || !season_id) {
-    return next(new Error("TeamId and SeasonId are required"));
-  }
   try {
-    const db = GET_DB();
-    const Check_team_id = new ObjectId(team_id);
-    const team = await db.collection("teams").findOne({ _id: Check_team_id });
-    if (!team) return next(new Error("Team not found"));
-    const Check_season_id = new ObjectId(season_id);
-    const season = await db
-      .collection("seasons")
-      .findOne({ _id: Check_season_id });
-    if (!season) return next(new Error("Season not found"));
-    const checkExist = await db
-      .collection("team_results")
-      .findOne({ team_id: Check_team_id, season_id: Check_season_id });
-    if (checkExist) return next(new Error("Team result already exists"));
+    // Validate schema với Zod
+    const { success, error } = CreateTeamResultSchema.safeParse({
+      team_id,
+      season_id,
+    });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
 
-    const matchplayed = 0;
-    const wins = 0;
-    const draws = 0;
-    const losses = 0;
-    const goalsFor = 0;
-    const goalsAgainst = 0;
-    const goalsDifference = 0;
-    const points = 0;
-    const goalsForAway = 0;
+    const Check_team_id = new mongoose.Types.ObjectId(team_id);
+    const Check_season_id = new mongoose.Types.ObjectId(season_id);
+
+    const team = await Team.findById(Check_team_id);
+    if (!team) {
+      const error = new Error("Team not found");
+      error.status = 404;
+      return next(error);
+    }
+
+    const season = await Season.findById(Check_season_id);
+    if (!season) {
+      const error = new Error("Season not found");
+      error.status = 404;
+      return next(error);
+    }
+
+    const checkExist = await TeamResult.findOne({
+      team_id: Check_team_id,
+      season_id: Check_season_id,
+    });
+    if (checkExist) {
+      const error = new Error("Team result already exists");
+      error.status = 400;
+      return next(error);
+    }
+
     const currentDate = new Date();
     currentDate.setUTCHours(0, 0, 0, 0);
 
-    await db.collection("team_results").insertOne({
+    const newTeamResult = new TeamResult({
       team_id: Check_team_id,
       season_id: Check_season_id,
-      matchplayed,
-      wins,
-      draws,
-      losses,
-      goalsFor,
-      goalsAgainst,
-      goalsDifference,
-      points,
-      goalsForAway,
+      matchplayed: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      goalsFor: 0,
+      goalsAgainst: 0,
+      goalsDifference: 0,
+      points: 0,
+      goalsForAway: 0,
       headToHeadPoints: {},
       date: currentDate,
     });
+    await newTeamResult.save();
 
     return successResponse(res, null, "Created team result successfully", 201);
   } catch (error) {
-    return next(error); // Chuyển lỗi vào middleware xử lý lỗi
+    return next(error);
   }
 };
 
 // Lấy kết quả đội bóng theo mùa giải
 const getTeamResultsbySeasonId = async (req, res, next) => {
-  const season_id = req.params.season_id;
-  console.log(season_id);
-  if (!season_id) return next(new Error("SeasonId is required"));
+  const { season_id } = req.params;
   try {
-    const db = GET_DB();
-    const Check_season_id = new ObjectId(season_id);
-    const team_results = await db
-      .collection("team_results")
-      .find({ season_id: Check_season_id })
-      .toArray();
-    if (!team_results) return next(new Error("Team results not found"));
+    const { success, error } = SeasonIdSchema.safeParse({ season_id });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const Check_season_id = new mongoose.Types.ObjectId(season_id);
+    const team_results = await TeamResult.find({ season_id: Check_season_id });
+    if (!team_results || team_results.length === 0) {
+      const error = new Error("Team results not found");
+      error.status = 404;
+      return next(error);
+    }
 
     return successResponse(
       res,
@@ -78,41 +106,57 @@ const getTeamResultsbySeasonId = async (req, res, next) => {
       "Fetched team results successfully"
     );
   } catch (error) {
-    return next(error); // Chuyển lỗi vào middleware xử lý lỗi
+    return next(error);
   }
 };
 
 // Lấy kết quả đội bóng theo ID
 const getTeamResultsById = async (req, res, next) => {
   const { id } = req.params;
-  if (!id) return next(new Error("Id is required"));
   try {
-    const db = GET_DB();
-    const Check_id = new ObjectId(id);
-    const team_result = await db
-      .collection("team_results")
-      .findOne({ _id: Check_id });
-    if (!team_result) return next(new Error("Team result not found"));
+    const { success, error } = TeamResultIdSchema.safeParse({ id });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const Check_id = new mongoose.Types.ObjectId(id);
+    const team_result = await TeamResult.findById(Check_id);
+    if (!team_result) {
+      const error = new Error("Team result not found");
+      error.status = 404;
+      return next(error);
+    }
 
     return successResponse(res, team_result, "Team result found successfully");
   } catch (error) {
-    return next(error); // Chuyển lỗi vào middleware xử lý lỗi
+    return next(error);
   }
 };
 
 // Lấy ID kết quả đội bóng
 const getId = async (req, res, next) => {
   const { team_id, season_id } = req.params;
-  if (!team_id || !season_id)
-    return next(new Error("TeamId and SeasonId are required"));
   try {
-    const db = GET_DB();
-    const Check_team_id = new ObjectId(team_id);
-    const Check_season_id = new ObjectId(season_id);
-    const team_result = await db
-      .collection("team_results")
-      .findOne({ team_id: Check_team_id, season_id: Check_season_id });
-    if (!team_result) return next(new Error("Team result not found"));
+    const { success, error } = GetIdSchema.safeParse({ team_id, season_id });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const Check_team_id = new mongoose.Types.ObjectId(team_id);
+    const Check_season_id = new mongoose.Types.ObjectId(season_id);
+    const team_result = await TeamResult.findOne({
+      team_id: Check_team_id,
+      season_id: Check_season_id,
+    });
+    if (!team_result) {
+      const error = new Error("Team result not found");
+      error.status = 404;
+      return next(error);
+    }
 
     return successResponse(
       res,
@@ -120,10 +164,11 @@ const getId = async (req, res, next) => {
       "Fetched team result ID successfully"
     );
   } catch (error) {
-    return next(error); // Chuyển lỗi vào middleware xử lý lỗi
+    return next(error);
   }
 };
 
+// Cập nhật kết quả đội bóng (hàm nội bộ)
 const updateTeamResults = async (
   team_id,
   season_id,
@@ -131,26 +176,22 @@ const updateTeamResults = async (
   opponent_score,
   isHome,
   opponent_team_id,
-  match_date // Ngày của trận đấu
+  match_date
 ) => {
-  const db = GET_DB();
-  const Check_team_id = new ObjectId(team_id);
-  const Check_season_id = new ObjectId(season_id);
-  const Check_opponent_team_id = new ObjectId(opponent_team_id);
+  const Check_team_id = new mongoose.Types.ObjectId(team_id);
+  const Check_season_id = new mongoose.Types.ObjectId(season_id);
+  const Check_opponent_team_id = new mongoose.Types.ObjectId(opponent_team_id);
 
-  // Chuẩn hóa ngày từ match_date thành ISODate với giờ 00:00:00
   const currentDate = new Date(match_date);
   currentDate.setUTCHours(0, 0, 0, 0);
 
-  // Tìm bản ghi team_results với cùng ngày
-  const teamResultSameDay = await db.collection("team_results").findOne({
+  const teamResultSameDay = await TeamResult.findOne({
     team_id: Check_team_id,
     season_id: Check_season_id,
     date: currentDate,
   });
 
   if (teamResultSameDay) {
-    // Nếu đã tồn tại bản ghi với cùng ngày, cập nhật nó
     const updatedMatchesPlayed = teamResultSameDay.matchplayed + 1;
     const updatedGoalsFor = teamResultSameDay.goalsFor + team_score;
     const updatedGoalsAgainst = teamResultSameDay.goalsAgainst + opponent_score;
@@ -163,13 +204,14 @@ const updateTeamResults = async (
     let updatedWins = teamResultSameDay.wins;
     let updatedLosses = teamResultSameDay.losses;
     let updatedDraws = teamResultSameDay.draws;
-    let updatedHeadToHeadPoints = teamResultSameDay.headToHeadPoints || {};
+    let updatedHeadToHeadPoints =
+      teamResultSameDay.headToHeadPoints || new Map();
     const opponentKey = Check_opponent_team_id.toString();
-    if (!updatedHeadToHeadPoints[opponentKey]) {
-      updatedHeadToHeadPoints[opponentKey] = 0;
+    if (!updatedHeadToHeadPoints.has(opponentKey)) {
+      updatedHeadToHeadPoints.set(opponentKey, 0);
     }
 
-    const seasonRegulation = await db.collection("regulations").findOne({
+    const seasonRegulation = await Regulation.findOne({
       season_id: Check_season_id,
       regulation_name: "Ranking Rules",
     });
@@ -183,18 +225,27 @@ const updateTeamResults = async (
     if (team_score > opponent_score) {
       updatedPoints += pointforwin;
       updatedWins += 1;
-      updatedHeadToHeadPoints[opponentKey] += 3;
+      updatedHeadToHeadPoints.set(
+        opponentKey,
+        updatedHeadToHeadPoints.get(opponentKey) + 3
+      );
     } else if (team_score < opponent_score) {
       updatedPoints += pointforloss;
       updatedLosses += 1;
-      updatedHeadToHeadPoints[opponentKey] += 0;
+      updatedHeadToHeadPoints.set(
+        opponentKey,
+        updatedHeadToHeadPoints.get(opponentKey) + 0
+      );
     } else {
       updatedPoints += pointfordraw;
       updatedDraws += 1;
-      updatedHeadToHeadPoints[opponentKey] += 1;
+      updatedHeadToHeadPoints.set(
+        opponentKey,
+        updatedHeadToHeadPoints.get(opponentKey) + 1
+      );
     }
 
-    await db.collection("team_results").updateOne(
+    await TeamResult.updateOne(
       { team_id: Check_team_id, season_id: Check_season_id, date: currentDate },
       {
         $set: {
@@ -212,20 +263,13 @@ const updateTeamResults = async (
       }
     );
   } else {
-    // Tìm bản ghi gần nhất trước ngày currentDate
-    const latestTeamResult = await db
-      .collection("team_results")
-      .find({
-        team_id: Check_team_id,
-        season_id: Check_season_id,
-        date: { $lt: currentDate }, // Lấy bản ghi có ngày nhỏ hơn ngày hiện tại
-      })
-      .sort({ date: -1 }) // Sắp xếp giảm dần để lấy bản ghi gần nhất
-      .limit(1)
-      .toArray();
+    const latestTeamResult = await TeamResult.findOne({
+      team_id: Check_team_id,
+      season_id: Check_season_id,
+      date: { $lt: currentDate },
+    }).sort({ date: -1 });
 
-    // Dữ liệu cơ sở: dùng bản ghi gần nhất nếu có, không thì bắt đầu từ 0
-    const baseResult = latestTeamResult.length > 0 ? latestTeamResult[0] : null;
+    const baseResult = latestTeamResult || null;
     const matchplayed = (baseResult?.matchplayed || 0) + 1;
     const goalsFor = (baseResult?.goalsFor || 0) + team_score;
     const goalsAgainst = (baseResult?.goalsAgainst || 0) + opponent_score;
@@ -238,13 +282,13 @@ const updateTeamResults = async (
     let wins = baseResult?.wins || 0;
     let losses = baseResult?.losses || 0;
     let draws = baseResult?.draws || 0;
-    let headToHeadPoints = baseResult?.headToHeadPoints || {};
+    let headToHeadPoints = baseResult?.headToHeadPoints || new Map();
     const opponentKey = Check_opponent_team_id.toString();
-    if (!headToHeadPoints[opponentKey]) {
-      headToHeadPoints[opponentKey] = 0;
+    if (!headToHeadPoints.has(opponentKey)) {
+      headToHeadPoints.set(opponentKey, 0);
     }
 
-    const seasonRegulation = await db.collection("regulations").findOne({
+    const seasonRegulation = await Regulation.findOne({
       season_id: Check_season_id,
       regulation_name: "Ranking Rules",
     });
@@ -258,19 +302,18 @@ const updateTeamResults = async (
     if (team_score > opponent_score) {
       points += pointforwin;
       wins += 1;
-      headToHeadPoints[opponentKey] += 3;
+      headToHeadPoints.set(opponentKey, headToHeadPoints.get(opponentKey) + 3);
     } else if (team_score < opponent_score) {
       points += pointforloss;
       losses += 1;
-      headToHeadPoints[opponentKey] += 0;
+      headToHeadPoints.set(opponentKey, headToHeadPoints.get(opponentKey) + 0);
     } else {
       points += pointfordraw;
       draws += 1;
-      headToHeadPoints[opponentKey] += 1;
+      headToHeadPoints.set(opponentKey, headToHeadPoints.get(opponentKey) + 1);
     }
 
-    // Tạo bản ghi mới với dữ liệu tích lũy từ ngày cũ
-    await db.collection("team_results").insertOne({
+    const newTeamResult = new TeamResult({
       team_id: Check_team_id,
       season_id: Check_season_id,
       matchplayed,
@@ -285,22 +328,32 @@ const updateTeamResults = async (
       headToHeadPoints,
       date: currentDate,
     });
+    await newTeamResult.save();
   }
 };
 
 // Cập nhật kết quả đội bóng sau trận đấu
 const updateTeamResultsByMatch = async (req, res, next) => {
-  const match_id = new ObjectId(req.params.matchid);
-  const db = GET_DB();
-
+  const { matchid } = req.params;
   try {
-    const match = await db.collection("matches").findOne({ _id: match_id });
-    if (!match) return next(new Error("Match not found"));
+    const { success, error } = MatchIdSchema.safeParse({ matchid });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const match_id = new mongoose.Types.ObjectId(matchid);
+    const match = await Match.findById(match_id);
+    if (!match) {
+      const error = new Error("Match not found");
+      error.status = 404;
+      return next(error);
+    }
 
     const [team1_score, team2_score] = match.score.split("-").map(Number);
     const { team1, team2, season_id, date } = match;
 
-    // Truyền ngày của trận đấu (match.date) vào hàm updateTeamResults
     await updateTeamResults(
       team1,
       season_id,
@@ -321,27 +374,34 @@ const updateTeamResultsByMatch = async (req, res, next) => {
     );
 
     return successResponse(res, null, "Team results updated successfully");
-  } catch (err) {
-    return next(err); // Chuyển lỗi vào middleware xử lý lỗi
+  } catch (error) {
+    return next(error);
   }
 };
 
+// Xóa kết quả đội bóng
 const deleteTeamResults = async (req, res, next) => {
   const { id } = req.params;
-  if (!id) return next(new Error("Id is required"));
   try {
-    const db = GET_DB();
-    const Check_id = new ObjectId(id);
-    const team_result = await db
-      .collection("team_results")
-      .findOne({ _id: Check_id });
-    if (!team_result) return next(new Error("Team result not found"));
+    const { success, error } = TeamResultIdSchema.safeParse({ id });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
 
-    await db.collection("team_results").deleteOne({ _id: Check_id });
+    const Check_id = new mongoose.Types.ObjectId(id);
+    const team_result = await TeamResult.findById(Check_id);
+    if (!team_result) {
+      const error = new Error("Team result not found");
+      error.status = 404;
+      return next(error);
+    }
 
+    await TeamResult.deleteOne({ _id: Check_id });
     return successResponse(res, null, "Deleted team result successfully");
   } catch (error) {
-    return next(error); // Chuyển lỗi vào middleware xử lý lỗi
+    return next(error);
   }
 };
 

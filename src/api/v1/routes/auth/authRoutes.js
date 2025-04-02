@@ -10,11 +10,11 @@ const { errorMiddleware } = require("../../middleware/errorMiddleware");
 
 const router = express.Router();
 
-router.post("/register", registerUser); //
-router.post("/login", loginUser); //
-router.put("/password", updatePasswordUser); //
-router.put("/username", updateUsername); //
-router.delete("/", deleteUser); //
-router.use(errorMiddleware); // Đảm bảo mọi lỗi đều được xử lý bởi errorMiddleware
+router.post("/register", registerUser); ///
+router.post("/login", loginUser); ///
+router.put("/password", updatePasswordUser); ///
+router.put("/username", updateUsername); ///
+router.delete("/", deleteUser); ///
+router.use(errorMiddleware);
 
 module.exports = router;

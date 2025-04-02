@@ -1,20 +1,13 @@
-const { ObjectId } = require("mongodb");
-const { GET_DB } = require("../../../config/db");
-const { successResponse } = require("../../../../utils/responseFormat"); // Import các hàm định dạng phản hồi
-
-// Danh sách các quy định hợp lệ
-const VALID_REGULATIONS = {
-  "Age Regulation": [
-    "minAge",
-    "maxAge",
-    "minPlayersPerTeam",
-    "maxPlayersPerTeam",
-    "maxForeignPlayers",
-  ],
-  "Match Rules": ["matchRounds", "homeTeamRule"],
-  "Goal Rules": ["goalTypes", "goalTimeLimit"],
-  "Ranking Rules": ["winPoints", "drawPoints", "losePoints", "rankingCriteria"],
-};
+const Regulation = require("../../../../models/Regulation");
+const { successResponse } = require("../../../../utils/responseFormat");
+const {
+  CreateRegulationSchema,
+  UpdateRegulationSchema,
+  RegulationIdSchema,
+  GetIdRegulationsSchema,
+  VALID_REGULATIONS,
+} = require("../../../../schemas/regulationSchema");
+const mongoose = require("mongoose");
 
 // Kiểm tra logic dữ liệu
 const validateRules = (regulation_name, rules) => {
@@ -74,50 +67,52 @@ const validateRules = (regulation_name, rules) => {
 // API tạo quy định
 const createRegulation = async (req, res, next) => {
   const { season_id, regulation_name, rules } = req.body;
-
-  // Kiểm tra đầu vào hợp lệ
-  if (!season_id || !regulation_name || !rules) {
-    return next(new Error("All fields are required"));
-  }
-
-  // Kiểm tra season_id có hợp lệ không
-  if (!ObjectId.isValid(season_id)) {
-    return next(new Error("Invalid season_id"));
-  }
-
-  // Kiểm tra regulation_name có hợp lệ không
-  if (!VALID_REGULATIONS[regulation_name]) {
-    return next(new Error("Invalid regulation_name"));
-  }
-
-  // Kiểm tra đủ các trường trong rules
-  const requiredFields = VALID_REGULATIONS[regulation_name];
-  for (let field of requiredFields) {
-    if (!(field in rules)) {
-      return next(new Error(`Missing field: ${field}`));
-    }
-  }
-
-  // Kiểm tra logic dữ liệu
-  if (!validateRules(regulation_name, rules)) {
-    return next(new Error("Invalid rules data"));
-  }
-
   try {
-    const db = GET_DB();
-    const existingRegulation = await db
-      .collection("regulations")
-      .findOne({ season_id, regulation_name });
-
-    if (existingRegulation) {
-      return next(new Error("Regulation already exists for this season"));
-    }
-
-    await db.collection("regulations").insertOne({
-      season_id: new ObjectId(season_id),
+    // Validate schema với Zod
+    const { success, error } = CreateRegulationSchema.safeParse({
+      season_id,
       regulation_name,
       rules,
     });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    // Kiểm tra đủ các trường trong rules
+    const requiredFields = VALID_REGULATIONS[regulation_name];
+    for (let field of requiredFields) {
+      if (!(field in rules)) {
+        const error = new Error(`Missing field: ${field}`);
+        error.status = 400;
+        return next(error);
+      }
+    }
+
+    // Kiểm tra logic dữ liệu
+    if (!validateRules(regulation_name, rules)) {
+      const error = new Error("Invalid rules data");
+      error.status = 400;
+      return next(error);
+    }
+
+    const existingRegulation = await Regulation.findOne({
+      season_id,
+      regulation_name,
+    });
+    if (existingRegulation) {
+      const error = new Error("Regulation already exists for this season");
+      error.status = 400;
+      return next(error);
+    }
+
+    const newRegulation = new Regulation({
+      season_id: new mongoose.Types.ObjectId(season_id),
+      regulation_name,
+      rules,
+    });
+    await newRegulation.save();
 
     return successResponse(res, null, "Regulation created successfully", 201);
   } catch (error) {
@@ -128,8 +123,7 @@ const createRegulation = async (req, res, next) => {
 // API lấy danh sách quy định
 const getRegulations = async (req, res, next) => {
   try {
-    const db = GET_DB();
-    const regulations = await db.collection("regulations").find().toArray();
+    const regulations = await Regulation.find();
     return successResponse(
       res,
       regulations,
@@ -142,17 +136,20 @@ const getRegulations = async (req, res, next) => {
 
 // API lấy quy định theo id
 const getRegulationById = async (req, res, next) => {
-  const id = req.params.id;
-  if (!ObjectId.isValid(id)) {
-    return next(new Error("Invalid id"));
-  }
+  const { id } = req.params;
   try {
-    const db = GET_DB();
-    const regulation = await db
-      .collection("regulations")
-      .findOne({ _id: new ObjectId(id) });
+    const { success, error } = RegulationIdSchema.safeParse({ id });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const regulation = await Regulation.findById(id);
     if (!regulation) {
-      return next(new Error("Regulation not found"));
+      const error = new Error("Regulation not found");
+      error.status = 404;
+      return next(error);
     }
     return successResponse(res, regulation, "Regulation found successfully");
   } catch (error) {
@@ -164,20 +161,38 @@ const getRegulationById = async (req, res, next) => {
 const updateRegulation = async (req, res, next) => {
   const { rules } = req.body;
   const { id } = req.params;
-  if (!ObjectId.isValid(id)) {
-    return next(new Error("Invalid regulation_id"));
-  }
   try {
-    const db = GET_DB();
-    const regulation = await db
-      .collection("regulations")
-      .findOne({ _id: new ObjectId(id) });
-    if (!regulation) {
-      return next(new Error("Regulation not found"));
+    const { success: idSuccess, error: idError } = RegulationIdSchema.safeParse(
+      { id }
+    );
+    if (!idSuccess) {
+      const validationError = new Error(idError.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
     }
-    await db
-      .collection("regulations")
-      .updateOne({ _id: new ObjectId(id) }, { $set: { rules } });
+
+    const { success, error } = UpdateRegulationSchema.safeParse({ rules });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const regulation = await Regulation.findById(id);
+    if (!regulation) {
+      const error = new Error("Regulation not found");
+      error.status = 404;
+      return next(error);
+    }
+
+    // Kiểm tra logic dữ liệu
+    if (!validateRules(regulation.regulation_name, rules)) {
+      const error = new Error("Invalid rules data");
+      error.status = 400;
+      return next(error);
+    }
+
+    await Regulation.updateOne({ _id: id }, { $set: { rules } });
     return successResponse(res, null, "Regulation updated successfully");
   } catch (error) {
     return next(error);
@@ -187,18 +202,22 @@ const updateRegulation = async (req, res, next) => {
 // API xóa quy định
 const deleteRegulation = async (req, res, next) => {
   const { id } = req.params;
-  if (!ObjectId.isValid(id)) {
-    return next(new Error("Invalid regulation_id"));
-  }
   try {
-    const db = GET_DB();
-    const regulation = await db
-      .collection("regulations")
-      .findOne({ _id: new ObjectId(id) });
-    if (!regulation) {
-      return next(new Error("Regulation not found"));
+    const { success, error } = RegulationIdSchema.safeParse({ id });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
     }
-    await db.collection("regulations").deleteOne({ _id: new ObjectId(id) });
+
+    const regulation = await Regulation.findById(id);
+    if (!regulation) {
+      const error = new Error("Regulation not found");
+      error.status = 404;
+      return next(error);
+    }
+
+    await Regulation.deleteOne({ _id: id });
     return successResponse(res, null, "Regulation deleted successfully");
   } catch (error) {
     return next(error);
@@ -208,19 +227,28 @@ const deleteRegulation = async (req, res, next) => {
 // API lấy id quy định
 const getIdRegulations = async (req, res, next) => {
   const { season_id, regulation_name } = req.params;
-  if (!season_id || !regulation_name) {
-    return next(new Error("All fields are required"));
-  }
   try {
-    const db = GET_DB();
-    const Season_Id = new ObjectId(season_id);
-    const regulations = await db
-      .collection("regulations")
-      .findOne({ season_id: Season_Id, regulation_name });
-    if (!regulations) {
-      return next(new Error("Regulation not found"));
+    const { success, error } = GetIdRegulationsSchema.safeParse({
+      season_id,
+      regulation_name,
+    });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
     }
-    return successResponse(res, regulations._id, "Regulation id found");
+
+    const Season_Id = new mongoose.Types.ObjectId(season_id);
+    const regulation = await Regulation.findOne({
+      season_id: Season_Id,
+      regulation_name,
+    });
+    if (!regulation) {
+      const error = new Error("Regulation not found");
+      error.status = 404;
+      return next(error);
+    }
+    return successResponse(res, regulation._id, "Regulation id found");
   } catch (error) {
     return next(error);
   }

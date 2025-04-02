@@ -1,45 +1,66 @@
-const { GET_DB } = require("../../../config/db");
-const { ObjectId } = require("mongodb");
+const PlayerResult = require("../../../../models/PlayerResult");
+const Player = require("../../../../models/Player");
+const Season = require("../../../../models/Season");
+const Team = require("../../../../models/Team");
+const Match = require("../../../../models/Match");
 const { successResponse } = require("../../../../utils/responseFormat");
+const {
+  CreatePlayerResultSchema,
+  GetPlayerResultBySeasonIdAndDateSchema,
+  PlayerIdSchema,
+  MatchIdSchema,
+  UpdatePlayerResultSchema,
+  PlayerResultIdSchema,
+} = require("../../../../schemas/playerResultSchema");
+const mongoose = require("mongoose");
 
 // Tạo kết quả cầu thủ
 const createPlayerResults = async (req, res, next) => {
   const { player_id, season_id, team_id } = req.body;
-  if (!player_id || !season_id || !team_id) {
-    const error = new Error("All fields are required");
-    error.status = 400;
-    return next(error); // Ném lỗi cho middleware xử lý
-  }
   try {
-    const db = GET_DB();
-    const PlayerID = new ObjectId(player_id);
-    const TeamID = new ObjectId(team_id);
-    const SeasonID = new ObjectId(season_id);
-    const player = await db
-      .collection("players")
-      .findOne({ _id: PlayerID, team_id: TeamID });
+    const { success, error } = CreatePlayerResultSchema.safeParse({
+      player_id,
+      season_id,
+      team_id,
+    });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const PlayerID = new mongoose.Types.ObjectId(player_id);
+    const TeamID = new mongoose.Types.ObjectId(team_id);
+    const SeasonID = new mongoose.Types.ObjectId(season_id);
+
+    const player = await Player.findOne({ _id: PlayerID, team_id: TeamID });
     if (!player) {
       const error = new Error("Player not found");
       error.status = 404;
-      return next(error); // Ném lỗi cho middleware xử lý
+      return next(error);
     }
-    const season = await db.collection("seasons").findOne({ _id: SeasonID });
+
+    const season = await Season.findById(SeasonID);
     if (!season) {
       const error = new Error("Season not found");
       error.status = 404;
-      return next(error); // Ném lỗi cho middleware xử lý
+      return next(error);
     }
-    const checkExist = await db
-      .collection("player_results")
-      .findOne({ player_id: PlayerID, season_id: SeasonID });
+
+    const checkExist = await PlayerResult.findOne({
+      player_id: PlayerID,
+      season_id: SeasonID,
+    });
     if (checkExist) {
       const error = new Error("Player result already exists");
       error.status = 400;
-      return next(error); // Ném lỗi cho middleware xử lý
+      return next(error);
     }
+
     const currentDate = new Date();
     currentDate.setUTCHours(0, 0, 0, 0);
-    await db.collection("player_results").insertOne({
+
+    const newPlayerResult = new PlayerResult({
       season_id: SeasonID,
       player_id: PlayerID,
       team_id: TeamID,
@@ -50,6 +71,8 @@ const createPlayerResults = async (req, res, next) => {
       redCards: 0,
       date: currentDate,
     });
+    await newPlayerResult.save();
+
     return successResponse(
       res,
       null,
@@ -57,70 +80,55 @@ const createPlayerResults = async (req, res, next) => {
       201
     );
   } catch (error) {
-    return next(error); // Ném lỗi cho middleware xử lý
+    return next(error);
   }
 };
 
 // Lấy kết quả cầu thủ theo mùa giải và ngày
 const getPlayerResultbySeasonIdAndDate = async (req, res, next) => {
-  const { seasonid: season_id } = req.params;
+  const { seasonid } = req.params;
   const { date } = req.body;
-  if (!season_id || !date) {
-    const error = new Error("Season ID and Date are required");
-    error.status = 400;
-    return next(error); // Ném lỗi cho middleware xử lý
-  }
-
   try {
-    const db = GET_DB();
-    let seasonId;
-    try {
-      seasonId = new ObjectId(season_id);
-    } catch (e) {
-      const error = new Error("Invalid Season ID format");
-      error.status = 400;
-      return next(error); // Ném lỗi cho middleware xử lý
+    const { success, error } = GetPlayerResultBySeasonIdAndDateSchema.safeParse(
+      { seasonid, date }
+    );
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
     }
 
+    const SeasonID = new mongoose.Types.ObjectId(seasonid);
     const queryDate = new Date(date);
-    if (isNaN(queryDate.getTime())) {
-      const error = new Error("Invalid Date format");
-      error.status = 400;
-      return next(error); // Ném lỗi cho middleware xử lý
-    }
     queryDate.setUTCHours(0, 0, 0, 0);
 
-    // Aggregation để lấy bản ghi gần nhất <= queryDate
-    const playerResults = await db
-      .collection("player_results")
-      .aggregate([
-        {
-          $match: {
-            season_id: seasonId,
-            date: { $lte: queryDate }, // Chỉ lấy các bản ghi trước hoặc bằng queryDate
-          },
+    const playerResults = await PlayerResult.aggregate([
+      {
+        $match: {
+          season_id: SeasonID,
+          date: { $lte: queryDate },
         },
-        {
-          $sort: { date: -1 }, // Sắp xếp theo date giảm dần (gần queryDate nhất lên đầu)
+      },
+      {
+        $sort: { date: -1 },
+      },
+      {
+        $group: {
+          _id: "$player_id",
+          latestResult: { $first: "$$ROOT" },
         },
-        {
-          $group: {
-            _id: "$player_id", // Nhóm theo player_id
-            latestResult: { $first: "$$ROOT" }, // Lấy bản ghi gần nhất
-          },
-        },
-        {
-          $replaceRoot: { newRoot: "$latestResult" }, // Chuyển latestResult thành document chính
-        },
-      ])
-      .toArray();
+      },
+      {
+        $replaceRoot: { newRoot: "$latestResult" },
+      },
+    ]);
 
     if (!playerResults.length) {
       const error = new Error(
         "No player results found for this season and date"
       );
       error.status = 404;
-      return next(error); // Ném lỗi cho middleware xử lý
+      return next(error);
     }
 
     return successResponse(
@@ -129,56 +137,58 @@ const getPlayerResultbySeasonIdAndDate = async (req, res, next) => {
       "Latest player results retrieved successfully"
     );
   } catch (error) {
-    return next(error); // Ném lỗi cho middleware xử lý
+    return next(error);
   }
 };
 
 // Lấy kết quả cầu thủ theo id
 const getPlayerResultsById = async (req, res, next) => {
-  const player_id = req.params.playerid;
-  if (!player_id) {
-    const error = new Error("PlayerId is required");
-    error.status = 400;
-    return next(error); // Ném lỗi cho middleware xử lý
-  }
+  const { playerid } = req.params;
   try {
-    const db = GET_DB();
-    const Check_player_id = new ObjectId(player_id);
-    const playerresult = await db
-      .collection("player_results")
-      .findOne({ player_id: Check_player_id });
-    if (!playerresult) {
+    const { success, error } = PlayerIdSchema.safeParse({ playerid });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const Check_player_id = new mongoose.Types.ObjectId(playerid);
+    const playerResult = await PlayerResult.findOne({
+      player_id: Check_player_id,
+    });
+    if (!playerResult) {
       const error = new Error("Player result not found");
       error.status = 404;
-      return next(error); // Ném lỗi cho middleware xử lý
+      return next(error);
     }
+
     return successResponse(
       res,
-      playerresult,
+      playerResult,
       "Player result found successfully"
     );
   } catch (error) {
-    return next(error); // Ném lỗi cho middleware xử lý
+    return next(error);
   }
 };
 
 // Cập nhật kết quả cầu thủ sau trận đấu
 const updatePlayerResultsafterMatch = async (req, res, next) => {
-  const match_id = req.params.matchid;
-  if (!match_id) {
-    const error = new Error("MatchId is required");
-    error.status = 400;
-    return next(error); // Ném lỗi cho middleware xử lý
-  }
-
+  const { matchid } = req.params;
   try {
-    const db = GET_DB();
-    const MatchID = new ObjectId(match_id);
-    const match = await db.collection("matches").findOne({ _id: MatchID });
+    const { success, error } = MatchIdSchema.safeParse({ matchid });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const MatchID = new mongoose.Types.ObjectId(matchid);
+    const match = await Match.findById(MatchID);
     if (!match) {
       const error = new Error("Match not found");
       error.status = 404;
-      return next(error); // Ném lỗi cho middleware xử lý
+      return next(error);
     }
 
     const matchDate = new Date(match.date);
@@ -187,23 +197,20 @@ const updatePlayerResultsafterMatch = async (req, res, next) => {
     if (!match.season_id) {
       const error = new Error("Match season_id is required");
       error.status = 400;
-      return next(error); // Ném lỗi cho middleware xử lý
+      return next(error);
     }
 
     const updateTeamResults = async (teamId) => {
-      const players = await db
-        .collection("players")
-        .find({ team_id: teamId })
-        .toArray();
-      const bulkOps = []; // Mảng để chứa các lệnh bulk
+      const players = await Player.find({ team_id: teamId });
+      const bulkOps = [];
 
       for (let player of players) {
         const PlayerID = player._id;
         const goalsScored = goalDetails.filter((goal) =>
-          new ObjectId(goal.player_id).equals(PlayerID)
+          new mongoose.Types.ObjectId(goal.player_id).equals(PlayerID)
         ).length;
 
-        const existingResult = await db.collection("player_results").findOne({
+        const existingResult = await PlayerResult.findOne({
           player_id: PlayerID,
           date: matchDate,
         });
@@ -221,25 +228,20 @@ const updatePlayerResultsafterMatch = async (req, res, next) => {
             },
           });
         } else {
-          const latestResult = await db
-            .collection("player_results")
-            .find({ player_id: PlayerID, date: { $lt: matchDate } })
-            .sort({ date: -1 })
-            .limit(1)
-            .toArray();
+          const latestResult = await PlayerResult.findOne({
+            player_id: PlayerID,
+            date: { $lt: matchDate },
+          }).sort({ date: -1 });
 
-          const baseResult =
-            latestResult.length > 0
-              ? latestResult[0]
-              : {
-                  matchesplayed: 0,
-                  totalGoals: 0,
-                  assists: 0,
-                  yellowCards: 0,
-                  redCards: 0,
-                  season_id: match.season_id,
-                  team_id: teamId,
-                };
+          const baseResult = latestResult || {
+            matchesplayed: 0,
+            totalGoals: 0,
+            assists: 0,
+            yellowCards: 0,
+            redCards: 0,
+            season_id: match.season_id,
+            team_id: teamId,
+          };
 
           bulkOps.push({
             insertOne: {
@@ -259,9 +261,8 @@ const updatePlayerResultsafterMatch = async (req, res, next) => {
         }
       }
 
-      // Thực hiện tất cả lệnh bulk cùng lúc
       if (bulkOps.length > 0) {
-        await db.collection("player_results").bulkWrite(bulkOps);
+        await PlayerResult.bulkWrite(bulkOps);
       }
     };
 
@@ -270,13 +271,13 @@ const updatePlayerResultsafterMatch = async (req, res, next) => {
 
     return successResponse(res, null, "Updated player result successfully");
   } catch (error) {
-    return next(error); // Ném lỗi cho middleware xử lý
+    return next(error);
   }
 };
 
 // Cập nhật kết quả cầu thủ thủ công
 const updatePlayerResults = async (req, res, next) => {
-  const player_result_id = req.params.id;
+  const { id } = req.params;
   const {
     season_id,
     player_id,
@@ -288,66 +289,91 @@ const updatePlayerResults = async (req, res, next) => {
     redCards,
     date,
   } = req.body;
-  if (!player_result_id) {
-    const error = new Error("Player result ID is required");
-    error.status = 400;
-    return next(error); // Ném lỗi cho middleware xử lý
-  }
   try {
-    const db = GET_DB();
-    const PlayerResultID = new ObjectId(player_result_id);
-    const updateplayerresult = {};
-    if (season_id) updateplayerresult.season_id = new ObjectId(season_id);
-    if (player_id) updateplayerresult.player_id = new ObjectId(player_id);
-    if (team_id) updateplayerresult.team_id = new ObjectId(team_id);
-    if (matchesplayed) updateplayerresult.matchesplayed = matchesplayed;
-    if (totalGoals) updateplayerresult.totalGoals = totalGoals;
-    if (assists) updateplayerresult.assists = assists;
-    if (yellowCards) updateplayerresult.yellowCards = yellowCards;
-    if (redCards) updateplayerresult.redCards = redCards;
-    if (date) {
-      if (isNaN(Date.parse(date))) {
-        const error = new Error("Invalid date");
-        error.status = 400;
-        return next(error); // Ném lỗi cho middleware xử lý
-      }
-      const newDate = new Date(date);
-      newDate.setUTCHours(0, 0, 0, 0);
-      updateplayerresult.date = newDate;
+    const { success: idSuccess, error: idError } =
+      PlayerResultIdSchema.safeParse({ id });
+    if (!idSuccess) {
+      const validationError = new Error(idError.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
     }
 
-    await db
-      .collection("player_results")
-      .updateOne({ _id: PlayerResultID }, { $set: updateplayerresult });
+    const { success, error } = UpdatePlayerResultSchema.safeParse({
+      season_id,
+      player_id,
+      team_id,
+      matchesplayed,
+      totalGoals,
+      assists,
+      yellowCards,
+      redCards,
+      date,
+    });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const PlayerResultID = new mongoose.Types.ObjectId(id);
+    const updatePlayerResult = {};
+    if (season_id)
+      updatePlayerResult.season_id = new mongoose.Types.ObjectId(season_id);
+    if (player_id)
+      updatePlayerResult.player_id = new mongoose.Types.ObjectId(player_id);
+    if (team_id)
+      updatePlayerResult.team_id = new mongoose.Types.ObjectId(team_id);
+    if (matchesplayed !== undefined)
+      updatePlayerResult.matchesplayed = matchesplayed;
+    if (totalGoals !== undefined) updatePlayerResult.totalGoals = totalGoals;
+    if (assists !== undefined) updatePlayerResult.assists = assists;
+    if (yellowCards !== undefined) updatePlayerResult.yellowCards = yellowCards;
+    if (redCards !== undefined) updatePlayerResult.redCards = redCards;
+    if (date) {
+      const newDate = new Date(date);
+      newDate.setUTCHours(0, 0, 0, 0);
+      updatePlayerResult.date = newDate;
+    }
+
+    const result = await PlayerResult.updateOne(
+      { _id: PlayerResultID },
+      { $set: updatePlayerResult }
+    );
+    if (result.matchedCount === 0) {
+      const error = new Error("Player result not found");
+      error.status = 404;
+      return next(error);
+    }
+
     return successResponse(res, null, "Updated player result successfully");
   } catch (error) {
-    return next(error); // Ném lỗi cho middleware xử lý
+    return next(error);
   }
 };
 
 // Xóa kết quả cầu thủ
 const deletePlayerResults = async (req, res, next) => {
-  const player_result_id = req.params.id;
-  if (!player_result_id) {
-    const error = new Error("Player result ID is required");
-    error.status = 400;
-    return next(error); // Ném lỗi cho middleware xử lý
-  }
+  const { id } = req.params;
   try {
-    const db = GET_DB();
-    const PlayerResultID = new ObjectId(player_result_id);
-    const playerresult = await db
-      .collection("player_results")
-      .findOne({ _id: PlayerResultID });
-    if (!playerresult) {
+    const { success, error } = PlayerResultIdSchema.safeParse({ id });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const PlayerResultID = new mongoose.Types.ObjectId(id);
+    const playerResult = await PlayerResult.findById(PlayerResultID);
+    if (!playerResult) {
       const error = new Error("Player result not found");
       error.status = 404;
-      return next(error); // Ném lỗi cho middleware xử lý
+      return next(error);
     }
-    await db.collection("player_results").deleteOne({ _id: PlayerResultID });
+
+    await PlayerResult.deleteOne({ _id: PlayerResultID });
     return successResponse(res, null, "Player result deleted successfully");
   } catch (error) {
-    return next(error); // Ném lỗi cho middleware xử lý
+    return next(error);
   }
 };
 

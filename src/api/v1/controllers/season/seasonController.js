@@ -1,29 +1,43 @@
-const { ObjectId } = require("mongodb");
-const { GET_DB } = require("../../../config/db");
-
+const Season = require("../../../../models/Season");
 const { successResponse } = require("../../../../utils/responseFormat");
+const {
+  CreateSeasonSchema,
+  UpdateSeasonSchema,
+  SeasonIdSchema,
+  SeasonNameSchema,
+} = require("../../../../schemas/seasonSchema");
+const mongoose = require("mongoose");
 
 // Lấy tất cả mùa giải
 const getSeasons = async (req, res, next) => {
   try {
-    const db = GET_DB();
-    const seasons = await db.collection("seasons").find().toArray();
+    const seasons = await Season.find();
     return successResponse(res, seasons, "Fetched seasons successfully");
   } catch (error) {
-    return next(error); // Chuyển lỗi vào middleware
+    return next(error);
   }
 };
 
 // Lấy mùa giải theo ID
 const getSeasonById = async (req, res, next) => {
   try {
-    const db = GET_DB();
-    const season_id = new ObjectId(req.params.id);
-    const season = await db.collection("seasons").findOne({ _id: season_id });
-    if (!season) return next(new Error("Season not found")); // Chuyển lỗi vào middleware
+    const { success, error } = SeasonIdSchema.safeParse({ id: req.params.id });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const season_id = new mongoose.Types.ObjectId(req.params.id);
+    const season = await Season.findById(season_id);
+    if (!season) {
+      const error = new Error("Season not found");
+      error.status = 404;
+      return next(error);
+    }
     return successResponse(res, season, "Season found successfully");
   } catch (error) {
-    return next(error); // Chuyển lỗi vào middleware
+    return next(error);
   }
 };
 
@@ -31,38 +45,37 @@ const getSeasonById = async (req, res, next) => {
 const createSeason = async (req, res, next) => {
   let { season_name, start_date, end_date, status } = req.body;
   try {
-    const db = GET_DB();
-    if (!season_name || !start_date || !end_date) {
-      return next(new Error("All fields are required"));
+    // Validate schema với Zod
+    const { success, error } = CreateSeasonSchema.safeParse({
+      season_name,
+      start_date,
+      end_date,
+      status,
+    });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
     }
-    if (
-      status === undefined ||
-      status === null ||
-      typeof status !== "boolean"
-    ) {
-      status = true;
-    }
-    if (typeof season_name !== "string") {
-      return next(new Error("typeof Season Name must be string"));
-    }
-    if (isNaN(Date.parse(start_date)) || isNaN(Date.parse(end_date))) {
-      return next(new Error("Invalid date format"));
-    }
-    const check_startdate = new Date(start_date);
-    const check_enddate = new Date(end_date);
-    if (check_startdate > check_enddate) {
-      return next(new Error("Start date must be before end date"));
-    }
-    const checkExist = await db.collection("seasons").findOne({ season_name });
+
+    const checkExist = await Season.findOne({ season_name });
     if (checkExist) {
-      return next(new Error("Season name already exists"));
+      const error = new Error("Season name already exists");
+      error.status = 400;
+      return next(error);
     }
-    await db
-      .collection("seasons")
-      .insertOne({ season_name, start_date, end_date, status });
+
+    const newSeason = new Season({
+      season_name,
+      start_date,
+      end_date,
+      status,
+    });
+    await newSeason.save();
+
     return successResponse(res, null, "Created season successfully", 201);
   } catch (error) {
-    return next(error); // Chuyển lỗi vào middleware
+    return next(error);
   }
 };
 
@@ -70,75 +83,98 @@ const createSeason = async (req, res, next) => {
 const updateSeason = async (req, res, next) => {
   const { season_name, start_date, end_date, status } = req.body;
   try {
-    const db = GET_DB();
-    if (!season_name || !start_date || !end_date) {
-      return next(new Error("All fields are required"));
+    const { success: idSuccess, error: idError } = SeasonIdSchema.safeParse({
+      id: req.params.id,
+    });
+    if (!idSuccess) {
+      const validationError = new Error(idError.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
     }
-    if (
-      status === undefined ||
-      status === null ||
-      typeof status !== "boolean"
-    ) {
-      status = true;
+
+    const { success, error } = UpdateSeasonSchema.safeParse({
+      season_name,
+      start_date,
+      end_date,
+      status,
+    });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
     }
-    if (typeof season_name !== "string") {
-      return next(new Error("typeof Season Name must be string"));
-    }
-    checkExist = await db.collection("seasons").findOne({ season_name });
+
+    const season_id = new mongoose.Types.ObjectId(req.params.id);
+    const checkExist = await Season.findOne({
+      season_name,
+      _id: { $ne: season_id },
+    });
     if (checkExist) {
-      return next(new Error("Season name already exists"));
-    }
-    if (isNaN(Date.parse(start_date)) || isNaN(Date.parse(end_date))) {
-      return next(new Error("Invalid date format"));
-    }
-    const check_startdate = new Date(start_date);
-    const check_enddate = new Date(end_date);
-    if (check_startdate > check_enddate) {
-      return next(new Error("Start date must be before end date"));
+      const error = new Error("Season name already exists");
+      error.status = 400;
+      return next(error);
     }
 
-    const season_id = new ObjectId(req.params.id);
-    const result = await db
-      .collection("seasons")
-      .findOneAndUpdate(
-        { _id: season_id },
-        { $set: { season_name, start_date, end_date, status } },
-        { returnDocument: "after" }
-      );
+    const updatedSeason = await Season.findByIdAndUpdate(
+      season_id,
+      { season_name, start_date, end_date, status },
+      { new: true }
+    );
+    if (!updatedSeason) {
+      const error = new Error("Season not found");
+      error.status = 404;
+      return next(error);
+    }
 
-    if (!result) return next(new Error("Season not found"));
-    return successResponse(res, result.value, "Season updated successfully");
+    return successResponse(res, updatedSeason, "Season updated successfully");
   } catch (error) {
-    return next(error); // Chuyển lỗi vào middleware
+    return next(error);
   }
 };
 
 // Xóa mùa giải
 const deleteSeason = async (req, res, next) => {
   try {
-    const db = GET_DB();
-    const season_id = new ObjectId(req.params.id);
-    const result = await db
-      .collection("seasons")
-      .findOneAndDelete({ _id: season_id });
+    const { success, error } = SeasonIdSchema.safeParse({ id: req.params.id });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const season_id = new mongoose.Types.ObjectId(req.params.id);
+    const result = await Season.findByIdAndDelete(season_id);
+    if (!result) {
+      const error = new Error("Season not found");
+      error.status = 404;
+      return next(error);
+    }
     return successResponse(res, null, "Deleted season successfully", 204);
   } catch (error) {
-    return next(error); // Chuyển lỗi vào middleware
+    return next(error);
   }
 };
 
+// Lấy ID mùa giải theo tên
 const getSeasonIdBySeasonName = async (req, res, next) => {
   const { season_name } = req.params;
-  if (!season_name) return next(new Error("Season name is required"));
   try {
-    const db = GET_DB();
-    const season = await db
-      .collection("seasons")
-      .findOne({ season_name: season_name });
-    if (!season) return next(new Error("Season not found"));
+    const { success, error } = SeasonNameSchema.safeParse({ season_name });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const season = await Season.findOne({ season_name });
+    if (!season) {
+      const error = new Error("Season not found");
+      error.status = 404;
+      return next(error);
+    }
     return successResponse(res, season._id, "Season ID found successfully");
   } catch (error) {
-    return next(error); // Chuyển lỗi vào middleware
+    return next(error);
   }
 };
 
