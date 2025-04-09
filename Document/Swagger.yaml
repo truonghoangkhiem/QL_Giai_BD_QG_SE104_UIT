@@ -1,17 +1,14 @@
 openapi: 3.0.4
 info:
-  title: Swagger Petstore - OpenAPI 3.0
+  title: National Football League Management API
   description: |-
-    This is a sample Pet Store Server based on the OpenAPI 3.0 specification.  
-    You can find out more about Swagger at [https://swagger.io](https://swagger.io). In the third iteration of the pet store, we've switched to the design first approach!
-    You can now help us improve the API whether it's by making changes to the definition itself or to the code.
-    That way, with time, we can improve the API in general, and expose some of the new features in OAS3.
-    Some useful links:
-    - [The Pet Store repository](https://github.com/swagger-api/swagger-petstore)
-    - [The source API definition for the Pet Store](https://github.com/swagger-api/swagger-petstore/blob/master/src/main/resources/openapi.yaml)
+    This is an API for managing a national football league, built on the OpenAPI 3.0 specification. It provides endpoints for managing team information, players, match schedules, results, and league standings.  
+    Learn more about OpenAPI at [https://swagger.io](https://swagger.io). We follow a design-first approach, allowing you to contribute to improving the API, from its definition to its code.  
+    Some useful links:  
+    - [National Football League API Repository](https://github.com/truonghoangkhiem/QL_Giai_BD_QG_SE104_UIT.git)
   termsOfService: https://swagger.io/terms/
   contact:
-    email: apiteam@swagger.io
+    email: truongkhiemhoang@gmail.com
   license:
     name: Apache 2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html
@@ -24,6 +21,24 @@ servers:
 tags:
   - name: users
     description: API concern about users
+  - name: regulations
+    description: API concern about regulations
+  - name: teams
+    description: API concern about teams
+  - name: team_results
+    description: API concern about team results
+  - name: ranking
+    description: API concern about ranking
+  - name: seasons
+    description: API concern about seasons
+  - name: matches
+    description: API concern about matches
+  - name: players
+    description: API concern about players
+  - name: playerresults
+    description: API concern about player results
+  - name: playerranking
+    description: API concern about player ranking
 paths:
   /api/auth/login:
     post:
@@ -48,7 +63,7 @@ paths:
         required: true
       responses:
         "200":
-          description: successful operation
+          description: Successful operation
           content:
             application/json:
               schema:
@@ -67,7 +82,20 @@ paths:
                         type: string
                         example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjdkMGVjMWE0MTJjMWVkYzAwZDIxMTdiIiwiZW1haWwiOiJ0ZXN0dXNlcjJAZXhhbXBsZS5jb20iLCJpYXQiOjE3NDQxNjUzOTEsImV4cCI6MTc0NDE4MzM5MX0.ugFACZ_y7vzyAhAMwhgQs2x36s0tWkPJFCR2Aw68aUU"
         "400":
-          description: Invalid username/password supplied
+          description: Invalid input (validation error)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid email address"
+        "401":
+          description: Invalid email or password
           content:
             application/json:
               schema:
@@ -79,3 +107,4529 @@ paths:
                   message:
                     type: string
                     example: "Email or password is incorrect"
+
+  /api/auth/register:
+    post:
+      tags:
+        - users
+      summary: Registers a new user
+      description: Creates a new user account in the system
+      operationId: registerUser
+      requestBody:
+        description: Information needed to register a new user
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: "testuser"
+                email:
+                  type: string
+                  example: "testuser@example.com"
+                password:
+                  type: string
+                  example: "1234567"
+              required:
+                - username
+                - email
+                - password
+        required: true
+      responses:
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Created user successfully"
+                  data:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                        example: "67d0ec1a412c1edc00d2117b"
+        "400":
+          description: Invalid input or email already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Email already exists"
+
+  /api/auth/password:
+    put:
+      tags:
+        - users
+      summary: Updates user password
+      description: Updates the password for an existing user
+      operationId: updatePasswordUser
+      requestBody:
+        description: Information needed to update the password
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: "testuser@example.com"
+                oldpassword:
+                  type: string
+                  example: "1234567"
+                newpassword:
+                  type: string
+                  example: "newpass123"
+              required:
+                - email
+                - oldpassword
+                - newpassword
+        required: true
+      responses:
+        "200":
+          description: Password updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Update password successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid input (validation error)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid email address"
+        "401":
+          description: Invalid old password
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Old password is incorrect"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Email not correct"
+
+  /api/auth/username:
+    put:
+      tags:
+        - users
+      summary: Updates user username
+      description: Updates the username for an existing user
+      operationId: updateUsername
+      requestBody:
+        description: Information needed to update the username
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: "testuser@example.com"
+                Inputpassword:
+                  type: string
+                  example: "1234567"
+                newusername:
+                  type: string
+                  example: "newusername"
+              required:
+                - email
+                - Inputpassword
+                - newusername
+        required: true
+      responses:
+        "200":
+          description: Username updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Update Username successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid input (validation error)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid email address"
+        "401":
+          description: Invalid password
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Password is incorrect"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "User not correct"
+
+  /api/auth/:
+    delete:
+      tags:
+        - users
+      summary: Deletes a user
+      description: Deletes an existing user from the system
+      operationId: deleteUser
+      requestBody:
+        description: Information needed to delete a user
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: "testuser@example.com"
+                password:
+                  type: string
+                  example: "1234567"
+              required:
+                - email
+                - password
+        required: true
+      responses:
+        "200":
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Delete user successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid input (validation error)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid email address"
+        "401":
+          description: Invalid password
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Password is incorrect"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Email not correct"
+
+  /api/regulations/:
+    get:
+      tags:
+        - regulations
+      summary: Get all regulations
+      description: Retrieves a list of all regulations
+      operationId: getRegulations
+      responses:
+        "200":
+          description: Regulations fetched successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Fetched regulations successfully"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117b"
+                        season_id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117c"
+                        regulation_name:
+                          type: string
+                          example: "Age Regulation"
+                        rules:
+                          type: object
+                          example:
+                            minAge: 18
+                            maxAge: 40
+                            minPlayersPerTeam: 11
+                            maxPlayersPerTeam: 20
+                            maxForeignPlayers: 5
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+
+    post:
+      tags:
+        - regulations
+      summary: Create a new regulation
+      description: Creates a new regulation for a season
+      operationId: createRegulation
+      security:
+        - bearerAuth: []
+      requestBody:
+        description: Information needed to create a regulation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                season_id:
+                  type: string
+                  example: "67d0ec1a412c1edc00d2117c"
+                regulation_name:
+                  type: string
+                  example: "Age Regulation"
+                  enum:
+                    - "Age Regulation"
+                    - "Match Rules"
+                    - "Goal Rules"
+                    - "Ranking Rules"
+                rules:
+                  type: object
+                  example:
+                    minAge: 18
+                    maxAge: 40
+                    minPlayersPerTeam: 11
+                    maxPlayersPerTeam: 20
+                    maxForeignPlayers: 5
+              required:
+                - season_id
+                - regulation_name
+                - rules
+        required: true
+      responses:
+        "201":
+          description: Regulation created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Regulation created successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid input, missing field, invalid rules, or regulation already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid rules data"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+
+  /api/regulations/{id}:
+    get:
+      tags:
+        - regulations
+      summary: Get a regulation by ID
+      description: Retrieves a regulation by its ID
+      operationId: getRegulationById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117b"
+      responses:
+        "200":
+          description: Regulation found successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Regulation found successfully"
+                  data:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                        example: "67d0ec1a412c1edc00d2117b"
+                      season_id:
+                        type: string
+                        example: "67d0ec1a412c1edc00d2117c"
+                      regulation_name:
+                        type: string
+                        example: "Age Regulation"
+                      rules:
+                        type: object
+                        example:
+                          minAge: 18
+                          maxAge: 40
+                          minPlayersPerTeam: 11
+                          maxPlayersPerTeam: 20
+                          maxForeignPlayers: 5
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2025-04-08T12:00:00Z"
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: "2025-04-08T12:00:00Z"
+        "400":
+          description: Invalid ID format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid ID format"
+        "404":
+          description: Regulation not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Regulation not found"
+
+    put:
+      tags:
+        - regulations
+      summary: Update a regulation
+      description: Updates the rules of an existing regulation
+      operationId: updateRegulation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117b"
+      requestBody:
+        description: Information needed to update the regulation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rules:
+                  type: object
+                  example:
+                    minAge: 18
+                    maxAge: 40
+                    minPlayersPerTeam: 11
+                    maxPlayersPerTeam: 20
+                    maxForeignPlayers: 5
+              required:
+                - rules
+        required: true
+      responses:
+        "200":
+          description: Regulation updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Regulation updated successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid ID format or invalid rules
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid rules data"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Regulation not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Regulation not found"
+
+    delete:
+      tags:
+        - regulations
+      summary: Delete a regulation
+      description: Deletes an existing regulation by its ID
+      operationId: deleteRegulation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117b"
+      responses:
+        "200":
+          description: Regulation deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Regulation deleted successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid ID format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid ID format"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Regulation not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Regulation not found"
+
+  /api/regulations/{season_id}/{regulation_name}:
+    get:
+      tags:
+        - regulations
+      summary: Get regulation ID by season and name
+      description: Retrieves the ID of a regulation by season ID and regulation name
+      operationId: getIdRegulations
+      parameters:
+        - name: season_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117c"
+        - name: regulation_name
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "Age Regulation"
+            enum:
+              - "Age Regulation"
+              - "Match Rules"
+              - "Goal Rules"
+              - "Ranking Rules"
+      responses:
+        "200":
+          description: Regulation ID found successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Regulation id found"
+                  data:
+                    type: string
+                    example: "67d0ec1a412c1edc00d2117b"
+        "400":
+          description: Invalid season_id or regulation_name
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid season_id format"
+        "404":
+          description: Regulation not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Regulation not found"
+
+  /api/teams/:
+    get:
+      tags:
+        - teams
+      summary: Get all teams
+      description: Retrieves a list of all teams
+      operationId: getTeams
+      responses:
+        "200":
+          description: Teams fetched successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Fetched teams successfully"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117b"
+                        season_id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117c"
+                        team_name:
+                          type: string
+                          example: "Team A"
+                        stadium:
+                          type: string
+                          example: "Stadium A"
+                        coach:
+                          type: string
+                          example: "Coach A"
+                        logo:
+                          type: string
+                          example: "https://example.com/logo.png"
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+
+    post:
+      tags:
+        - teams
+      summary: Create a new team
+      description: Creates a new team for a season
+      operationId: createTeam
+      security:
+        - bearerAuth: []
+      requestBody:
+        description: Information needed to create a team
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                season_id:
+                  type: string
+                  example: "67d0ec1a412c1edc00d2117c"
+                team_name:
+                  type: string
+                  example: "Team A"
+                stadium:
+                  type: string
+                  example: "Stadium A"
+                coach:
+                  type: string
+                  example: "Coach A"
+                logo:
+                  type: string
+                  example: "https://example.com/logo.png"
+              required:
+                - season_id
+                - team_name
+                - stadium
+                - coach
+                - logo
+        required: true
+      responses:
+        "201":
+          description: Team created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Created team successfully"
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: "67d0ec1a412c1edc00d2117b"
+        "400":
+          description: Invalid input or team name already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Team name already exists"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Season not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Season not found"
+
+  /api/teams/{id}:
+    get:
+      tags:
+        - teams
+      summary: Get a team by ID
+      description: Retrieves a team by its ID
+      operationId: getTeamsByID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117b"
+      responses:
+        "200":
+          description: Team found successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Team found successfully"
+                  data:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                        example: "67d0ec1a412c1edc00d2117b"
+                      season_id:
+                        type: string
+                        example: "67d0ec1a412c1edc00d2117c"
+                      team_name:
+                        type: string
+                        example: "Team A"
+                      stadium:
+                        type: string
+                        example: "Stadium A"
+                      coach:
+                        type: string
+                        example: "Coach A"
+                      logo:
+                        type: string
+                        example: "https://example.com/logo.png"
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2025-04-08T12:00:00Z"
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: "2025-04-08T12:00:00Z"
+        "400":
+          description: Invalid ID format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid ID format"
+        "404":
+          description: Team not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Team not found"
+
+    put:
+      tags:
+        - teams
+      summary: Update a team
+      description: Updates an existing team
+      operationId: updateTeam
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117b"
+      requestBody:
+        description: Information needed to update the team
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                team_name:
+                  type: string
+                  example: "Team A Updated"
+                stadium:
+                  type: string
+                  example: "Stadium A Updated"
+                coach:
+                  type: string
+                  example: "Coach A Updated"
+                logo:
+                  type: string
+                  example: "https://example.com/logo-updated.png"
+      responses:
+        "200":
+          description: Team updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Team updated successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid input, team name already exists, or no changes made
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Team name already exists"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Team not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Team not found"
+
+    delete:
+      tags:
+        - teams
+      summary: Delete a team
+      description: Deletes an existing team by its ID
+      operationId: deleteTeam
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117b"
+      responses:
+        "204":
+          description: Team deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Deleted team successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid ID format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid ID format"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Team not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Team not found"
+
+  /api/teams/seasons/{id}:
+    get:
+      tags:
+        - teams
+      summary: Get teams by season ID
+      description: Retrieves all teams for a specific season
+      operationId: getTeamsByIDSeason
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117c"
+      responses:
+        "200":
+          description: Teams fetched successfully for this season
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Fetched teams successfully for this season"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117b"
+                        season_id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117c"
+                        team_name:
+                          type: string
+                          example: "Team A"
+                        stadium:
+                          type: string
+                          example: "Stadium A"
+                        coach:
+                          type: string
+                          example: "Coach A"
+                        logo:
+                          type: string
+                          example: "https://example.com/logo.png"
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+        "400":
+          description: Invalid season ID format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid season ID format"
+        "404":
+          description: Season not found or no teams found for this season
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "No teams found for this season"
+
+  /api/matches/:
+    get:
+      tags:
+        - matches
+      summary: Get all matches
+      description: Retrieves a list of all matches
+      operationId: getMatches
+      responses:
+        "200":
+          description: Matches fetched successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Fetched all matches successfully"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117b"
+                        season_id:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                              example: "67d0ec1a412c1edc00d2117c"
+                            season_name:
+                              type: string
+                              example: "Season 2025"
+                        team1:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                              example: "67d0ec1a412c1edc00d2117d"
+                            team_name:
+                              type: string
+                              example: "Team A"
+                        team2:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                              example: "67d0ec1a412c1edc00d2117e"
+                            team_name:
+                              type: string
+                              example: "Team B"
+                        date:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+                        stadium:
+                          type: string
+                          example: "Stadium A"
+                        score:
+                          type: string
+                          example: "0-0"
+                        goalDetails:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              player_id:
+                                type: string
+                                example: "67d0ec1a412c1edc00d2117f"
+                              team_id:
+                                type: string
+                                example: "67d0ec1a412c1edc00d2117d"
+                              minute:
+                                type: number
+                                example: 45
+                              goalType:
+                                type: string
+                                example: "normal"
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+
+    post:
+      tags:
+        - matches
+      summary: Create match schedule
+      description: Creates a match schedule for a season
+      operationId: createMatch
+      security:
+        - bearerAuth: []
+      requestBody:
+        description: Information needed to create a match schedule
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                season_id:
+                  type: string
+                  example: "67d0ec1a412c1edc00d2117c"
+                matchperday:
+                  type: number
+                  example: 2
+              required:
+                - season_id
+                - matchperday
+        required: true
+      responses:
+        "201":
+          description: Match schedule created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Created match successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid input, not enough teams, or not enough time for match
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Not enough teams for a match"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Season not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Season not found"
+
+  /api/matches/{id}:
+    get:
+      tags:
+        - matches
+      summary: Get a match by ID
+      description: Retrieves a match by its ID
+      operationId: getMatchesById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117b"
+      responses:
+        "200":
+          description: Match found successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Match found successfully"
+                  data:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                        example: "67d0ec1a412c1edc00d2117b"
+                      season_id:
+                        type: object
+                        properties:
+                          _id:
+                            type: string
+                            example: "67d0ec1a412c1edc00d2117c"
+                          season_name:
+                            type: string
+                            example: "Season 2025"
+                      team1:
+                        type: object
+                        properties:
+                          _id:
+                            type: string
+                            example: "67d0ec1a412c1edc00d2117d"
+                          team_name:
+                            type: string
+                            example: "Team A"
+                      team2:
+                        type: object
+                        properties:
+                          _id:
+                            type: string
+                            example: "67d0ec1a412c1edc00d2117e"
+                          team_name:
+                            type: string
+                            example: "Team B"
+                      date:
+                        type: string
+                        format: date-time
+                        example: "2025-04-08T12:00:00Z"
+                      stadium:
+                        type: string
+                        example: "Stadium A"
+                      score:
+                        type: string
+                        example: "0-0"
+                      goalDetails:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            player_id:
+                              type: string
+                              example: "67d0ec1a412c1edc00d2117f"
+                            team_id:
+                              type: string
+                              example: "67d0ec1a412c1edc00d2117d"
+                            minute:
+                              type: number
+                              example: 45
+                            goalType:
+                              type: string
+                              example: "normal"
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2025-04-08T12:00:00Z"
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: "2025-04-08T12:00:00Z"
+        "404":
+          description: Match not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Match not found"
+
+    put:
+      tags:
+        - matches
+      summary: Update a match
+      description: Updates an existing match
+      operationId: updateMatch
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117b"
+      requestBody:
+        description: Information needed to update the match
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                score:
+                  type: string
+                  example: "2-1"
+                goalDetails:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      player_id:
+                        type: string
+                        example: "67d0ec1a412c1edc00d2117f"
+                      team_id:
+                        type: string
+                        example: "67d0ec1a412c1edc00d2117d"
+                      minute:
+                        type: number
+                        example: 45
+                      goalType:
+                        type: string
+                        example: "normal"
+      responses:
+        "200":
+          description: Match updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Updated match successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid input, goal minute exceeds regulation limit, or invalid goal type
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Goal minute exceeds regulation limit"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Match not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Match not found"
+
+    delete:
+      tags:
+        - matches
+      summary: Delete a match
+      description: Deletes an existing match by its ID
+      operationId: deleteMatch
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117b"
+      responses:
+        "204":
+          description: Match deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Deleted match successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Match not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Match not found"
+
+  /api/matches/season/{seasonid}:
+    get:
+      tags:
+        - matches
+      summary: Get matches by season ID
+      description: Retrieves all matches for a specific season
+      operationId: getMatchesBySeasonId
+      parameters:
+        - name: seasonid
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117c"
+      responses:
+        "200":
+          description: Matches fetched successfully for this season
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Fetched all matches by season ID successfully"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117b"
+                        season_id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117c"
+                        team1:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117d"
+                        team2:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117e"
+                        date:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+                        stadium:
+                          type: string
+                          example: "Stadium A"
+                        score:
+                          type: string
+                          example: "0-0"
+                        goalDetails:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              player_id:
+                                type: string
+                                example: "67d0ec1a412c1edc00d2117f"
+                              team_id:
+                                type: string
+                                example: "67d0ec1a412c1edc00d2117d"
+                              minute:
+                                type: number
+                                example: 45
+                              goalType:
+                                type: string
+                                example: "normal"
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+
+  /api/teamresults/:
+    post:
+      tags:
+        - team_results
+      summary: Create a new team result
+      description: Creates a new team result for a season
+      operationId: createTeamResults
+      security:
+        - bearerAuth: []
+      requestBody:
+        description: Information needed to create a team result
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                team_id:
+                  type: string
+                  example: "67d0ec1a412c1edc00d2117d"
+                season_id:
+                  type: string
+                  example: "67d0ec1a412c1edc00d2117c"
+              required:
+                - team_id
+                - season_id
+        required: true
+      responses:
+        "201":
+          description: Team result created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Created team result successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid input or team result already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Team result already exists"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Team or season not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Team not found"
+
+  /api/teamresults/{id}:
+    get:
+      tags:
+        - team_results
+      summary: Get a team result by ID
+      description: Retrieves a team result by its ID
+      operationId: getTeamResultsById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117b"
+      responses:
+        "200":
+          description: Team result found successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Team result found successfully"
+                  data:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                        example: "67d0ec1a412c1edc00d2117b"
+                      team_id:
+                        type: string
+                        example: "67d0ec1a412c1edc00d2117d"
+                      season_id:
+                        type: string
+                        example: "67d0ec1a412c1edc00d2117c"
+                      matchplayed:
+                        type: number
+                        example: 0
+                      wins:
+                        type: number
+                        example: 0
+                      draws:
+                        type: number
+                        example: 0
+                      losses:
+                        type: number
+                        example: 0
+                      goalsFor:
+                        type: number
+                        example: 0
+                      goalsAgainst:
+                        type: number
+                        example: 0
+                      goalsDifference:
+                        type: number
+                        example: 0
+                      points:
+                        type: number
+                        example: 0
+                      goalsForAway:
+                        type: number
+                        example: 0
+                      headToHeadPoints:
+                        type: object
+                        additionalProperties:
+                          type: number
+                        example: {}
+                      date:
+                        type: string
+                        format: date-time
+                        example: "2025-04-08T00:00:00Z"
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2025-04-08T12:00:00Z"
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: "2025-04-08T12:00:00Z"
+        "400":
+          description: Invalid ID format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid id"
+        "404":
+          description: Team result not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Team result not found"
+
+    delete:
+      tags:
+        - team_results
+      summary: Delete a team result
+      description: Deletes an existing team result by its ID
+      operationId: deleteTeamResults
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117b"
+      responses:
+        "200":
+          description: Team result deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Deleted team result successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid ID format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid id"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Team result not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Team result not found"
+
+  /api/teamresults/season/{season_id}:
+    get:
+      tags:
+        - team_results
+      summary: Get team results by season ID
+      description: Retrieves all team results for a specific season
+      operationId: getTeamResultsbySeasonId
+      parameters:
+        - name: season_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117c"
+      responses:
+        "200":
+          description: Team results fetched successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Fetched team results successfully"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117b"
+                        team_id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117d"
+                        season_id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117c"
+                        matchplayed:
+                          type: number
+                          example: 0
+                        wins:
+                          type: number
+                          example: 0
+                        draws:
+                          type: number
+                          example: 0
+                        losses:
+                          type: number
+                          example: 0
+                        goalsFor:
+                          type: number
+                          example: 0
+                        goalsAgainst:
+                          type: number
+                          example: 0
+                        goalsDifference:
+                          type: number
+                          example: 0
+                        points:
+                          type: number
+                          example: 0
+                        goalsForAway:
+                          type: number
+                          example: 0
+                        headToHeadPoints:
+                          type: object
+                          additionalProperties:
+                            type: number
+                          example: {}
+                        date:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T00:00:00Z"
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+        "400":
+          description: Invalid season ID format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid season_id"
+        "404":
+          description: Team results not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Team results not found"
+
+  /api/teamresults/{season_id}/{team_id}:
+    get:
+      tags:
+        - team_results
+      summary: Get team result ID by season and team
+      description: Retrieves the ID of a team result by season ID and team ID
+      operationId: getId
+      parameters:
+        - name: season_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117c"
+        - name: team_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117d"
+      responses:
+        "200":
+          description: Team result ID fetched successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Fetched team result ID successfully"
+                  data:
+                    type: string
+                    example: "67d0ec1a412c1edc00d2117b"
+        "400":
+          description: Invalid season_id or team_id
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid season_id"
+        "404":
+          description: Team result not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Team result not found"
+
+  /api/teamresults/{matchid}:
+    put:
+      tags:
+        - team_results
+      summary: Update team results by match
+      description: Updates team results based on a match result
+      operationId: updateTeamResultsByMatch
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: matchid
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117b"
+      responses:
+        "200":
+          description: Team results updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Team results updated successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid match ID format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid match_id"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Match not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Match not found"
+
+  /api/rankings/{seasonid}:
+    get:
+      tags:
+        - ranking
+      summary: Get season rankings
+      description: Retrieves all rankings for a specific season
+      operationId: getSeasonRanking
+      parameters:
+        - name: seasonid
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117c"
+      responses:
+        "200":
+          description: Season rankings fetched successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Fetched season rankings successfully"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117b"
+                        team_result_id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117d"
+                        season_id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117c"
+                        rank:
+                          type: number
+                          example: 1
+                        date:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T00:00:00Z"
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+        "400":
+          description: Invalid season ID format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid season_id"
+
+    put:
+      tags:
+        - ranking
+      summary: Update season rankings
+      description: Updates or creates rankings for a specific season based on a match date
+      operationId: updateRanking
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: seasonid
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117c"
+      requestBody:
+        description: Information needed to update the rankings
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                match_date:
+                  type: string
+                  format: date-time
+                  example: "2025-04-08T12:00:00Z"
+              required:
+                - match_date
+        required: true
+      responses:
+        "200":
+          description: Rankings updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Ranking updated for date 2025-04-08T00:00:00.000Z"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "201":
+          description: New rankings created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "New ranking created for date 2025-04-08T00:00:00.000Z"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid input, invalid ranking criteria, or no team results found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid ranking criteria"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Season regulation or team results not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Season Regulation not found"
+
+  /api/rankings/{team_result_id}:
+    post:
+      tags:
+        - ranking
+      summary: Create a new ranking
+      description: Creates a new ranking for a team result in a season
+      operationId: createRanking
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: team_result_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117d"
+      requestBody:
+        description: Information needed to create a ranking
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                season_id:
+                  type: string
+                  example: "67d0ec1a412c1edc00d2117c"
+              required:
+                - season_id
+        required: true
+      responses:
+        "201":
+          description: Ranking created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Ranking created successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid input or ranking already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Ranking already exists"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Team result not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Team Result not found"
+
+  /api/rankings/{id}:
+    delete:
+      tags:
+        - ranking
+      summary: Delete a ranking
+      description: Deletes an existing ranking by its ID
+      operationId: deleteRanking
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117b"
+      responses:
+        "200":
+          description: Ranking deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Ranking deleted successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid ID format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid ranking_id"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Ranking not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Ranking not found"
+
+  /api/seasons:
+    get:
+      tags:
+        - seasons
+      summary: Get all seasons
+      description: Retrieves a list of all seasons
+      operationId: getSeasons
+      responses:
+        "200":
+          description: Seasons fetched successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Fetched seasons successfully"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117c"
+                        season_name:
+                          type: string
+                          example: "Season 2025"
+                        start_date:
+                          type: string
+                          format: date-time
+                          example: "2025-01-01T00:00:00Z"
+                        end_date:
+                          type: string
+                          format: date-time
+                          example: "2025-12-31T23:59:59Z"
+                        status:
+                          type: boolean
+                          example: true
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: "2025-01-01T00:00:00Z"
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: "2025-01-01T00:00:00Z"
+
+    post:
+      tags:
+        - seasons
+      summary: Create a new season
+      description: Creates a new season
+      operationId: createSeason
+      security:
+        - bearerAuth: []
+      requestBody:
+        description: Information needed to create a season
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                season_name:
+                  type: string
+                  example: "Season 2025"
+                start_date:
+                  type: string
+                  format: date-time
+                  example: "2025-01-01T00:00:00Z"
+                end_date:
+                  type: string
+                  format: date-time
+                  example: "2025-12-31T23:59:59Z"
+                status:
+                  type: boolean
+                  example: true
+              required:
+                - season_name
+                - start_date
+                - end_date
+        required: true
+      responses:
+        "201":
+          description: Season created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Created season successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid input or season name already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Season name already exists"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+
+  /api/seasons/{id}:
+    get:
+      tags:
+        - seasons
+      summary: Get a season by ID
+      description: Retrieves a season by its ID
+      operationId: getSeasonById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117c"
+      responses:
+        "200":
+          description: Season found successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Season found successfully"
+                  data:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                        example: "67d0ec1a412c1edc00d2117c"
+                      season_name:
+                        type: string
+                        example: "Season 2025"
+                      start_date:
+                        type: string
+                        format: date-time
+                        example: "2025-01-01T00:00:00Z"
+                      end_date:
+                        type: string
+                        format: date-time
+                        example: "2025-12-31T23:59:59Z"
+                      status:
+                        type: boolean
+                        example: true
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2025-01-01T00:00:00Z"
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: "2025-01-01T00:00:00Z"
+        "400":
+          description: Invalid ID format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid season_id"
+        "404":
+          description: Season not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Season not found"
+
+    put:
+      tags:
+        - seasons
+      summary: Update a season
+      description: Updates an existing season
+      operationId: updateSeason
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117c"
+      requestBody:
+        description: Information needed to update the season
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                season_name:
+                  type: string
+                  example: "Season 2025 Updated"
+                start_date:
+                  type: string
+                  format: date-time
+                  example: "2025-01-01T00:00:00Z"
+                end_date:
+                  type: string
+                  format: date-time
+                  example: "2025-12-31T23:59:59Z"
+                status:
+                  type: boolean
+                  example: false
+      responses:
+        "200":
+          description: Season updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Season updated successfully"
+                  data:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                        example: "67d0ec1a412c1edc00d2117c"
+                      season_name:
+                        type: string
+                        example: "Season 2025 Updated"
+                      start_date:
+                        type: string
+                        format: date-time
+                        example: "2025-01-01T00:00:00Z"
+                      end_date:
+                        type: string
+                        format: date-time
+                        example: "2025-12-31T23:59:59Z"
+                      status:
+                        type: boolean
+                        example: false
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2025-01-01T00:00:00Z"
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: "2025-04-08T12:00:00Z"
+        "400":
+          description: Invalid input or season name already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Season name already exists"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Season not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Season not found"
+
+    delete:
+      tags:
+        - seasons
+      summary: Delete a season
+      description: Deletes an existing season by its ID
+      operationId: deleteSeason
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117c"
+      responses:
+        "204":
+          description: Season deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Deleted season successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid ID format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid season_id"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Season not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Season not found"
+
+  /api/seasons/name/{season_name}:
+    get:
+      tags:
+        - seasons
+      summary: Get season ID by season name
+      description: Retrieves the ID of a season by its name
+      operationId: getSeasonIdBySeasonName
+      parameters:
+        - name: season_name
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "Season 2025"
+      responses:
+        "200":
+          description: Season ID found successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Season ID found successfully"
+                  data:
+                    type: string
+                    example: "67d0ec1a412c1edc00d2117c"
+        "400":
+          description: Invalid season name
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Season name is required"
+        "404":
+          description: Season not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Season not found"
+
+  /api/players:
+    get:
+      tags:
+        - players
+      summary: Get all players
+      description: Retrieves a list of all players with their team information
+      operationId: getPlayers
+      responses:
+        "200":
+          description: Players fetched successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Fetched players successfully"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117f"
+                        team_id:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                              example: "67d0ec1a412c1edc00d2117d"
+                            team_name:
+                              type: string
+                              example: "Team A"
+                            season_id:
+                              type: string
+                              example: "67d0ec1a412c1edc00d2117c"
+                            stadium:
+                              type: string
+                              example: "Stadium A"
+                            coach:
+                              type: string
+                              example: "Coach A"
+                            logo:
+                              type: string
+                              example: "https://example.com/logo.png"
+                        name:
+                          type: string
+                          example: "John Doe"
+                        dob:
+                          type: string
+                          format: date-time
+                          example: "1995-05-15T00:00:00Z"
+                        nationality:
+                          type: string
+                          example: "England"
+                        position:
+                          type: string
+                          example: "Forward"
+                        isForeigner:
+                          type: boolean
+                          example: false
+                        number:
+                          type: string
+                          example: "10"
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+
+    post:
+      tags:
+        - players
+      summary: Create a new player
+      description: Creates a new player for a team, adhering to team regulations
+      operationId: createPlayer
+      security:
+        - bearerAuth: []
+      requestBody:
+        description: Information needed to create a player
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                team_id:
+                  type: string
+                  example: "67d0ec1a412c1edc00d2117d"
+                name:
+                  type: string
+                  example: "John Doe"
+                dob:
+                  type: string
+                  format: date-time
+                  example: "1995-05-15T00:00:00Z"
+                nationality:
+                  type: string
+                  example: "England"
+                position:
+                  type: string
+                  example: "Forward"
+                isForeigner:
+                  type: boolean
+                  example: false
+                number:
+                  type: string
+                  example: "10"
+              required:
+                - team_id
+                - name
+                - dob
+                - nationality
+                - position
+                - number
+        required: true
+      responses:
+        "201":
+          description: Player created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Created player successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid input, player number already exists, team has maximum players, too many foreign players, or age out of range
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Player number already exists"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Team not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Team not found"
+        "500":
+          description: Regulation not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Regulation not found"
+
+  /api/players/{id}:
+    get:
+      tags:
+        - players
+      summary: Get a player by ID
+      description: Retrieves a player by its ID with team information
+      operationId: getPlayerById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117f"
+      responses:
+        "200":
+          description: Player found successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Player found successfully"
+                  data:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                        example: "67d0ec1a412c1edc00d2117f"
+                      team_id:
+                        type: object
+                        properties:
+                          _id:
+                            type: string
+                            example: "67d0ec1a412c1edc00d2117d"
+                          team_name:
+                            type: string
+                            example: "Team A"
+                          season_id:
+                            type: string
+                            example: "67d0ec1a412c1edc00d2117c"
+                          stadium:
+                            type: string
+                            example: "Stadium A"
+                          coach:
+                            type: string
+                            example: "Coach A"
+                          logo:
+                            type: string
+                            example: "https://example.com/logo.png"
+                      name:
+                        type: string
+                        example: "John Doe"
+                      dob:
+                        type: string
+                        format: date-time
+                        example: "1995-05-15T00:00:00Z"
+                      nationality:
+                        type: string
+                        example: "England"
+                      position:
+                        type: string
+                        example: "Forward"
+                      isForeigner:
+                        type: boolean
+                        example: false
+                      number:
+                        type: string
+                        example: "10"
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2025-04-08T12:00:00Z"
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: "2025-04-08T12:00:00Z"
+        "404":
+          description: Player not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Player not found"
+
+    put:
+      tags:
+        - players
+      summary: Update a player
+      description: Updates an existing player
+      operationId: updatePlayer
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117f"
+      requestBody:
+        description: Information needed to update the player
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                team_id:
+                  type: string
+                  example: "67d0ec1a412c1edc00d2117d"
+                name:
+                  type: string
+                  example: "John Doe Updated"
+                dob:
+                  type: string
+                  format: date-time
+                  example: "1995-05-15T00:00:00Z"
+                nationality:
+                  type: string
+                  example: "England"
+                position:
+                  type: string
+                  example: "Midfielder"
+                isForeigner:
+                  type: boolean
+                  example: false
+                number:
+                  type: string
+                  example: "11"
+      responses:
+        "200":
+          description: Player updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Updated player successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid input or player number already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Player number already exists"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Player not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Player not found"
+
+    delete:
+      tags:
+        - players
+      summary: Delete a player
+      description: Deletes an existing player by its ID
+      operationId: deletePlayer
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117f"
+      responses:
+        "204":
+          description: Player deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Deleted player successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Player not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Player not found"
+
+  /api/players/team/{id}:
+    get:
+      tags:
+        - players
+      summary: Get players by team ID
+      description: Retrieves all players for a specific team
+      operationId: getPlayersByIdTeam
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117d"
+      responses:
+        "200":
+          description: Players fetched successfully for this team
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Fetched players for team successfully"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117f"
+                        team_id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117d"
+                        name:
+                          type: string
+                          example: "John Doe"
+                        dob:
+                          type: string
+                          format: date-time
+                          example: "1995-05-15T00:00:00Z"
+                        nationality:
+                          type: string
+                          example: "England"
+                        position:
+                          type: string
+                          example: "Forward"
+                        isForeigner:
+                          type: boolean
+                          example: false
+                        number:
+                          type: string
+                          example: "10"
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+        "404":
+          description: Team not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Team not found"
+
+  /api/player_results:
+    post:
+      tags:
+        - playerresults
+      summary: Create a new player result
+      description: Creates a new player result for a specific player, season, and team
+      operationId: createPlayerResults
+      security:
+        - bearerAuth: []
+      requestBody:
+        description: Information needed to create a player result
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                player_id:
+                  type: string
+                  example: "67d0ec1a412c1edc00d2117f"
+                season_id:
+                  type: string
+                  example: "67d0ec1a412c1edc00d2117c"
+                team_id:
+                  type: string
+                  example: "67d0ec1a412c1edc00d2117d"
+              required:
+                - player_id
+                - season_id
+                - team_id
+        required: true
+      responses:
+        "201":
+          description: Player result created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Created player result successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid input or player result already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Player result already exists"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Player or season not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Player not found"
+
+  /api/player_results/season/{seasonid}:
+    get:
+      tags:
+        - playerresults
+      summary: Get player results by season ID and date
+      description: Retrieves the latest player results for a specific season up to a given date
+      operationId: getPlayerResultbySeasonIdAndDate
+      parameters:
+        - name: seasonid
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117c"
+      requestBody:
+        description: Date to filter player results
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date:
+                  type: string
+                  format: date-time
+                  example: "2025-04-08T00:00:00Z"
+              required:
+                - date
+        required: true
+      responses:
+        "200":
+          description: Latest player results retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Latest player results retrieved successfully"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d21180"
+                        season_id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117c"
+                        player_id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117f"
+                        team_id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117d"
+                        matchesplayed:
+                          type: number
+                          example: 5
+                        totalGoals:
+                          type: number
+                          example: 3
+                        assists:
+                          type: number
+                          example: 2
+                        yellowCards:
+                          type: number
+                          example: 1
+                        redCards:
+                          type: number
+                          example: 0
+                        date:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T00:00:00Z"
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid season_id"
+        "404":
+          description: No player results found for this season and date
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "No player results found for this season and date"
+
+  /api/player_results/player/{playerid}:
+    get:
+      tags:
+        - playerresults
+      summary: Get player result by player ID
+      description: Retrieves a player result by player ID
+      operationId: getPlayerResultsById
+      parameters:
+        - name: playerid
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117f"
+      responses:
+        "200":
+          description: Player result found successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Player result found successfully"
+                  data:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                        example: "67d0ec1a412c1edc00d21180"
+                      season_id:
+                        type: string
+                        example: "67d0ec1a412c1edc00d2117c"
+                      player_id:
+                        type: string
+                        example: "67d0ec1a412c1edc00d2117f"
+                      team_id:
+                        type: string
+                        example: "67d0ec1a412c1edc00d2117d"
+                      matchesplayed:
+                        type: number
+                        example: 5
+                      totalGoals:
+                        type: number
+                        example: 3
+                      assists:
+                        type: number
+                        example: 2
+                      yellowCards:
+                        type: number
+                        example: 1
+                      redCards:
+                        type: number
+                        example: 0
+                      date:
+                        type: string
+                        format: date-time
+                        example: "2025-04-08T00:00:00Z"
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2025-04-08T12:00:00Z"
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: "2025-04-08T12:00:00Z"
+        "400":
+          description: Invalid player ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid player_id"
+        "404":
+          description: Player result not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Player result not found"
+
+  /api/player_results/match/{matchid}:
+    put:
+      tags:
+        - playerresults
+      summary: Update player results after a match
+      description: Updates player results for all players in a match based on match details
+      operationId: updatePlayerResultsafterMatch
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: matchid
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d21181"
+      responses:
+        "200":
+          description: Player results updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Updated player result successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid match ID or match season_id is required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Match season_id is required"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Match not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Match not found"
+
+  /api/player_results/{id}:
+    put:
+      tags:
+        - playerresults
+      summary: Update a player result manually
+      description: Updates an existing player result with provided details
+      operationId: updatePlayerResults
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d21180"
+      requestBody:
+        description: Information needed to update the player result
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                season_id:
+                  type: string
+                  example: "67d0ec1a412c1edc00d2117c"
+                player_id:
+                  type: string
+                  example: "67d0ec1a412c1edc00d2117f"
+                team_id:
+                  type: string
+                  example: "67d0ec1a412c1edc00d2117d"
+                matchesplayed:
+                  type: number
+                  example: 6
+                totalGoals:
+                  type: number
+                  example: 4
+                assists:
+                  type: number
+                  example: 3
+                yellowCards:
+                  type: number
+                  example: 2
+                redCards:
+                  type: number
+                  example: 1
+                date:
+                  type: string
+                  format: date-time
+                  example: "2025-04-08T00:00:00Z"
+      responses:
+        "200":
+          description: Player result updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Updated player result successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid player_result_id"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Player result not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Player result not found"
+
+    delete:
+      tags:
+        - playerresults
+      summary: Delete a player result
+      description: Deletes an existing player result by its ID
+      operationId: deletePlayerResults
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d21180"
+      responses:
+        "200":
+          description: Player result deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Player result deleted successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid player result ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid player_result_id"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Player result not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Player result not found"
+
+  /api/player_rankings:
+    post:
+      tags:
+        - playerranking
+      summary: Create a new player ranking
+      description: Creates a new player ranking for a specific season and player result
+      operationId: createPlayerRankings
+      security:
+        - bearerAuth: []
+      requestBody:
+        description: Information needed to create a player ranking
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                season_id:
+                  type: string
+                  example: "67d0ec1a412c1edc00d2117c"
+                player_results_id:
+                  type: string
+                  example: "67d0ec1a412c1edc00d21180"
+              required:
+                - season_id
+                - player_results_id
+        required: true
+      responses:
+        "201":
+          description: Player ranking created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Created player ranking successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid input or player ranking already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Player Ranking already exists"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Player result not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Player Result not found"
+
+  /api/player_rankings/season/{seasonid}:
+    get:
+      tags:
+        - playerranking
+      summary: Get player rankings by season ID and date
+      description: Retrieves the latest player rankings for a specific season up to a given date
+      operationId: getPlayerRankingsbySeasonIdAndDate
+      parameters:
+        - name: seasonid
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d2117c"
+      requestBody:
+        description: Date to filter player rankings
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date:
+                  type: string
+                  format: date-time
+                  example: "2025-04-08T00:00:00Z"
+              required:
+                - date
+        required: true
+      responses:
+        "200":
+          description: Latest player rankings retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Latest player rankings retrieved successfully"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d21182"
+                        season_id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117c"
+                        player_results_id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d21180"
+                        player_id:
+                          type: string
+                          example: "67d0ec1a412c1edc00d2117f"
+                        rank:
+                          type: number
+                          example: 1
+                        date:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T00:00:00Z"
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: "2025-04-08T12:00:00Z"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid season_id"
+        "404":
+          description: No player rankings found for this season and date
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "No player rankings found for this season and date"
+
+  /api/player_rankings/match/{matchid}:
+    put:
+      tags:
+        - playerranking
+      summary: Update player rankings after a match
+      description: Updates player rankings for a specific season based on match results
+      operationId: updatePlayerRankingsafterMatch
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: matchid
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d21181"
+      responses:
+        "200":
+          description: Player rankings updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Updated player rankings successfully"
+                  data:
+                    type: object
+                    properties:
+                      date:
+                        type: string
+                        format: date-time
+                        example: "2025-04-08T00:00:00Z"
+        "400":
+          description: Invalid match ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid match_id"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Match or player results not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Match not found"
+
+  /api/player_rankings/{id}:
+    delete:
+      tags:
+        - playerranking
+      summary: Delete a player ranking
+      description: Deletes an existing player ranking by its ID
+      operationId: deletePlayerRankings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "67d0ec1a412c1edc00d21182"
+      responses:
+        "200":
+          description: Player ranking deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Player Ranking deleted successfully"
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        "400":
+          description: Invalid player ranking ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Invalid player_ranking_id"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Token required"
+        "404":
+          description: Player ranking not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Player Ranking not found"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

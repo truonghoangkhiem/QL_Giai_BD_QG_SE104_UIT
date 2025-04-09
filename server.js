@@ -2,6 +2,10 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const fs = require("fs");
+const YAML = require("yaml");
+const file = fs.readFileSync("./Document/swagger.yaml", "utf8");
+const swaggerUi = require("swagger-ui-express");
 const { connectDB } = require("./src/api/config/db");
 const authRoutes = require("./src/api/v1/routes/auth/authRoutes"); // Import routes
 const teamRoutes = require("./src/api/v1/routes/team/teamRoutes");
@@ -15,22 +19,11 @@ const player_resultsRoutes = require("./src/api/v1/routes/player/player_resultsR
 const player_rankingsRoutes = require("./src/api/v1/routes/player/player_rankingsRoutes");
 const { errorMiddleware } = require("./src/api/v1/middleware/errorMiddleware");
 
-console.log(
-  "📌 [DEBUG] MONGODB_URI:",
-  process.env.MONGODB_URI || "❌ Không tìm thấy biến môi trường!"
-);
-console.log("DATABASE_NAME:", process.env.DATABASE_NAME); // Kiểm tra giá trị của DATABASE_NAME
-
-console.log(
-  "📌 [DEBUG] DATABASE_NAME:",
-  process.env.DATABASE_NAME || "❌ Không tìm thấy biến môi trường!"
-);
-console.log(process.env.MONGODB_URI);
-
+const swaggerDocument = YAML.parse(file);
 const app = express();
 app.use(cors());
 app.use(express.json());
-
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 // Định nghĩa các route API
 app.use("/api/auth", authRoutes);
 app.use("/api/teams", teamRoutes);

@@ -5,10 +5,13 @@ const errorMiddleware = (err, req, res, next) => {
   console.log(err.message); // In thông báo lỗi ra console để kiểm tra
 
   // Xử lý lỗi xác thực (ví dụ: token hết hạn hoặc không hợp lệ)
-  if (err.name === "UnauthorizedError") {
-    return errorResponse(res, "Unauthorized access", 401);
+  if (err.name === 401) {
+    return errorResponse(res, err.message, 401);
   }
 
+  if (err.status === 404) {
+    return errorResponse(res, err.message, 404);
+  }
   // Xử lý lỗi xác thực dữ liệu (ví dụ: dữ liệu không hợp lệ từ phía người dùng)
   if (err.name === "ValidationError" || err.status === 400 || err.message) {
     return errorResponse(res, err.message, 400);
