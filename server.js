@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
+const cors = require("cors");
 const { connectDB } = require("./src/api/config/db");
 const authRoutes = require("./src/api/v1/routes/auth/authRoutes"); // Import routes
 const teamRoutes = require("./src/api/v1/routes/team/teamRoutes");
@@ -27,6 +28,7 @@ console.log(
 console.log(process.env.MONGODB_URI);
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 // Định nghĩa các route API
