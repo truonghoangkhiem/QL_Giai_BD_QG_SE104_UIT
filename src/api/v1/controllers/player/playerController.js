@@ -6,13 +6,48 @@ const Regulation = require("../../../../models/Regulation");
 const {
   createPlayerSchema,
   updatePlayerSchema,
+  getPlayerByNameAndNumberSchema,
 } = require("../../../../schemas/playerSchema.js");
 const { successResponse } = require("../../../../utils/responseFormat");
+const { TeamIdSchema } = require("../../../../schemas/teamSchema.js");
+const { default: mongoose } = require("mongoose");
 
 const getPlayers = async (req, res, next) => {
   try {
     const players = await Player.find().populate("team_id");
     return successResponse(res, players, "Fetched players successfully");
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getPlayerByNamePlayerAndNumberAndTeamId = async (req, res, next) => {
+  const { team_id, number, name_player } = req.params;
+  try {
+    const { success, error } = TeamIdSchema.safeParse({ id: team_id });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+    TeamId = new mongoose.Types.ObjectId(team_id);
+    const { success: numberSuccess, error: numberError } =
+      getPlayerByNameAndNumberSchema.safeParse({ name_player, number });
+    if (!numberSuccess) {
+      const validationError = new Error(numberError.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+    const player = await Player.findOne({
+      team_id: TeamId,
+      number,
+      name: { $regex: name_player, $options: "i" },
+    });
+    if (!player)
+      return next(
+        Object.assign(new Error("Player not found"), { status: 404 })
+      );
+    return successResponse(res, player, "Player found successfully");
   } catch (error) {
     return next(error);
   }
@@ -190,4 +225,5 @@ module.exports = {
   updatePlayer,
   deletePlayer,
   getPlayersByIdTeam,
+  getPlayerByNamePlayerAndNumberAndTeamId,
 };

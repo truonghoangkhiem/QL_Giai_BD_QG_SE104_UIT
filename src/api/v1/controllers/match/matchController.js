@@ -8,6 +8,8 @@ const {
   createMatchSchema,
   updateMatchSchema,
 } = require("../../../../schemas/matchSchema");
+const { TeamIdSchema } = require("../../../../schemas/teamSchema");
+const { SeasonIdSchema } = require("../../../../schemas/seasonSchema");
 const { successResponse } = require("../../../../utils/responseFormat");
 const mongoose = require("mongoose");
 
@@ -127,8 +129,23 @@ const createMatch = async (req, res, next) => {
 
 // GET matches by season
 const getMatchesBySeasonId = async (req, res, next) => {
+  const season_id = req.params.season_id;
+  const { success, error } = SeasonIdSchema.safeParse({ id: season_id });
+  if (!success) {
+    return next(
+      Object.assign(new Error(error.errors[0].message), { status: 400 })
+    );
+  }
   try {
-    const matches = await Match.find({ season_id: req.params.seasonid });
+    SeasonId = new mongoose.Types.ObjectId(season_id);
+    const matches = await Match.find({ season_id: SeasonId });
+    if (!matches || matches.length === 0) {
+      return next(
+        Object.assign(new Error("No matches found for this season"), {
+          status: 404,
+        })
+      );
+    }
     return successResponse(
       res,
       matches,
@@ -202,6 +219,81 @@ const deleteMatch = async (req, res, next) => {
   }
 };
 
+const getMatchesByTeamId = async (req, res, next) => {
+  const team_id = req.params.team_id;
+  console.log(team_id);
+  const { success, error } = TeamIdSchema.safeParse({ id: team_id });
+  if (!success) {
+    return next(
+      Object.assign(new Error(error.errors[0].message), { status: 400 })
+    );
+  }
+  try {
+    TeamId = new mongoose.Types.ObjectId(team_id);
+    const matches = await Match.find({
+      $or: [{ team1: TeamId }, { team2: TeamId }],
+    }).populate("team1 team2 season_id");
+    if (!matches) {
+      return next(Object.assign(new Error("Match not found"), { status: 404 }));
+    }
+    return successResponse(res, matches, "Match found successfully");
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getMatchesBySeasonIdAndDate = async (req, res, next) => {
+  const { season_id, date } = req.params;
+
+  const { success, error } = SeasonIdSchema.safeParse({ id: season_id });
+  if (!success) {
+    return next(
+      Object.assign(new Error(error.errors[0].message), { status: 400 })
+    );
+  }
+
+  try {
+    // Chuyển season_id thành ObjectId
+    const SeasonId = new mongoose.Types.ObjectId(season_id);
+
+    // Chuyển date thành đối tượng Date
+    const matchDate = new Date(date); // Giả sử date là chuỗi kiểu 'YYYY-MM-DD'
+
+    // Kiểm tra nếu date không hợp lệ
+    if (isNaN(matchDate.getTime())) {
+      return next(
+        Object.assign(new Error("Invalid date format"), { status: 400 })
+      );
+    }
+
+    // Lọc các trận đấu trong ngày
+    const startOfDay = new Date(matchDate.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(matchDate.setHours(23, 59, 59, 999));
+
+    // Truy vấn tìm các trận đấu trong khoảng thời gian ngày đó
+    const matches = await Match.find({
+      season_id: SeasonId,
+      date: { $gte: startOfDay, $lte: endOfDay }, // Lọc theo ngày
+    }).populate("team1 team2 season_id");
+
+    if (!matches || matches.length === 0) {
+      return next(
+        Object.assign(new Error("No matches found for this season and date"), {
+          status: 404,
+        })
+      );
+    }
+
+    return successResponse(
+      res,
+      matches,
+      "Fetched all matches by season ID and date successfully"
+    );
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   getMatches,
   getMatchesById,
@@ -209,4 +301,6 @@ module.exports = {
   getMatchesBySeasonId,
   updateMatch,
   deleteMatch,
+  getMatchesByTeamId,
+  getMatchesBySeasonIdAndDate,
 };

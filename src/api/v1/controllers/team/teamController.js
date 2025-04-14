@@ -6,6 +6,7 @@ const {
   UpdateTeamSchema,
   TeamIdSchema,
   SeasonIdSchema,
+  NameTeamSchema,
 } = require("../../../../schemas/teamSchema");
 const mongoose = require("mongoose");
 
@@ -14,6 +15,55 @@ const getTeams = async (req, res, next) => {
   try {
     const teams = await Team.find();
     return successResponse(res, teams, "Fetched teams successfully");
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getTeamsByNameAndSeasonId = async (req, res, next) => {
+  const season_id = req.params.season_id;
+  const team_name = req.params.team_name;
+
+  try {
+    console.log("season_id", season_id);
+
+    // Xác thực tên đội
+    const { success, error } = NameTeamSchema.safeParse({ team_name });
+    if (!success) {
+      const validationError = new Error(error.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    console.log("team_name", team_name);
+
+    // Kiểm tra định dạng của season_id
+    if (!mongoose.Types.ObjectId.isValid(season_id)) {
+      const validationError = new Error("Invalid season_id format");
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const seasonId = new mongoose.Types.ObjectId(season_id);
+
+    // Xác thực season_id thông qua schema
+    const { success: idSuccess, error: idError } = SeasonIdSchema.safeParse({
+      id: season_id,
+    });
+    if (!idSuccess) {
+      const validationError = new Error(idError.errors[0].message);
+      validationError.status = 400;
+      return next(validationError);
+    }
+
+    const Teams = await Team.findOne({ team_name, season_id: seasonId });
+    if (!Teams) {
+      const error = new Error("Team not found");
+      error.status = 404;
+      return next(error);
+    }
+
+    return successResponse(res, Teams, "Fetched team successfully");
   } catch (error) {
     return next(error);
   }
@@ -230,4 +280,5 @@ module.exports = {
   updateTeam,
   deleteTeam,
   getTeamsByIDSeason,
+  getTeamsByNameAndSeasonId,
 };

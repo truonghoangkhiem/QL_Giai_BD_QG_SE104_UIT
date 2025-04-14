@@ -27,7 +27,13 @@ const updatePlayerSchema = z.object({
   number: z.string().optional(),
 });
 
+const getPlayerByNameAndNumberSchema = z.object({
+  name_player: z.string().min(1, "Name is required"),
+  number: z.string().min(1, "Number is required"),
+});
+
 module.exports = {
   createPlayerSchema,
   updatePlayerSchema,
+  getPlayerByNameAndNumberSchema,
 };

@@ -49,64 +49,30 @@ paths:
       operationId: loginUser
       requestBody:
         description: Information needed to login
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                email:
-                  type: string
-                  example: "testuser2@example.com"
-                password:
-                  type: string
-                  example: "1234567"
-        required: true
+              $ref: "#/components/schemas/LoginRequest"
       responses:
         "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Login successful"
-                  data:
-                    type: object
-                    properties:
-                      token:
-                        type: string
-                        example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjdkMGVjMWE0MTJjMWVkYzAwZDIxMTdiIiwiZW1haWwiOiJ0ZXN0dXNlcjJAZXhhbXBsZS5jb20iLCJpYXQiOjE3NDQxNjUzOTEsImV4cCI6MTc0NDE4MzM5MX0.ugFACZ_y7vzyAhAMwhgQs2x36s0tWkPJFCR2Aw68aUU"
+                $ref: "#/components/schemas/LoginResponse"
         "400":
           description: Invalid input (validation error)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid email address"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Invalid email or password
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Email or password is incorrect"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/auth/register:
     post:
@@ -117,58 +83,24 @@ paths:
       operationId: registerUser
       requestBody:
         description: Information needed to register a new user
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                username:
-                  type: string
-                  example: "testuser"
-                email:
-                  type: string
-                  example: "testuser@example.com"
-                password:
-                  type: string
-                  example: "1234567"
-              required:
-                - username
-                - email
-                - password
-        required: true
+              $ref: "#/components/schemas/RegisterRequest"
       responses:
         "201":
           description: User created successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Created user successfully"
-                  data:
-                    type: object
-                    properties:
-                      userId:
-                        type: string
-                        example: "67d0ec1a412c1edc00d2117b"
+                $ref: "#/components/schemas/RegisterResponse"
         "400":
           description: Invalid input or email already exists
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Email already exists"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/auth/password:
     put:
@@ -179,82 +111,36 @@ paths:
       operationId: updatePasswordUser
       requestBody:
         description: Information needed to update the password
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                email:
-                  type: string
-                  example: "testuser@example.com"
-                oldpassword:
-                  type: string
-                  example: "1234567"
-                newpassword:
-                  type: string
-                  example: "newpass123"
-              required:
-                - email
-                - oldpassword
-                - newpassword
-        required: true
+              $ref: "#/components/schemas/UpdatePasswordRequest"
       responses:
         "200":
           description: Password updated successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Update password successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid input (validation error)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid email address"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Invalid old password
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Old password is incorrect"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: User not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Email not correct"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/auth/username:
     put:
@@ -265,82 +151,36 @@ paths:
       operationId: updateUsername
       requestBody:
         description: Information needed to update the username
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                email:
-                  type: string
-                  example: "testuser@example.com"
-                Inputpassword:
-                  type: string
-                  example: "1234567"
-                newusername:
-                  type: string
-                  example: "newusername"
-              required:
-                - email
-                - Inputpassword
-                - newusername
-        required: true
+              $ref: "#/components/schemas/UpdateUsernameRequest"
       responses:
         "200":
           description: Username updated successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Update Username successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid input (validation error)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid email address"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Invalid password
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Password is incorrect"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: User not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "User not correct"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/auth/:
     delete:
@@ -351,78 +191,36 @@ paths:
       operationId: deleteUser
       requestBody:
         description: Information needed to delete a user
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                email:
-                  type: string
-                  example: "testuser@example.com"
-                password:
-                  type: string
-                  example: "1234567"
-              required:
-                - email
-                - password
-        required: true
+              $ref: "#/components/schemas/DeleteUserRequest"
       responses:
         "200":
           description: User deleted successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Delete user successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid input (validation error)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid email address"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Invalid password
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Password is incorrect"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: User not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Email not correct"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/regulations/:
     get:
@@ -437,45 +235,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Fetched regulations successfully"
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        _id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117b"
-                        season_id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117c"
-                        regulation_name:
-                          type: string
-                          example: "Age Regulation"
-                        rules:
-                          type: object
-                          example:
-                            minAge: 18
-                            maxAge: 40
-                            minPlayersPerTeam: 11
-                            maxPlayersPerTeam: 20
-                            maxForeignPlayers: 5
-                        createdAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
-                        updatedAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
-
+                $ref: "#/components/schemas/RegulationsResponse"
     post:
       tags:
         - regulations
@@ -486,79 +246,30 @@ paths:
         - bearerAuth: []
       requestBody:
         description: Information needed to create a regulation
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                season_id:
-                  type: string
-                  example: "67d0ec1a412c1edc00d2117c"
-                regulation_name:
-                  type: string
-                  example: "Age Regulation"
-                  enum:
-                    - "Age Regulation"
-                    - "Match Rules"
-                    - "Goal Rules"
-                    - "Ranking Rules"
-                rules:
-                  type: object
-                  example:
-                    minAge: 18
-                    maxAge: 40
-                    minPlayersPerTeam: 11
-                    maxPlayersPerTeam: 20
-                    maxForeignPlayers: 5
-              required:
-                - season_id
-                - regulation_name
-                - rules
-        required: true
+              $ref: "#/components/schemas/CreateRegulationRequest"
       responses:
         "201":
           description: Regulation created successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Regulation created successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid input, missing field, invalid rules, or regulation already exists
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid rules data"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/regulations/{id}:
     get:
@@ -568,81 +279,26 @@ paths:
       description: Retrieves a regulation by its ID
       operationId: getRegulationById
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117b"
+        - $ref: "#/components/parameters/RegulationId"
       responses:
         "200":
           description: Regulation found successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Regulation found successfully"
-                  data:
-                    type: object
-                    properties:
-                      _id:
-                        type: string
-                        example: "67d0ec1a412c1edc00d2117b"
-                      season_id:
-                        type: string
-                        example: "67d0ec1a412c1edc00d2117c"
-                      regulation_name:
-                        type: string
-                        example: "Age Regulation"
-                      rules:
-                        type: object
-                        example:
-                          minAge: 18
-                          maxAge: 40
-                          minPlayersPerTeam: 11
-                          maxPlayersPerTeam: 20
-                          maxForeignPlayers: 5
-                      createdAt:
-                        type: string
-                        format: date-time
-                        example: "2025-04-08T12:00:00Z"
-                      updatedAt:
-                        type: string
-                        format: date-time
-                        example: "2025-04-08T12:00:00Z"
+                $ref: "#/components/schemas/RegulationResponse"
         "400":
           description: Invalid ID format
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid ID format"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Regulation not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Regulation not found"
-
+                $ref: "#/components/schemas/ErrorResponse"
     put:
       tags:
         - regulations
@@ -652,88 +308,39 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117b"
+        - $ref: "#/components/parameters/RegulationId"
       requestBody:
         description: Information needed to update the regulation
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                rules:
-                  type: object
-                  example:
-                    minAge: 18
-                    maxAge: 40
-                    minPlayersPerTeam: 11
-                    maxPlayersPerTeam: 20
-                    maxForeignPlayers: 5
-              required:
-                - rules
-        required: true
+              $ref: "#/components/schemas/UpdateRegulationRequest"
       responses:
         "200":
           description: Regulation updated successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Regulation updated successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid ID format or invalid rules
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid rules data"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Regulation not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Regulation not found"
-
+                $ref: "#/components/schemas/ErrorResponse"
     delete:
       tags:
         - regulations
@@ -743,69 +350,32 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117b"
+        - $ref: "#/components/parameters/RegulationId"
       responses:
         "200":
           description: Regulation deleted successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Regulation deleted successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid ID format
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid ID format"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Regulation not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Regulation not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/regulations/{season_id}/{regulation_name}:
     get:
@@ -815,66 +385,57 @@ paths:
       description: Retrieves the ID of a regulation by season ID and regulation name
       operationId: getIdRegulations
       parameters:
-        - name: season_id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117c"
-        - name: regulation_name
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "Age Regulation"
-            enum:
-              - "Age Regulation"
-              - "Match Rules"
-              - "Goal Rules"
-              - "Ranking Rules"
+        - $ref: "#/components/parameters/SeasonId"
+        - $ref: "#/components/parameters/RegulationName"
       responses:
         "200":
           description: Regulation ID found successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Regulation id found"
-                  data:
-                    type: string
-                    example: "67d0ec1a412c1edc00d2117b"
+                $ref: "#/components/schemas/RegulationIdResponse"
         "400":
           description: Invalid season_id or regulation_name
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid season_id format"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Regulation not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Regulation not found"
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/teams/{season_id}/{team_name}:
+    get:
+      tags:
+        - teams
+      summary: Get a team by season ID and team name
+      description: Retrieves a team based on the season ID and team name
+      operationId: getTeamsByNameAndSeasonId
+      parameters:
+        - $ref: "#/components/parameters/SeasonId"
+        - $ref: "#/components/parameters/TeamName"
+      responses:
+        "200":
+          description: Team fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamResponse"
+        "400":
+          description: Invalid season ID or team name
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Team not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/teams/:
     get:
@@ -889,46 +450,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Fetched teams successfully"
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        _id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117b"
-                        season_id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117c"
-                        team_name:
-                          type: string
-                          example: "Team A"
-                        stadium:
-                          type: string
-                          example: "Stadium A"
-                        coach:
-                          type: string
-                          example: "Coach A"
-                        logo:
-                          type: string
-                          example: "https://example.com/logo.png"
-                        createdAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
-                        updatedAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
-
+                $ref: "#/components/schemas/TeamsResponse"
     post:
       tags:
         - teams
@@ -939,92 +461,36 @@ paths:
         - bearerAuth: []
       requestBody:
         description: Information needed to create a team
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                season_id:
-                  type: string
-                  example: "67d0ec1a412c1edc00d2117c"
-                team_name:
-                  type: string
-                  example: "Team A"
-                stadium:
-                  type: string
-                  example: "Stadium A"
-                coach:
-                  type: string
-                  example: "Coach A"
-                logo:
-                  type: string
-                  example: "https://example.com/logo.png"
-              required:
-                - season_id
-                - team_name
-                - stadium
-                - coach
-                - logo
-        required: true
+              $ref: "#/components/schemas/CreateTeamRequest"
       responses:
         "201":
           description: Team created successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Created team successfully"
-                  data:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        example: "67d0ec1a412c1edc00d2117b"
+                $ref: "#/components/schemas/CreateTeamResponse"
         "400":
           description: Invalid input or team name already exists
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Team name already exists"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Season not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Season not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/teams/{id}:
     get:
@@ -1034,82 +500,26 @@ paths:
       description: Retrieves a team by its ID
       operationId: getTeamsByID
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117b"
+        - $ref: "#/components/parameters/TeamId"
       responses:
         "200":
           description: Team found successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Team found successfully"
-                  data:
-                    type: object
-                    properties:
-                      _id:
-                        type: string
-                        example: "67d0ec1a412c1edc00d2117b"
-                      season_id:
-                        type: string
-                        example: "67d0ec1a412c1edc00d2117c"
-                      team_name:
-                        type: string
-                        example: "Team A"
-                      stadium:
-                        type: string
-                        example: "Stadium A"
-                      coach:
-                        type: string
-                        example: "Coach A"
-                      logo:
-                        type: string
-                        example: "https://example.com/logo.png"
-                      createdAt:
-                        type: string
-                        format: date-time
-                        example: "2025-04-08T12:00:00Z"
-                      updatedAt:
-                        type: string
-                        format: date-time
-                        example: "2025-04-08T12:00:00Z"
+                $ref: "#/components/schemas/TeamResponse"
         "400":
           description: Invalid ID format
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid ID format"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Team not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Team not found"
-
+                $ref: "#/components/schemas/ErrorResponse"
     put:
       tags:
         - teams
@@ -1119,89 +529,38 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117b"
+        - $ref: "#/components/parameters/TeamId"
       requestBody:
         description: Information needed to update the team
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                team_name:
-                  type: string
-                  example: "Team A Updated"
-                stadium:
-                  type: string
-                  example: "Stadium A Updated"
-                coach:
-                  type: string
-                  example: "Coach A Updated"
-                logo:
-                  type: string
-                  example: "https://example.com/logo-updated.png"
+              $ref: "#/components/schemas/UpdateTeamRequest"
       responses:
         "200":
           description: Team updated successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Team updated successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid input, team name already exists, or no changes made
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Team name already exists"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Team not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Team not found"
-
+                $ref: "#/components/schemas/ErrorResponse"
     delete:
       tags:
         - teams
@@ -1211,69 +570,32 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117b"
+        - $ref: "#/components/parameters/TeamId"
       responses:
         "204":
           description: Team deleted successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Deleted team successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid ID format
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid ID format"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Team not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Team not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/teams/seasons/{id}:
     get:
@@ -1283,83 +605,26 @@ paths:
       description: Retrieves all teams for a specific season
       operationId: getTeamsByIDSeason
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117c"
+        - $ref: "#/components/parameters/SeasonId"
       responses:
         "200":
           description: Teams fetched successfully for this season
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Fetched teams successfully for this season"
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        _id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117b"
-                        season_id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117c"
-                        team_name:
-                          type: string
-                          example: "Team A"
-                        stadium:
-                          type: string
-                          example: "Stadium A"
-                        coach:
-                          type: string
-                          example: "Coach A"
-                        logo:
-                          type: string
-                          example: "https://example.com/logo.png"
-                        createdAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
-                        updatedAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
+                $ref: "#/components/schemas/TeamsResponse"
         "400":
           description: Invalid season ID format
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid season ID format"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Season not found or no teams found for this season
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "No teams found for this season"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/matches/:
     get:
@@ -1374,85 +639,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Fetched all matches successfully"
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        _id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117b"
-                        season_id:
-                          type: object
-                          properties:
-                            _id:
-                              type: string
-                              example: "67d0ec1a412c1edc00d2117c"
-                            season_name:
-                              type: string
-                              example: "Season 2025"
-                        team1:
-                          type: object
-                          properties:
-                            _id:
-                              type: string
-                              example: "67d0ec1a412c1edc00d2117d"
-                            team_name:
-                              type: string
-                              example: "Team A"
-                        team2:
-                          type: object
-                          properties:
-                            _id:
-                              type: string
-                              example: "67d0ec1a412c1edc00d2117e"
-                            team_name:
-                              type: string
-                              example: "Team B"
-                        date:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
-                        stadium:
-                          type: string
-                          example: "Stadium A"
-                        score:
-                          type: string
-                          example: "0-0"
-                        goalDetails:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              player_id:
-                                type: string
-                                example: "67d0ec1a412c1edc00d2117f"
-                              team_id:
-                                type: string
-                                example: "67d0ec1a412c1edc00d2117d"
-                              minute:
-                                type: number
-                                example: 45
-                              goalType:
-                                type: string
-                                example: "normal"
-                        createdAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
-                        updatedAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
-
+                $ref: "#/components/schemas/MatchesResponse"
     post:
       tags:
         - matches
@@ -1463,78 +650,36 @@ paths:
         - bearerAuth: []
       requestBody:
         description: Information needed to create a match schedule
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                season_id:
-                  type: string
-                  example: "67d0ec1a412c1edc00d2117c"
-                matchperday:
-                  type: number
-                  example: 2
-              required:
-                - season_id
-                - matchperday
-        required: true
+              $ref: "#/components/schemas/CreateMatchRequest"
       responses:
         "201":
           description: Match schedule created successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Created match successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid input, not enough teams, or not enough time for match
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Not enough teams for a match"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Season not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Season not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/matches/{id}:
     get:
@@ -1544,108 +689,20 @@ paths:
       description: Retrieves a match by its ID
       operationId: getMatchesById
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117b"
+        - $ref: "#/components/parameters/MatchId"
       responses:
         "200":
           description: Match found successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Match found successfully"
-                  data:
-                    type: object
-                    properties:
-                      _id:
-                        type: string
-                        example: "67d0ec1a412c1edc00d2117b"
-                      season_id:
-                        type: object
-                        properties:
-                          _id:
-                            type: string
-                            example: "67d0ec1a412c1edc00d2117c"
-                          season_name:
-                            type: string
-                            example: "Season 2025"
-                      team1:
-                        type: object
-                        properties:
-                          _id:
-                            type: string
-                            example: "67d0ec1a412c1edc00d2117d"
-                          team_name:
-                            type: string
-                            example: "Team A"
-                      team2:
-                        type: object
-                        properties:
-                          _id:
-                            type: string
-                            example: "67d0ec1a412c1edc00d2117e"
-                          team_name:
-                            type: string
-                            example: "Team B"
-                      date:
-                        type: string
-                        format: date-time
-                        example: "2025-04-08T12:00:00Z"
-                      stadium:
-                        type: string
-                        example: "Stadium A"
-                      score:
-                        type: string
-                        example: "0-0"
-                      goalDetails:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            player_id:
-                              type: string
-                              example: "67d0ec1a412c1edc00d2117f"
-                            team_id:
-                              type: string
-                              example: "67d0ec1a412c1edc00d2117d"
-                            minute:
-                              type: number
-                              example: 45
-                            goalType:
-                              type: string
-                              example: "normal"
-                      createdAt:
-                        type: string
-                        format: date-time
-                        example: "2025-04-08T12:00:00Z"
-                      updatedAt:
-                        type: string
-                        format: date-time
-                        example: "2025-04-08T12:00:00Z"
+                $ref: "#/components/schemas/MatchResponse"
         "404":
           description: Match not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Match not found"
-
+                $ref: "#/components/schemas/ErrorResponse"
     put:
       tags:
         - matches
@@ -1655,97 +712,38 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117b"
+        - $ref: "#/components/parameters/MatchId"
       requestBody:
         description: Information needed to update the match
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                score:
-                  type: string
-                  example: "2-1"
-                goalDetails:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      player_id:
-                        type: string
-                        example: "67d0ec1a412c1edc00d2117f"
-                      team_id:
-                        type: string
-                        example: "67d0ec1a412c1edc00d2117d"
-                      minute:
-                        type: number
-                        example: 45
-                      goalType:
-                        type: string
-                        example: "normal"
+              $ref: "#/components/schemas/UpdateMatchRequest"
       responses:
         "200":
           description: Match updated successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Updated match successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid input, goal minute exceeds regulation limit, or invalid goal type
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Goal minute exceeds regulation limit"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Match not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Match not found"
-
+                $ref: "#/components/schemas/ErrorResponse"
     delete:
       tags:
         - matches
@@ -1755,56 +753,97 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117b"
+        - $ref: "#/components/parameters/MatchId"
       responses:
         "204":
           description: Match deleted successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Deleted match successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Match not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Match not found"
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/matches/teams/{team_id}:
+    get:
+      tags:
+        - matches
+      summary: Get matches by team ID
+      description: Retrieves all matches where the provided team ID is either team1 or team2
+      operationId: getMatchesByTeamId
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+      responses:
+        "200":
+          description: Matches found successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchesResponse"
+        "400":
+          description: Invalid team ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: No matches found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/matches/seasons/{season_id}/{date}:
+    get:
+      tags:
+        - matches
+      summary: Get matches by season ID and date
+      description: Retrieves all matches for a given season ID and date
+      operationId: getMatchesBySeasonIdAndDate
+      parameters:
+        - $ref: "#/components/parameters/SeasonId"
+        - $ref: "#/components/parameters/Date"
+      responses:
+        "200":
+          description: Matches found successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchesResponse"
+        "400":
+          description: Invalid season ID or date format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: No matches found for the given season and date
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/matches/season/{seasonid}:
     get:
@@ -1814,78 +853,14 @@ paths:
       description: Retrieves all matches for a specific season
       operationId: getMatchesBySeasonId
       parameters:
-        - name: seasonid
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117c"
+        - $ref: "#/components/parameters/SeasonId"
       responses:
         "200":
           description: Matches fetched successfully for this season
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Fetched all matches by season ID successfully"
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        _id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117b"
-                        season_id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117c"
-                        team1:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117d"
-                        team2:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117e"
-                        date:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
-                        stadium:
-                          type: string
-                          example: "Stadium A"
-                        score:
-                          type: string
-                          example: "0-0"
-                        goalDetails:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              player_id:
-                                type: string
-                                example: "67d0ec1a412c1edc00d2117f"
-                              team_id:
-                                type: string
-                                example: "67d0ec1a412c1edc00d2117d"
-                              minute:
-                                type: number
-                                example: 45
-                              goalType:
-                                type: string
-                                example: "normal"
-                        createdAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
-                        updatedAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
+                $ref: "#/components/schemas/MatchesResponse"
 
   /api/teamresults/:
     post:
@@ -1898,78 +873,36 @@ paths:
         - bearerAuth: []
       requestBody:
         description: Information needed to create a team result
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                team_id:
-                  type: string
-                  example: "67d0ec1a412c1edc00d2117d"
-                season_id:
-                  type: string
-                  example: "67d0ec1a412c1edc00d2117c"
-              required:
-                - team_id
-                - season_id
-        required: true
+              $ref: "#/components/schemas/CreateTeamResultRequest"
       responses:
         "201":
           description: Team result created successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Created team result successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid input or team result already exists
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Team result already exists"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Team or season not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Team not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/teamresults/{id}:
     get:
@@ -1979,109 +912,26 @@ paths:
       description: Retrieves a team result by its ID
       operationId: getTeamResultsById
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117b"
+        - $ref: "#/components/parameters/TeamResultId"
       responses:
         "200":
           description: Team result found successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Team result found successfully"
-                  data:
-                    type: object
-                    properties:
-                      _id:
-                        type: string
-                        example: "67d0ec1a412c1edc00d2117b"
-                      team_id:
-                        type: string
-                        example: "67d0ec1a412c1edc00d2117d"
-                      season_id:
-                        type: string
-                        example: "67d0ec1a412c1edc00d2117c"
-                      matchplayed:
-                        type: number
-                        example: 0
-                      wins:
-                        type: number
-                        example: 0
-                      draws:
-                        type: number
-                        example: 0
-                      losses:
-                        type: number
-                        example: 0
-                      goalsFor:
-                        type: number
-                        example: 0
-                      goalsAgainst:
-                        type: number
-                        example: 0
-                      goalsDifference:
-                        type: number
-                        example: 0
-                      points:
-                        type: number
-                        example: 0
-                      goalsForAway:
-                        type: number
-                        example: 0
-                      headToHeadPoints:
-                        type: object
-                        additionalProperties:
-                          type: number
-                        example: {}
-                      date:
-                        type: string
-                        format: date-time
-                        example: "2025-04-08T00:00:00Z"
-                      createdAt:
-                        type: string
-                        format: date-time
-                        example: "2025-04-08T12:00:00Z"
-                      updatedAt:
-                        type: string
-                        format: date-time
-                        example: "2025-04-08T12:00:00Z"
+                $ref: "#/components/schemas/TeamResultResponse"
         "400":
           description: Invalid ID format
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid id"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Team result not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Team result not found"
-
+                $ref: "#/components/schemas/ErrorResponse"
     delete:
       tags:
         - team_results
@@ -2091,69 +941,32 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117b"
+        - $ref: "#/components/parameters/TeamResultId"
       responses:
         "200":
           description: Team result deleted successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Deleted team result successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid ID format
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid id"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Team result not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Team result not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/teamresults/season/{season_id}:
     get:
@@ -2163,110 +976,26 @@ paths:
       description: Retrieves all team results for a specific season
       operationId: getTeamResultsbySeasonId
       parameters:
-        - name: season_id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117c"
+        - $ref: "#/components/parameters/SeasonId"
       responses:
         "200":
           description: Team results fetched successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Fetched team results successfully"
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        _id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117b"
-                        team_id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117d"
-                        season_id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117c"
-                        matchplayed:
-                          type: number
-                          example: 0
-                        wins:
-                          type: number
-                          example: 0
-                        draws:
-                          type: number
-                          example: 0
-                        losses:
-                          type: number
-                          example: 0
-                        goalsFor:
-                          type: number
-                          example: 0
-                        goalsAgainst:
-                          type: number
-                          example: 0
-                        goalsDifference:
-                          type: number
-                          example: 0
-                        points:
-                          type: number
-                          example: 0
-                        goalsForAway:
-                          type: number
-                          example: 0
-                        headToHeadPoints:
-                          type: object
-                          additionalProperties:
-                            type: number
-                          example: {}
-                        date:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T00:00:00Z"
-                        createdAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
-                        updatedAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
+                $ref: "#/components/schemas/TeamResultsResponse"
         "400":
           description: Invalid season ID format
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid season_id"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Team results not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Team results not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/teamresults/{season_id}/{team_id}:
     get:
@@ -2276,61 +1005,27 @@ paths:
       description: Retrieves the ID of a team result by season ID and team ID
       operationId: getId
       parameters:
-        - name: season_id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117c"
-        - name: team_id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117d"
+        - $ref: "#/components/parameters/SeasonId"
+        - $ref: "#/components/parameters/TeamId"
       responses:
         "200":
           description: Team result ID fetched successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Fetched team result ID successfully"
-                  data:
-                    type: string
-                    example: "67d0ec1a412c1edc00d2117b"
+                $ref: "#/components/schemas/TeamResultIdResponse"
         "400":
           description: Invalid season_id or team_id
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid season_id"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Team result not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Team result not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/teamresults/{matchid}:
     put:
@@ -2342,69 +1037,32 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: matchid
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117b"
+        - $ref: "#/components/parameters/MatchId"
       responses:
         "200":
           description: Team results updated successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Team results updated successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid match ID format
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid match_id"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Match not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Match not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/rankings/{seasonid}:
     get:
@@ -2414,69 +1072,20 @@ paths:
       description: Retrieves all rankings for a specific season
       operationId: getSeasonRanking
       parameters:
-        - name: seasonid
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117c"
+        - $ref: "#/components/parameters/SeasonId"
       responses:
         "200":
           description: Season rankings fetched successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Fetched season rankings successfully"
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        _id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117b"
-                        team_result_id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117d"
-                        season_id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117c"
-                        rank:
-                          type: number
-                          example: 1
-                        date:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T00:00:00Z"
-                        createdAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
-                        updatedAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
+                $ref: "#/components/schemas/RankingsResponse"
         "400":
           description: Invalid season ID format
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid season_id"
-
+                $ref: "#/components/schemas/ErrorResponse"
     put:
       tags:
         - ranking
@@ -2486,100 +1095,45 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: seasonid
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117c"
+        - $ref: "#/components/parameters/SeasonId"
       requestBody:
         description: Information needed to update the rankings
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                match_date:
-                  type: string
-                  format: date-time
-                  example: "2025-04-08T12:00:00Z"
-              required:
-                - match_date
-        required: true
+              $ref: "#/components/schemas/UpdateRankingRequest"
       responses:
         "200":
           description: Rankings updated successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Ranking updated for date 2025-04-08T00:00:00.000Z"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "201":
           description: New rankings created successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "New ranking created for date 2025-04-08T00:00:00.000Z"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid input, invalid ranking criteria, or no team results found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid ranking criteria"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Season regulation or team results not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Season Regulation not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/rankings/{team_result_id}:
     post:
@@ -2591,82 +1145,39 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: team_result_id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117d"
+        - $ref: "#/components/parameters/TeamResultId"
       requestBody:
         description: Information needed to create a ranking
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                season_id:
-                  type: string
-                  example: "67d0ec1a412c1edc00d2117c"
-              required:
-                - season_id
-        required: true
+              $ref: "#/components/schemas/CreateRankingRequest"
       responses:
         "201":
           description: Ranking created successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Ranking created successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid input or ranking already exists
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Ranking already exists"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Team result not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Team Result not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/rankings/{id}:
     delete:
@@ -2678,69 +1189,32 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117b"
+        - $ref: "#/components/parameters/RankingId"
       responses:
         "200":
           description: Ranking deleted successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Ranking deleted successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid ID format
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid ranking_id"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Ranking not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Ranking not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/seasons:
     get:
@@ -2755,45 +1229,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Fetched seasons successfully"
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        _id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117c"
-                        season_name:
-                          type: string
-                          example: "Season 2025"
-                        start_date:
-                          type: string
-                          format: date-time
-                          example: "2025-01-01T00:00:00Z"
-                        end_date:
-                          type: string
-                          format: date-time
-                          example: "2025-12-31T23:59:59Z"
-                        status:
-                          type: boolean
-                          example: true
-                        createdAt:
-                          type: string
-                          format: date-time
-                          example: "2025-01-01T00:00:00Z"
-                        updatedAt:
-                          type: string
-                          format: date-time
-                          example: "2025-01-01T00:00:00Z"
-
+                $ref: "#/components/schemas/SeasonsResponse"
     post:
       tags:
         - seasons
@@ -2804,74 +1240,30 @@ paths:
         - bearerAuth: []
       requestBody:
         description: Information needed to create a season
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                season_name:
-                  type: string
-                  example: "Season 2025"
-                start_date:
-                  type: string
-                  format: date-time
-                  example: "2025-01-01T00:00:00Z"
-                end_date:
-                  type: string
-                  format: date-time
-                  example: "2025-12-31T23:59:59Z"
-                status:
-                  type: boolean
-                  example: true
-              required:
-                - season_name
-                - start_date
-                - end_date
-        required: true
+              $ref: "#/components/schemas/CreateSeasonRequest"
       responses:
         "201":
           description: Season created successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Created season successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid input or season name already exists
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Season name already exists"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/seasons/{id}:
     get:
@@ -2881,81 +1273,26 @@ paths:
       description: Retrieves a season by its ID
       operationId: getSeasonById
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117c"
+        - $ref: "#/components/parameters/SeasonId"
       responses:
         "200":
           description: Season found successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Season found successfully"
-                  data:
-                    type: object
-                    properties:
-                      _id:
-                        type: string
-                        example: "67d0ec1a412c1edc00d2117c"
-                      season_name:
-                        type: string
-                        example: "Season 2025"
-                      start_date:
-                        type: string
-                        format: date-time
-                        example: "2025-01-01T00:00:00Z"
-                      end_date:
-                        type: string
-                        format: date-time
-                        example: "2025-12-31T23:59:59Z"
-                      status:
-                        type: boolean
-                        example: true
-                      createdAt:
-                        type: string
-                        format: date-time
-                        example: "2025-01-01T00:00:00Z"
-                      updatedAt:
-                        type: string
-                        format: date-time
-                        example: "2025-01-01T00:00:00Z"
+                $ref: "#/components/schemas/SeasonResponse"
         "400":
           description: Invalid ID format
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid season_id"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Season not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Season not found"
-
+                $ref: "#/components/schemas/ErrorResponse"
     put:
       tags:
         - seasons
@@ -2965,115 +1302,38 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117c"
+        - $ref: "#/components/parameters/SeasonId"
       requestBody:
         description: Information needed to update the season
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                season_name:
-                  type: string
-                  example: "Season 2025 Updated"
-                start_date:
-                  type: string
-                  format: date-time
-                  example: "2025-01-01T00:00:00Z"
-                end_date:
-                  type: string
-                  format: date-time
-                  example: "2025-12-31T23:59:59Z"
-                status:
-                  type: boolean
-                  example: false
+              $ref: "#/components/schemas/UpdateSeasonRequest"
       responses:
         "200":
           description: Season updated successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Season updated successfully"
-                  data:
-                    type: object
-                    properties:
-                      _id:
-                        type: string
-                        example: "67d0ec1a412c1edc00d2117c"
-                      season_name:
-                        type: string
-                        example: "Season 2025 Updated"
-                      start_date:
-                        type: string
-                        format: date-time
-                        example: "2025-01-01T00:00:00Z"
-                      end_date:
-                        type: string
-                        format: date-time
-                        example: "2025-12-31T23:59:59Z"
-                      status:
-                        type: boolean
-                        example: false
-                      createdAt:
-                        type: string
-                        format: date-time
-                        example: "2025-01-01T00:00:00Z"
-                      updatedAt:
-                        type: string
-                        format: date-time
-                        example: "2025-04-08T12:00:00Z"
+                $ref: "#/components/schemas/SeasonResponse"
         "400":
           description: Invalid input or season name already exists
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Season name already exists"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Season not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Season not found"
-
+                $ref: "#/components/schemas/ErrorResponse"
     delete:
       tags:
         - seasons
@@ -3083,69 +1343,32 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117c"
+        - $ref: "#/components/parameters/SeasonId"
       responses:
         "204":
           description: Season deleted successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Deleted season successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid ID format
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid season_id"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Season not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Season not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/seasons/name/{season_name}:
     get:
@@ -3155,55 +1378,26 @@ paths:
       description: Retrieves the ID of a season by its name
       operationId: getSeasonIdBySeasonName
       parameters:
-        - name: season_name
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "Season 2025"
+        - $ref: "#/components/parameters/SeasonName"
       responses:
         "200":
           description: Season ID found successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Season ID found successfully"
-                  data:
-                    type: string
-                    example: "67d0ec1a412c1edc00d2117c"
+                $ref: "#/components/schemas/SeasonIdResponse"
         "400":
           description: Invalid season name
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Season name is required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Season not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Season not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/players:
     get:
@@ -3218,71 +1412,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Fetched players successfully"
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        _id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117f"
-                        team_id:
-                          type: object
-                          properties:
-                            _id:
-                              type: string
-                              example: "67d0ec1a412c1edc00d2117d"
-                            team_name:
-                              type: string
-                              example: "Team A"
-                            season_id:
-                              type: string
-                              example: "67d0ec1a412c1edc00d2117c"
-                            stadium:
-                              type: string
-                              example: "Stadium A"
-                            coach:
-                              type: string
-                              example: "Coach A"
-                            logo:
-                              type: string
-                              example: "https://example.com/logo.png"
-                        name:
-                          type: string
-                          example: "John Doe"
-                        dob:
-                          type: string
-                          format: date-time
-                          example: "1995-05-15T00:00:00Z"
-                        nationality:
-                          type: string
-                          example: "England"
-                        position:
-                          type: string
-                          example: "Forward"
-                        isForeigner:
-                          type: boolean
-                          example: false
-                        number:
-                          type: string
-                          example: "10"
-                        createdAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
-                        updatedAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
-
+                $ref: "#/components/schemas/PlayersResponse"
     post:
       tags:
         - players
@@ -3293,111 +1423,79 @@ paths:
         - bearerAuth: []
       requestBody:
         description: Information needed to create a player
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                team_id:
-                  type: string
-                  example: "67d0ec1a412c1edc00d2117d"
-                name:
-                  type: string
-                  example: "John Doe"
-                dob:
-                  type: string
-                  format: date-time
-                  example: "1995-05-15T00:00:00Z"
-                nationality:
-                  type: string
-                  example: "England"
-                position:
-                  type: string
-                  example: "Forward"
-                isForeigner:
-                  type: boolean
-                  example: false
-                number:
-                  type: string
-                  example: "10"
-              required:
-                - team_id
-                - name
-                - dob
-                - nationality
-                - position
-                - number
-        required: true
+              $ref: "#/components/schemas/CreatePlayerRequest"
       responses:
         "201":
           description: Player created successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Created player successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid input, player number already exists, team has maximum players, too many foreign players, or age out of range
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Player number already exists"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Team not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Team not found"
+                $ref: "#/components/schemas/ErrorResponse"
         "500":
           description: Regulation not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Regulation not found"
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/players/{team_id}/{number}/{name_player}:
+    get:
+      tags:
+        - players
+      summary: Get a player by team ID, number, and name
+      description: Retrieves a player based on the provided team ID, player number, and player name (case-insensitive)
+      operationId: getPlayerByTeamIdNumberName
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+        - $ref: "#/components/parameters/PlayerNumber"
+        - $ref: "#/components/parameters/PlayerName"
+      responses:
+        "200":
+          description: Player found successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerResponse"
+        "400":
+          description: Invalid input parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Player not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/players/{id}:
     get:
@@ -3407,94 +1505,20 @@ paths:
       description: Retrieves a player by its ID with team information
       operationId: getPlayerById
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117f"
+        - $ref: "#/components/parameters/PlayerId"
       responses:
         "200":
           description: Player found successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Player found successfully"
-                  data:
-                    type: object
-                    properties:
-                      _id:
-                        type: string
-                        example: "67d0ec1a412c1edc00d2117f"
-                      team_id:
-                        type: object
-                        properties:
-                          _id:
-                            type: string
-                            example: "67d0ec1a412c1edc00d2117d"
-                          team_name:
-                            type: string
-                            example: "Team A"
-                          season_id:
-                            type: string
-                            example: "67d0ec1a412c1edc00d2117c"
-                          stadium:
-                            type: string
-                            example: "Stadium A"
-                          coach:
-                            type: string
-                            example: "Coach A"
-                          logo:
-                            type: string
-                            example: "https://example.com/logo.png"
-                      name:
-                        type: string
-                        example: "John Doe"
-                      dob:
-                        type: string
-                        format: date-time
-                        example: "1995-05-15T00:00:00Z"
-                      nationality:
-                        type: string
-                        example: "England"
-                      position:
-                        type: string
-                        example: "Forward"
-                      isForeigner:
-                        type: boolean
-                        example: false
-                      number:
-                        type: string
-                        example: "10"
-                      createdAt:
-                        type: string
-                        format: date-time
-                        example: "2025-04-08T12:00:00Z"
-                      updatedAt:
-                        type: string
-                        format: date-time
-                        example: "2025-04-08T12:00:00Z"
+                $ref: "#/components/schemas/PlayerResponse"
         "404":
           description: Player not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Player not found"
-
+                $ref: "#/components/schemas/ErrorResponse"
     put:
       tags:
         - players
@@ -3504,99 +1528,38 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117f"
+        - $ref: "#/components/parameters/PlayerId"
       requestBody:
         description: Information needed to update the player
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                team_id:
-                  type: string
-                  example: "67d0ec1a412c1edc00d2117d"
-                name:
-                  type: string
-                  example: "John Doe Updated"
-                dob:
-                  type: string
-                  format: date-time
-                  example: "1995-05-15T00:00:00Z"
-                nationality:
-                  type: string
-                  example: "England"
-                position:
-                  type: string
-                  example: "Midfielder"
-                isForeigner:
-                  type: boolean
-                  example: false
-                number:
-                  type: string
-                  example: "11"
+              $ref: "#/components/schemas/UpdatePlayerRequest"
       responses:
         "200":
           description: Player updated successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Updated player successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid input or player number already exists
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Player number already exists"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Player not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Player not found"
-
+                $ref: "#/components/schemas/ErrorResponse"
     delete:
       tags:
         - players
@@ -3606,56 +1569,26 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117f"
+        - $ref: "#/components/parameters/PlayerId"
       responses:
         "204":
           description: Player deleted successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Deleted player successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Player not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Player not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/players/team/{id}:
     get:
@@ -3665,77 +1598,20 @@ paths:
       description: Retrieves all players for a specific team
       operationId: getPlayersByIdTeam
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117d"
+        - $ref: "#/components/parameters/TeamId"
       responses:
         "200":
           description: Players fetched successfully for this team
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Fetched players for team successfully"
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        _id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117f"
-                        team_id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117d"
-                        name:
-                          type: string
-                          example: "John Doe"
-                        dob:
-                          type: string
-                          format: date-time
-                          example: "1995-05-15T00:00:00Z"
-                        nationality:
-                          type: string
-                          example: "England"
-                        position:
-                          type: string
-                          example: "Forward"
-                        isForeigner:
-                          type: boolean
-                          example: false
-                        number:
-                          type: string
-                          example: "10"
-                        createdAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
-                        updatedAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
+                $ref: "#/components/schemas/PlayersResponse"
         "404":
           description: Team not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Team not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/player_results:
     post:
@@ -3748,82 +1624,36 @@ paths:
         - bearerAuth: []
       requestBody:
         description: Information needed to create a player result
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                player_id:
-                  type: string
-                  example: "67d0ec1a412c1edc00d2117f"
-                season_id:
-                  type: string
-                  example: "67d0ec1a412c1edc00d2117c"
-                team_id:
-                  type: string
-                  example: "67d0ec1a412c1edc00d2117d"
-              required:
-                - player_id
-                - season_id
-                - team_id
-        required: true
+              $ref: "#/components/schemas/CreatePlayerResultRequest"
       responses:
         "201":
           description: Player result created successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Created player result successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid input or player result already exists
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Player result already exists"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Player or season not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Player not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/player_results/season/{seasonid}:
     get:
@@ -3833,110 +1663,33 @@ paths:
       description: Retrieves the latest player results for a specific season up to a given date
       operationId: getPlayerResultbySeasonIdAndDate
       parameters:
-        - name: seasonid
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117c"
+        - $ref: "#/components/parameters/SeasonId"
       requestBody:
         description: Date to filter player results
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                date:
-                  type: string
-                  format: date-time
-                  example: "2025-04-08T00:00:00Z"
-              required:
-                - date
-        required: true
+              $ref: "#/components/schemas/FilterDateRequest"
       responses:
         "200":
           description: Latest player results retrieved successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Latest player results retrieved successfully"
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        _id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d21180"
-                        season_id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117c"
-                        player_id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117f"
-                        team_id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117d"
-                        matchesplayed:
-                          type: number
-                          example: 5
-                        totalGoals:
-                          type: number
-                          example: 3
-                        assists:
-                          type: number
-                          example: 2
-                        yellowCards:
-                          type: number
-                          example: 1
-                        redCards:
-                          type: number
-                          example: 0
-                        date:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T00:00:00Z"
-                        createdAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
-                        updatedAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
+                $ref: "#/components/schemas/PlayerResultsResponse"
         "400":
           description: Invalid input
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid season_id"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: No player results found for this season and date
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "No player results found for this season and date"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/player_results/player/{playerid}:
     get:
@@ -3946,94 +1699,26 @@ paths:
       description: Retrieves a player result by player ID
       operationId: getPlayerResultsById
       parameters:
-        - name: playerid
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117f"
+        - $ref: "#/components/parameters/PlayerId"
       responses:
         "200":
           description: Player result found successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Player result found successfully"
-                  data:
-                    type: object
-                    properties:
-                      _id:
-                        type: string
-                        example: "67d0ec1a412c1edc00d21180"
-                      season_id:
-                        type: string
-                        example: "67d0ec1a412c1edc00d2117c"
-                      player_id:
-                        type: string
-                        example: "67d0ec1a412c1edc00d2117f"
-                      team_id:
-                        type: string
-                        example: "67d0ec1a412c1edc00d2117d"
-                      matchesplayed:
-                        type: number
-                        example: 5
-                      totalGoals:
-                        type: number
-                        example: 3
-                      assists:
-                        type: number
-                        example: 2
-                      yellowCards:
-                        type: number
-                        example: 1
-                      redCards:
-                        type: number
-                        example: 0
-                      date:
-                        type: string
-                        format: date-time
-                        example: "2025-04-08T00:00:00Z"
-                      createdAt:
-                        type: string
-                        format: date-time
-                        example: "2025-04-08T12:00:00Z"
-                      updatedAt:
-                        type: string
-                        format: date-time
-                        example: "2025-04-08T12:00:00Z"
+                $ref: "#/components/schemas/PlayerResultResponse"
         "400":
           description: Invalid player ID
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid player_id"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Player result not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Player result not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/player_results/match/{matchid}:
     put:
@@ -4045,69 +1730,32 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: matchid
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d21181"
+        - $ref: "#/components/parameters/MatchId"
       responses:
         "200":
           description: Player results updated successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Updated player result successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid match ID or match season_id is required
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Match season_id is required"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Match not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Match not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/player_results/{id}:
     put:
@@ -4119,105 +1767,38 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d21180"
+        - $ref: "#/components/parameters/PlayerResultId"
       requestBody:
         description: Information needed to update the player result
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                season_id:
-                  type: string
-                  example: "67d0ec1a412c1edc00d2117c"
-                player_id:
-                  type: string
-                  example: "67d0ec1a412c1edc00d2117f"
-                team_id:
-                  type: string
-                  example: "67d0ec1a412c1edc00d2117d"
-                matchesplayed:
-                  type: number
-                  example: 6
-                totalGoals:
-                  type: number
-                  example: 4
-                assists:
-                  type: number
-                  example: 3
-                yellowCards:
-                  type: number
-                  example: 2
-                redCards:
-                  type: number
-                  example: 1
-                date:
-                  type: string
-                  format: date-time
-                  example: "2025-04-08T00:00:00Z"
+              $ref: "#/components/schemas/UpdatePlayerResultRequest"
       responses:
         "200":
           description: Player result updated successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Updated player result successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid input
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid player_result_id"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Player result not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Player result not found"
-
+                $ref: "#/components/schemas/ErrorResponse"
     delete:
       tags:
         - playerresults
@@ -4227,69 +1808,32 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d21180"
+        - $ref: "#/components/parameters/PlayerResultId"
       responses:
         "200":
           description: Player result deleted successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Player result deleted successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid player result ID
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid player_result_id"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Player result not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Player result not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/player_rankings:
     post:
@@ -4302,78 +1846,36 @@ paths:
         - bearerAuth: []
       requestBody:
         description: Information needed to create a player ranking
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                season_id:
-                  type: string
-                  example: "67d0ec1a412c1edc00d2117c"
-                player_results_id:
-                  type: string
-                  example: "67d0ec1a412c1edc00d21180"
-              required:
-                - season_id
-                - player_results_id
-        required: true
+              $ref: "#/components/schemas/CreatePlayerRankingRequest"
       responses:
         "201":
           description: Player ranking created successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Created player ranking successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid input or player ranking already exists
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Player Ranking already exists"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Player result not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Player Result not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/player_rankings/season/{seasonid}:
     get:
@@ -4383,98 +1885,33 @@ paths:
       description: Retrieves the latest player rankings for a specific season up to a given date
       operationId: getPlayerRankingsbySeasonIdAndDate
       parameters:
-        - name: seasonid
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d2117c"
+        - $ref: "#/components/parameters/SeasonId"
       requestBody:
         description: Date to filter player rankings
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                date:
-                  type: string
-                  format: date-time
-                  example: "2025-04-08T00:00:00Z"
-              required:
-                - date
-        required: true
+              $ref: "#/components/schemas/FilterDateRequest"
       responses:
         "200":
           description: Latest player rankings retrieved successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Latest player rankings retrieved successfully"
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        _id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d21182"
-                        season_id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117c"
-                        player_results_id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d21180"
-                        player_id:
-                          type: string
-                          example: "67d0ec1a412c1edc00d2117f"
-                        rank:
-                          type: number
-                          example: 1
-                        date:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T00:00:00Z"
-                        createdAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
-                        updatedAt:
-                          type: string
-                          format: date-time
-                          example: "2025-04-08T12:00:00Z"
+                $ref: "#/components/schemas/PlayerRankingsResponse"
         "400":
           description: Invalid input
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid season_id"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: No player rankings found for this season and date
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "No player rankings found for this season and date"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/player_rankings/match/{matchid}:
     put:
@@ -4486,72 +1923,32 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: matchid
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d21181"
+        - $ref: "#/components/parameters/MatchId"
       responses:
         "200":
           description: Player rankings updated successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Updated player rankings successfully"
-                  data:
-                    type: object
-                    properties:
-                      date:
-                        type: string
-                        format: date-time
-                        example: "2025-04-08T00:00:00Z"
+                $ref: "#/components/schemas/UpdatePlayerRankingsResponse"
         "400":
           description: Invalid match ID
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid match_id"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Match or player results not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Match not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/player_rankings/{id}:
     delete:
@@ -4563,69 +1960,32 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "67d0ec1a412c1edc00d21182"
+        - $ref: "#/components/parameters/PlayerRankingId"
       responses:
         "200":
           description: Player ranking deleted successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  message:
-                    type: string
-                    example: "Player Ranking deleted successfully"
-                  data:
-                    type: object
-                    nullable: true
-                    example: null
+                $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Invalid player ranking ID
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Invalid player_ranking_id"
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Token required"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Player ranking not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "error"
-                  message:
-                    type: string
-                    example: "Player Ranking not found"
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   securitySchemes:
@@ -4633,3 +1993,1362 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
+  parameters:
+    RegulationId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "67d0ec1a412c1edc00d2117b"
+    SeasonId:
+      name: season_id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "67d0ec1a412c1edc00d2117c"
+    RegulationName:
+      name: regulation_name
+      in: path
+      required: true
+      schema:
+        type: string
+        enum:
+          - "Age Regulation"
+          - "Match Rules"
+          - "Goal Rules"
+          - "Ranking Rules"
+      example: "Age Regulation"
+    TeamName:
+      name: team_name
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "Real Madrid"
+    TeamId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "67d0ec1a412c1edc00d2117b"
+    MatchId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "67d0ec1a412c1edc00d2117b"
+    Date:
+      name: date
+      in: path
+      required: true
+      schema:
+        type: string
+        format: date
+      example: "2025-01-10"
+    TeamResultId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "67d0ec1a412c1edc00d2117b"
+    RankingId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "67d0ec1a412c1edc00d2117b"
+    SeasonName:
+      name: season_name
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "Season 2025"
+    PlayerId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "67d0ec1a412c1edc00d2117f"
+    PlayerNumber:
+      name: number
+      in: path
+      required: true
+      schema:
+        type: integer
+      example: 8
+    PlayerName:
+      name: name_player
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "Truong Hoang Khiem"
+    PlayerResultId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "67d0ec1a412c1edc00d21180"
+    PlayerRankingId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "67d0ec1a412c1edc00d21182"
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "error"
+        message:
+          type: string
+          example: "Invalid email address"
+      required:
+        - status
+        - message
+
+    SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Operation successful"
+        data:
+          type: object
+          nullable: true
+          example: null
+      required:
+        - status
+        - message
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          example: "testuser2@example.com"
+        password:
+          type: string
+          example: "1234567"
+      required:
+        - email
+        - password
+
+    LoginResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Login successful"
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      required:
+        - status
+        - message
+        - data
+
+    RegisterRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          example: "testuser"
+        email:
+          type: string
+          example: "testuser@example.com"
+        password:
+          type: string
+          example: "1234567"
+      required:
+        - username
+        - email
+        - password
+
+    RegisterResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Created user successfully"
+        data:
+          type: object
+          properties:
+            userId:
+              type: string
+              example: "67d0ec1a412c1edc00d2117b"
+      required:
+        - status
+        - message
+        - data
+
+    UpdatePasswordRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          example: "testuser@example.com"
+        oldpassword:
+          type: string
+          example: "1234567"
+        newpassword:
+          type: string
+          example: "newpass123"
+      required:
+        - email
+        - oldpassword
+        - newpassword
+
+    UpdateUsernameRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          example: "testuser@example.com"
+        Inputpassword:
+          type: string
+          example: "1234567"
+        newusername:
+          type: string
+          example: "newusername"
+      required:
+        - email
+        - Inputpassword
+        - newusername
+
+    DeleteUserRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          example: "testuser@example.com"
+        password:
+          type: string
+          example: "1234567"
+      required:
+        - email
+        - password
+
+    Regulation:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117b"
+        season_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117c"
+        regulation_name:
+          type: string
+          example: "Age Regulation"
+        rules:
+          type: object
+          example:
+            minAge: 18
+            maxAge: 40
+            minPlayersPerTeam: 11
+            maxPlayersPerTeam: 20
+            maxForeignPlayers: 5
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-04-08T12:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-04-08T12:00:00Z"
+      required:
+        - _id
+        - season_id
+        - regulation_name
+        - rules
+        - createdAt
+        - updatedAt
+
+    RegulationsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Fetched regulations successfully"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Regulation"
+      required:
+        - status
+        - message
+        - data
+
+    CreateRegulationRequest:
+      type: object
+      properties:
+        season_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117c"
+        regulation_name:
+          type: string
+          enum:
+            - "Age Regulation"
+            - "Match Rules"
+            - "Goal Rules"
+            - "Ranking Rules"
+          example: "Age Regulation"
+        rules:
+          type: object
+          example:
+            minAge: 18
+            maxAge: 40
+            minPlayersPerTeam: 11
+            maxPlayersPerTeam: 20
+            maxForeignPlayers: 5
+      required:
+        - season_id
+        - regulation_name
+        - rules
+
+    RegulationResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Regulation found successfully"
+        data:
+          $ref: "#/components/schemas/Regulation"
+      required:
+        - status
+        - message
+        - data
+
+    UpdateRegulationRequest:
+      type: object
+      properties:
+        rules:
+          type: object
+          example:
+            minAge: 18
+            maxAge: 40
+            minPlayersPerTeam: 11
+            maxPlayersPerTeam: 20
+            maxForeignPlayers: 5
+      required:
+        - rules
+
+    RegulationIdResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Regulation id found"
+        data:
+          type: string
+          example: "67d0ec1a412c1edc00d2117b"
+      required:
+        - status
+        - message
+        - data
+
+    Team:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117b"
+        season_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117c"
+        team_name:
+          type: string
+          example: "Team A"
+        stadium:
+          type: string
+          example: "Stadium A"
+        coach:
+          type: string
+          example: "Coach A"
+        logo:
+          type: string
+          example: "https://example.com/logo.png"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-04-08T12:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-04-08T12:00:00Z"
+      required:
+        - _id
+        - season_id
+        - team_name
+        - stadium
+        - coach
+        - logo
+        - createdAt
+        - updatedAt
+
+    TeamResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Fetched team successfully"
+        data:
+          $ref: "#/components/schemas/Team"
+      required:
+        - status
+        - message
+        - data
+
+    TeamsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Fetched teams successfully"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Team"
+      required:
+        - status
+        - message
+        - data
+
+    CreateTeamRequest:
+      type: object
+      properties:
+        season_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117c"
+        team_name:
+          type: string
+          example: "Team A"
+        stadium:
+          type: string
+          example: "Stadium A"
+        coach:
+          type: string
+          example: "Coach A"
+        logo:
+          type: string
+          example: "https://example.com/logo.png"
+      required:
+        - season_id
+        - team_name
+        - stadium
+        - coach
+        - logo
+
+    CreateTeamResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Created team successfully"
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              example: "67d0ec1a412c1edc00d2117b"
+      required:
+        - status
+        - message
+        - data
+
+    UpdateTeamRequest:
+      type: object
+      properties:
+        team_name:
+          type: string
+          example: "Team A Updated"
+        stadium:
+          type: string
+          example: "Stadium A Updated"
+        coach:
+          type: string
+          example: "Coach A Updated"
+        logo:
+          type: string
+          example: "https://example.com/logo-updated.png"
+
+    GoalDetail:
+      type: object
+      properties:
+        player_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117f"
+        team_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117d"
+        minute:
+          type: number
+          example: 45
+        goalType:
+          type: string
+          example: "normal"
+      required:
+        - player_id
+        - team_id
+        - minute
+        - goalType
+
+    Match:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117b"
+        season_id:
+          type: object
+          properties:
+            _id:
+              type: string
+              example: "67d0ec1a412c1edc00d2117c"
+            season_name:
+              type: string
+              example: "Season 2025"
+        team1:
+          type: object
+          properties:
+            _id:
+              type: string
+              example: "67d0ec1a412c1edc00d2117d"
+            team_name:
+              type: string
+              example: "Team A"
+        team2:
+          type: object
+          properties:
+            _id:
+              type: string
+              example: "67d0ec1a412c1edc00d2117e"
+            team_name:
+              type: string
+              example: "Team B"
+        date:
+          type: string
+          format: date-time
+          example: "2025-04-08T12:00:00Z"
+        stadium:
+          type: string
+          example: "Stadium A"
+        score:
+          type: string
+          example: "0-0"
+        goalDetails:
+          type: array
+          items:
+            $ref: "#/components/schemas/GoalDetail"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-04-08T12:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-04-08T12:00:00Z"
+      required:
+        - _id
+        - season_id
+        - team1
+        - team2
+        - date
+        - stadium
+        - score
+        - goalDetails
+        - createdAt
+        - updatedAt
+
+    MatchesResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Fetched all matches successfully"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Match"
+      required:
+        - status
+        - message
+        - data
+
+    MatchResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Match found successfully"
+        data:
+          $ref: "#/components/schemas/Match"
+      required:
+        - status
+        - message
+        - data
+
+    CreateMatchRequest:
+      type: object
+      properties:
+        season_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117c"
+        matchperday:
+          type: number
+          example: 2
+      required:
+        - season_id
+        - matchperday
+
+    UpdateMatchRequest:
+      type: object
+      properties:
+        score:
+          type: string
+          example: "2-1"
+        goalDetails:
+          type: array
+          items:
+            $ref: "#/components/schemas/GoalDetail"
+
+    TeamResult:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117b"
+        team_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117d"
+        season_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117c"
+        matchplayed:
+          type: number
+          example: 0
+        wins:
+          type: number
+          example: 0
+        draws:
+          type: number
+          example: 0
+        losses:
+          type: number
+          example: 0
+        goalsFor:
+          type: number
+          example: 0
+        goalsAgainst:
+          type: number
+          example: 0
+        goalsDifference:
+          type: number
+          example: 0
+        points:
+          type: number
+          example: 0
+        goalsForAway:
+          type: number
+          example: 0
+        headToHeadPoints:
+          type: object
+          additionalProperties:
+            type: number
+          example: {}
+        date:
+          type: string
+          format: date-time
+          example: "2025-04-08T00:00:00Z"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-04-08T12:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-04-08T12:00:00Z"
+      required:
+        - _id
+        - team_id
+        - season_id
+        - matchplayed
+        - wins
+        - draws
+        - losses
+        - goalsFor
+        - goalsAgainst
+        - goalsDifference
+        - points
+        - goalsForAway
+        - headToHeadPoints
+        - date
+        - createdAt
+        - updatedAt
+
+    TeamResultResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Team result found successfully"
+        data:
+          $ref: "#/components/schemas/TeamResult"
+      required:
+        - status
+        - message
+        - data
+
+    TeamResultsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Fetched team results successfully"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeamResult"
+      required:
+        - status
+        - message
+        - data
+
+    CreateTeamResultRequest:
+      type: object
+      properties:
+        team_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117d"
+        season_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117c"
+      required:
+        - team_id
+        - season_id
+
+    TeamResultIdResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Fetched team result ID successfully"
+        data:
+          type: string
+          example: "67d0ec1a412c1edc00d2117b"
+      required:
+        - status
+        - message
+        - data
+
+    Ranking:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117b"
+        team_result_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117d"
+        season_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117c"
+        rank:
+          type: number
+          example: 1
+        date:
+          type: string
+          format: date-time
+          example: "2025-04-08T00:00:00Z"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-04-08T12:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-04-08T12:00:00Z"
+      required:
+        - _id
+        - team_result_id
+        - season_id
+        - rank
+        - date
+        - createdAt
+        - updatedAt
+
+    RankingsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Fetched season rankings successfully"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Ranking"
+      required:
+        - status
+        - message
+        - data
+
+    UpdateRankingRequest:
+      type: object
+      properties:
+        match_date:
+          type: string
+          format: date-time
+          example: "2025-04-08T12:00:00Z"
+      required:
+        - match_date
+
+    CreateRankingRequest:
+      type: object
+      properties:
+        season_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117c"
+      required:
+        - season_id
+
+    Season:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117c"
+        season_name:
+          type: string
+          example: "Season 2025"
+        start_date:
+          type: string
+          format: date-time
+          example: "2025-01-01T00:00:00Z"
+        end_date:
+          type: string
+          format: date-time
+          example: "2025-12-31T23:59:59Z"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-04-08T12:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-04-08T12:00:00Z"
+      required:
+        - _id
+        - season_name
+        - start_date
+        - end_date
+        - createdAt
+        - updatedAt
+
+    SeasonsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Fetched seasons successfully"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Season"
+      required:
+        - status
+        - message
+        - data
+
+    SeasonResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Season found successfully"
+        data:
+          $ref: "#/components/schemas/Season"
+      required:
+        - status
+        - message
+        - data
+
+    CreateSeasonRequest:
+      type: object
+      properties:
+        season_name:
+          type: string
+          example: "Season 2025"
+        start_date:
+          type: string
+          format: date-time
+          example: "2025-01-01T00:00:00Z"
+        end_date:
+          type: string
+          format: date-time
+          example: "2025-12-31T23:59:59Z"
+      required:
+        - season_name
+        - start_date
+        - end_date
+
+    UpdateSeasonRequest:
+      type: object
+      properties:
+        season_name:
+          type: string
+          example: "Season 2025 Updated"
+        start_date:
+          type: string
+          format: date-time
+          example: "2025-01-01T00:00:00Z"
+        end_date:
+          type: string
+          format: date-time
+          example: "2025-12-31T23:59:59Z"
+
+    SeasonIdResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Season ID found successfully"
+        data:
+          type: string
+          example: "67d0ec1a412c1edc00d2117c"
+      required:
+        - status
+        - message
+        - data
+
+    Player:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117f"
+        team_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117d"
+        name:
+          type: string
+          example: "John Doe"
+        number:
+          type: integer
+          example: 10
+        position:
+          type: string
+          example: "Forward"
+        nationality:
+          type: string
+          example: "USA"
+        dateOfBirth:
+          type: string
+          format: date
+          example: "1995-05-15"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-04-08T12:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-04-08T12:00:00Z"
+      required:
+        - _id
+        - team_id
+        - name
+        - number
+        - position
+        - nationality
+        - dateOfBirth
+        - createdAt
+        - updatedAt
+
+    PlayersResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Fetched players successfully"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Player"
+      required:
+        - status
+        - message
+        - data
+
+    PlayerResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Player found successfully"
+        data:
+          $ref: "#/components/schemas/Player"
+      required:
+        - status
+        - message
+        - data
+
+    CreatePlayerRequest:
+      type: object
+      properties:
+        team_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117d"
+        name:
+          type: string
+          example: "John Doe"
+        number:
+          type: integer
+          example: 10
+        position:
+          type: string
+          example: "Forward"
+        nationality:
+          type: string
+          example: "USA"
+        dateOfBirth:
+          type: string
+          format: date
+          example: "1995-05-15"
+      required:
+        - team_id
+        - name
+        - number
+        - position
+        - nationality
+        - dateOfBirth
+
+    UpdatePlayerRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "John Doe Updated"
+        number:
+          type: integer
+          example: 11
+        position:
+          type: string
+          example: "Midfielder"
+        nationality:
+          type: string
+          example: "USA"
+        dateOfBirth:
+          type: string
+          format: date
+          example: "1995-05-15"
+
+    PlayerResult:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "67d0ec1a412c1edc00d21180"
+        player_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117f"
+        season_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117c"
+        team_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117d"
+        matchesPlayed:
+          type: integer
+          example: 5
+        goals:
+          type: integer
+          example: 3
+        assists:
+          type: integer
+          example: 2
+        yellowCards:
+          type: integer
+          example: 1
+        redCards:
+          type: integer
+          example: 0
+        date:
+          type: string
+          format: date-time
+          example: "2025-04-08T00:00:00Z"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-04-08T12:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-04-08T12:00:00Z"
+      required:
+        - _id
+        - player_id
+        - season_id
+        - team_id
+        - matchesPlayed
+        - goals
+        - assists
+        - yellowCards
+        - redCards
+        - date
+        - createdAt
+        - updatedAt
+
+    PlayerResultsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Fetched player results successfully"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlayerResult"
+      required:
+        - status
+        - message
+        - data
+
+    PlayerResultResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Player result found successfully"
+        data:
+          $ref: "#/components/schemas/PlayerResult"
+      required:
+        - status
+        - message
+        - data
+
+    CreatePlayerResultRequest:
+      type: object
+      properties:
+        player_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117f"
+        season_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117c"
+        team_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117d"
+      required:
+        - player_id
+        - season_id
+        - team_id
+
+    UpdatePlayerResultRequest:
+      type: object
+      properties:
+        matchesPlayed:
+          type: integer
+          example: 6
+        goals:
+          type: integer
+          example: 4
+        assists:
+          type: integer
+          example: 3
+        yellowCards:
+          type: integer
+          example: 2
+        redCards:
+          type: integer
+          example: 0
+        date:
+          type: string
+          format: date-time
+          example: "2025-04-08T00:00:00Z"
+
+    PlayerRanking:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "67d0ec1a412c1edc00d21182"
+        player_result_id:
+          type: string
+          example: "67d0ec1a412c1edc00d21180"
+        season_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117c"
+        rank:
+          type: integer
+          example: 1
+        date:
+          type: string
+          format: date-time
+          example: "2025-04-08T00:00:00Z"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-04-08T12:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-04-08T12:00:00Z"
+      required:
+        - _id
+        - player_result_id
+        - season_id
+        - rank
+        - date
+        - createdAt
+        - updatedAt
+
+    PlayerRankingsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Fetched player rankings successfully"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlayerRanking"
+      required:
+        - status
+        - message
+        - data
+
+    CreatePlayerRankingRequest:
+      type: object
+      properties:
+        player_result_id:
+          type: string
+          example: "67d0ec1a412c1edc00d21180"
+        season_id:
+          type: string
+          example: "67d0ec1a412c1edc00d2117c"
+        rank:
+          type: integer
+          example: 1
+        date:
+          type: string
+          format: date-time
+          example: "2025-04-08T00:00:00Z"
+      required:
+        - player_result_id
+        - season_id
+        - rank
+        - date
+
+    UpdatePlayerRankingsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Player rankings updated successfully"
+        data:
+          type: object
+          nullable: true
+          example: null
+      required:
+        - status
+        - message
+
+    FilterDateRequest:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date-time
+          example: "2025-04-08T00:00:00Z"
+      required:
+        - date

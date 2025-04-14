@@ -30,18 +30,14 @@ const TeamIdSchema = z.object({
     }),
 });
 
-const SeasonIdSchema = z.object({
-  id: z
-    .string()
-    .min(1, "Season ID is required")
-    .refine((val) => mongoose.Types.ObjectId.isValid(val), {
-      message: "Invalid season_id",
-    }),
+const NameTeamSchema = z.object({
+  team_name: z.string().min(1, "Team name is required"),
 });
+
 
 module.exports = {
   CreateTeamSchema,
   UpdateTeamSchema,
   TeamIdSchema,
-  SeasonIdSchema,
+  NameTeamSchema,
 };
