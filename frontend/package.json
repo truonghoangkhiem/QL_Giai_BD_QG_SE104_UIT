@@ -2,7 +2,7 @@
   "name": "quanligiaiquocgia",
   "private": true,
   "version": "0.0.0",
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
     "dev": "vite --host",
     "build": "vite build --base=./",
@@ -10,10 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@babel/preset-react": "^7.26.3",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^6.4.5",
     "@mui/material": "^6.4.5",
+    "babel-eslint": "^10.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
