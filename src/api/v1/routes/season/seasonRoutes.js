@@ -1,14 +1,14 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   getSeasons,
   createSeason,
   updateSeason,
   deleteSeason,
   getSeasonById,
   getSeasonIdBySeasonName,
-} = require("../../controllers/season/seasonController");
-const { authenticateToken } = require("../../middleware/authMiddleware");
-const { errorMiddleware } = require("../../middleware/errorMiddleware");
+} from "../../controllers/season/seasonController.js";
+import { authenticateToken } from "../../middleware/authMiddleware.js";
+import { errorMiddleware } from "../../middleware/errorMiddleware.js";
 
 const router = express.Router();
 router.get("/:id", getSeasonById); ///
@@ -19,4 +19,4 @@ router.put("/:id", authenticateToken, updateSeason); ///
 router.delete("/:id", authenticateToken, deleteSeason); ///
 router.use(errorMiddleware); // Đảm bảo mọi lỗi đều được xử lý bởi errorMiddleware
 
-module.exports = router;
+export default router;

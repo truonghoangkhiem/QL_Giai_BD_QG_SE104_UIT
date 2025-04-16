@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const playerRankingSchema = new mongoose.Schema(
   {
@@ -30,4 +30,5 @@ const playerRankingSchema = new mongoose.Schema(
 );
 
 const PlayerRanking = mongoose.model("PlayerRanking", playerRankingSchema);
-module.exports = PlayerRanking;
+
+export default PlayerRanking;

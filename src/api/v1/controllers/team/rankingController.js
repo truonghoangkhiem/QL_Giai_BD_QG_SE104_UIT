@@ -1,14 +1,14 @@
-const Ranking = require("../../../../models/Ranking");
-const TeamResult = require("../../../../models/TeamResult");
-const Regulation = require("../../../../models/Regulation");
-const { successResponse } = require("../../../../utils/responseFormat");
-const {
+import Ranking from "../../../../models/Ranking.js";
+import TeamResult from "../../../../models/TeamResult.js";
+import Regulation from "../../../../models/Regulation.js";
+import { successResponse } from "../../../../utils/responseFormat.js";
+import {
   CreateRankingSchema,
   SeasonIdSchema,
   UpdateRankingSchema,
   RankingIdSchema,
-} = require("../../../../schemas/rankingSchema");
-const mongoose = require("mongoose");
+} from "../../../../schemas/rankingSchema.js";
+import mongoose from "mongoose";
 
 // Tạo bảng xếp hạng cầu thủ
 const createRanking = async (req, res, next) => {
@@ -299,9 +299,4 @@ const deleteRanking = async (req, res, next) => {
   }
 };
 
-module.exports = {
-  createRanking,
-  getSeasonRanking,
-  updateRanking,
-  deleteRanking,
-};
+export { createRanking, getSeasonRanking, updateRanking, deleteRanking };

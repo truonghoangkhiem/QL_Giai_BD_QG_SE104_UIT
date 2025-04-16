@@ -1,12 +1,12 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   registerUser,
   loginUser,
   updatePasswordUser,
   updateUsername,
   deleteUser,
-} = require("../../controllers/auth/authController");
-const { errorMiddleware } = require("../../middleware/errorMiddleware");
+} from "../../controllers/auth/authController.js";
+import { errorMiddleware } from "../../middleware/errorMiddleware.js";
 
 const router = express.Router();
 
@@ -17,4 +17,4 @@ router.put("/username", updateUsername); ///
 router.delete("/", deleteUser); ///
 router.use(errorMiddleware);
 
-module.exports = router;
+export default router;

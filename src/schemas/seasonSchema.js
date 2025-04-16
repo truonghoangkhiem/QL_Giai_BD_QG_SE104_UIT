@@ -1,6 +1,6 @@
-const { z } = require("zod");
+import { z } from "zod";
+import mongoose from "mongoose";
 
-const mongoose = require("mongoose");
 const CreateSeasonSchema = z
   .object({
     season_name: z.string().min(1, "Season name is required"),
@@ -46,7 +46,7 @@ const SeasonNameSchema = z.object({
   season_name: z.string().min(1, "Season name is required"),
 });
 
-module.exports = {
+export {
   CreateSeasonSchema,
   UpdateSeasonSchema,
   SeasonIdSchema,

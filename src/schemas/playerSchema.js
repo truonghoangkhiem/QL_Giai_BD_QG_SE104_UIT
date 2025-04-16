@@ -1,4 +1,4 @@
-const { z } = require("zod");
+import { z } from "zod";
 
 const createPlayerSchema = z.object({
   team_id: z.string().length(24, "Invalid team_id format"),
@@ -32,7 +32,7 @@ const getPlayerByNameAndNumberSchema = z.object({
   number: z.string().min(1, "Number is required"),
 });
 
-module.exports = {
+export {
   createPlayerSchema,
   updatePlayerSchema,
   getPlayerByNameAndNumberSchema,

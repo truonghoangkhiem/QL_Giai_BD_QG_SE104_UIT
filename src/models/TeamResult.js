@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const teamResultSchema = new mongoose.Schema(
   {
@@ -62,4 +62,5 @@ const teamResultSchema = new mongoose.Schema(
 );
 
 const TeamResult = mongoose.model("TeamResult", teamResultSchema);
-module.exports = TeamResult;
+
+export default TeamResult;

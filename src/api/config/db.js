@@ -1,5 +1,7 @@
-require("dotenv").config();
-const mongoose = require("mongoose");
+import dotenv from "dotenv";
+import mongoose from "mongoose";
+
+dotenv.config();
 
 // Hàm kết nối database
 const connectDB = async () => {
@@ -18,4 +20,4 @@ const connectDB = async () => {
   }
 };
 
-module.exports = { connectDB };
+export { connectDB };

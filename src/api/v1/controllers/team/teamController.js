@@ -1,14 +1,14 @@
-const Team = require("../../../../models/Team");
-const Season = require("../../../../models/Season");
-const { successResponse } = require("../../../../utils/responseFormat");
-const {
+import Team from "../../../../models/Team.js";
+import Season from "../../../../models/Season.js";
+import { successResponse } from "../../../../utils/responseFormat.js";
+import {
   CreateTeamSchema,
   UpdateTeamSchema,
   TeamIdSchema,
-  SeasonIdSchema,
   NameTeamSchema,
-} = require("../../../../schemas/teamSchema");
-const mongoose = require("mongoose");
+} from "../../../../schemas/teamSchema.js";
+import { SeasonIdSchema } from "../../../../schemas/seasonSchema.js";
+import mongoose from "mongoose";
 
 // Lấy tất cả đội bóng
 const getTeams = async (req, res, next) => {
@@ -273,7 +273,7 @@ const getTeamsByIDSeason = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   getTeams,
   getTeamsByID,
   createTeam,

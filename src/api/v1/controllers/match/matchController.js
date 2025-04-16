@@ -1,17 +1,15 @@
-// src/api/config/controllers/matchController.js
-
-const Match = require("../../../../models/Match");
-const Season = require("../../../../models/Season");
-const Team = require("../../../../models/Team");
-const Regulation = require("../../../../models/Regulation");
-const {
+import Match from "../../../../models/Match.js";
+import Season from "../../../../models/Season.js";
+import Team from "../../../../models/Team.js";
+import Regulation from "../../../../models/Regulation.js";
+import {
   createMatchSchema,
   updateMatchSchema,
-} = require("../../../../schemas/matchSchema");
-const { TeamIdSchema } = require("../../../../schemas/teamSchema");
-const { SeasonIdSchema } = require("../../../../schemas/seasonSchema");
-const { successResponse } = require("../../../../utils/responseFormat");
-const mongoose = require("mongoose");
+} from "../../../../schemas/matchSchema.js";
+import { TeamIdSchema } from "../../../../schemas/teamSchema.js";
+import { SeasonIdSchema } from "../../../../schemas/seasonSchema.js";
+import { successResponse } from "../../../../utils/responseFormat.js";
+import mongoose from "mongoose";
 
 // GET all matches
 const getMatches = async (req, res, next) => {
@@ -294,7 +292,7 @@ const getMatchesBySeasonIdAndDate = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   getMatches,
   getMatchesById,
   createMatch,

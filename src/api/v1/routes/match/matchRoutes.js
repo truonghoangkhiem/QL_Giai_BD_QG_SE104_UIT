@@ -1,5 +1,5 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   getMatches,
   getMatchesById,
   createMatch,
@@ -8,9 +8,10 @@ const {
   getMatchesBySeasonId,
   getMatchesBySeasonIdAndDate,
   getMatchesByTeamId,
-} = require("../../controllers/match/matchController");
-const { authenticateToken } = require("../../middleware/authMiddleware");
-const { errorMiddleware } = require("../../middleware/errorMiddleware");
+} from "../../controllers/match/matchController.js";
+import { authenticateToken } from "../../middleware/authMiddleware.js";
+import { errorMiddleware } from "../../middleware/errorMiddleware.js";
+
 const router = express.Router();
 
 router.get("/", getMatches); ///
@@ -23,4 +24,4 @@ router.put("/:id", authenticateToken, updateMatch); ///
 router.delete("/:id", authenticateToken, deleteMatch); ///
 router.use(errorMiddleware); // Đảm bảo mọi lỗi đều được xử lý bởi errorMiddleware
 
-module.exports = router;
+export default router;

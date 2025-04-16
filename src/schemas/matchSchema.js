@@ -1,5 +1,4 @@
-// src/api/config/schemas/matchSchema.js
-const { z } = require("zod");
+import { z } from "zod";
 
 const goalDetailSchema = z.object({
   player_id: z.string().length(24, "Invalid player_id format"),
@@ -28,7 +27,4 @@ const updateMatchSchema = z.object({
   goalDetails: z.array(goalDetailSchema).optional(),
 });
 
-module.exports = {
-  createMatchSchema,
-  updateMatchSchema,
-};
+export { createMatchSchema, updateMatchSchema };

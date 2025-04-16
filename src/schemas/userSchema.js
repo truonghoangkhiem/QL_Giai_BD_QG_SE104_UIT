@@ -1,4 +1,4 @@
-const { z } = require("zod");
+import { z } from "zod";
 
 // Schema cho đăng ký
 const RegisterSchema = z.object({
@@ -33,7 +33,7 @@ const DeleteUserSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
-module.exports = {
+export {
   RegisterSchema,
   LoginSchema,
   UpdatePasswordSchema,

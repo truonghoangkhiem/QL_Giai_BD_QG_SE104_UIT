@@ -1,4 +1,5 @@
-const { errorResponse } = require("../../../utils/responseFormat"); // Import các hàm định dạng phản hồi
+import { errorResponse } from "../../../utils/responseFormat.js"; // Import các hàm định dạng phản hồi
+
 // Xử lý các lỗi hệ thống và logic
 const errorMiddleware = (err, req, res, next) => {
   console.error(err.stack); // In lỗi ra console để kiểm tra
@@ -21,4 +22,4 @@ const errorMiddleware = (err, req, res, next) => {
   return errorResponse(res, "Internal Server Error", 500);
 };
 
-module.exports = { errorMiddleware }; // Xuất trực tiếp hàm errorMiddleware
+export { errorMiddleware }; // Xuất trực tiếp hàm errorMiddleware

@@ -42,9 +42,4 @@ const unauthorizedError = async (res) => {
 };
 
 // Export tất cả các hàm
-module.exports = {
-  successResponse,
-  errorResponse,
-  validationError,
-  unauthorizedError,
-};
+export { successResponse, errorResponse, validationError, unauthorizedError };

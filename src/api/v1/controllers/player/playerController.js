@@ -1,16 +1,14 @@
-// src/api/config/controllers/playerController.js
-
-const Player = require("../../../../models/Player");
-const Team = require("../../../../models/Team");
-const Regulation = require("../../../../models/Regulation");
-const {
+import Player from "../../../../models/Player.js";
+import Team from "../../../../models/Team.js";
+import Regulation from "../../../../models/Regulation.js";
+import {
   createPlayerSchema,
   updatePlayerSchema,
   getPlayerByNameAndNumberSchema,
-} = require("../../../../schemas/playerSchema.js");
-const { successResponse } = require("../../../../utils/responseFormat");
-const { TeamIdSchema } = require("../../../../schemas/teamSchema.js");
-const { default: mongoose } = require("mongoose");
+} from "../../../../schemas/playerSchema.js";
+import { successResponse } from "../../../../utils/responseFormat.js";
+import { TeamIdSchema } from "../../../../schemas/teamSchema.js";
+import mongoose from "mongoose";
 
 const getPlayers = async (req, res, next) => {
   try {
@@ -218,7 +216,7 @@ const getPlayersByIdTeam = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   getPlayers,
   getPlayerById,
   createPlayer,

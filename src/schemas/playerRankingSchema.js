@@ -1,5 +1,5 @@
-const { z } = require("zod");
-const mongoose = require("mongoose");
+import { z } from "zod";
+import mongoose from "mongoose";
 
 const CreatePlayerRankingSchema = z.object({
   season_id: z
@@ -46,7 +46,7 @@ const GetPlayerRankingsBySeasonIdAndDateSchema = z.object({
   }),
 });
 
-module.exports = {
+export {
   CreatePlayerRankingSchema,
   MatchIdSchema,
   PlayerRankingIdSchema,

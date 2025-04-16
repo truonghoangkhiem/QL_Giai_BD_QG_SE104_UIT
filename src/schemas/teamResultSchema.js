@@ -1,5 +1,5 @@
-const { z } = require("zod");
-const mongoose = require("mongoose");
+import { z } from "zod";
+import mongoose from "mongoose";
 
 const CreateTeamResultSchema = z.object({
   team_id: z
@@ -58,7 +58,7 @@ const MatchIdSchema = z.object({
     }),
 });
 
-module.exports = {
+export {
   CreateTeamResultSchema,
   SeasonIdSchema,
   TeamResultIdSchema,

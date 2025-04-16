@@ -1,17 +1,17 @@
-const TeamResult = require("../../../../models/TeamResult");
-const Team = require("../../../../models/Team");
-const Season = require("../../../../models/Season");
-const Match = require("../../../../models/Match");
-const Regulation = require("../../../../models/Regulation");
-const { successResponse } = require("../../../../utils/responseFormat");
-const {
+import TeamResult from "../../../../models/TeamResult.js";
+import Team from "../../../../models/Team.js";
+import Season from "../../../../models/Season.js";
+import Match from "../../../../models/Match.js";
+import Regulation from "../../../../models/Regulation.js";
+import { successResponse } from "../../../../utils/responseFormat.js";
+import {
   CreateTeamResultSchema,
   SeasonIdSchema,
   TeamResultIdSchema,
   GetIdSchema,
   MatchIdSchema,
-} = require("../../../../schemas/teamResultSchema");
-const mongoose = require("mongoose");
+} from "../../../../schemas/teamResultSchema.js";
+import mongoose from "mongoose";
 
 // Thêm kết quả đội bóng
 const createTeamResults = async (req, res, next) => {
@@ -405,7 +405,7 @@ const deleteTeamResults = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   createTeamResults,
   getTeamResultsbySeasonId,
   getTeamResultsById,

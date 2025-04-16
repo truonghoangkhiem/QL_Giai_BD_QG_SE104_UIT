@@ -1,5 +1,5 @@
-const { z } = require("zod");
-const mongoose = require("mongoose");
+import { z } from "zod";
+import mongoose from "mongoose";
 
 const CreateTeamSchema = z.object({
   season_id: z
@@ -34,10 +34,4 @@ const NameTeamSchema = z.object({
   team_name: z.string().min(1, "Team name is required"),
 });
 
-
-module.exports = {
-  CreateTeamSchema,
-  UpdateTeamSchema,
-  TeamIdSchema,
-  NameTeamSchema,
-};
+export { CreateTeamSchema, UpdateTeamSchema, TeamIdSchema, NameTeamSchema };

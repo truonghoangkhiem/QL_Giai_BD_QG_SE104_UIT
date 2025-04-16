@@ -1,14 +1,14 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   createTeamResults,
   getTeamResultsbySeasonId,
   getTeamResultsById,
   getId,
   updateTeamResultsByMatch,
   deleteTeamResults,
-} = require("../../controllers/team/team_resultsController");
-const { authenticateToken } = require("../../middleware/authMiddleware");
-const { errorMiddleware } = require("../../middleware/errorMiddleware");
+} from "../../controllers/team/team_resultsController.js";
+import { authenticateToken } from "../../middleware/authMiddleware.js";
+import { errorMiddleware } from "../../middleware/errorMiddleware.js";
 
 const router = express.Router();
 router.get("/:id", getTeamResultsById); ///
@@ -19,4 +19,4 @@ router.put("/:matchid", authenticateToken, updateTeamResultsByMatch); ///
 router.use(errorMiddleware); // Đảm bảo mọi lỗi đều được xử lý bởi errorMiddleware
 router.delete("/:id", authenticateToken, deleteTeamResults); /// Xóa kết quả đội bóng theo ID
 
-module.exports = router;
+export default router;

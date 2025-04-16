@@ -1,13 +1,13 @@
-const Regulation = require("../../../../models/Regulation");
-const { successResponse } = require("../../../../utils/responseFormat");
-const {
+import Regulation from "../../../../models/Regulation.js";
+import { successResponse } from "../../../../utils/responseFormat.js";
+import {
   CreateRegulationSchema,
   UpdateRegulationSchema,
   RegulationIdSchema,
   GetIdRegulationsSchema,
   VALID_REGULATIONS,
-} = require("../../../../schemas/regulationSchema");
-const mongoose = require("mongoose");
+} from "../../../../schemas/regulationSchema.js";
+import mongoose from "mongoose";
 
 // Kiểm tra logic dữ liệu
 const validateRules = (regulation_name, rules) => {
@@ -254,7 +254,7 @@ const getIdRegulations = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   createRegulation,
   getRegulations,
   getRegulationById,

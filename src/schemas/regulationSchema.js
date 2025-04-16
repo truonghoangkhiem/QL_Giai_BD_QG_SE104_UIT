@@ -1,5 +1,5 @@
-const { z } = require("zod");
-const mongoose = require("mongoose");
+import { z } from "zod";
+import mongoose from "mongoose";
 
 // Danh sách các quy định hợp lệ
 const VALID_REGULATIONS = {
@@ -57,7 +57,7 @@ const GetIdRegulationsSchema = z.object({
   }),
 });
 
-module.exports = {
+export {
   CreateRegulationSchema,
   UpdateRegulationSchema,
   RegulationIdSchema,

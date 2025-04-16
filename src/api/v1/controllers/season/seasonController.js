@@ -1,12 +1,12 @@
-const Season = require("../../../../models/Season");
-const { successResponse } = require("../../../../utils/responseFormat");
-const {
+import Season from "../../../../models/Season.js";
+import { successResponse } from "../../../../utils/responseFormat.js";
+import {
   CreateSeasonSchema,
   UpdateSeasonSchema,
   SeasonIdSchema,
   SeasonNameSchema,
-} = require("../../../../schemas/seasonSchema");
-const mongoose = require("mongoose");
+} from "../../../../schemas/seasonSchema.js";
+import mongoose from "mongoose";
 
 // Lấy tất cả mùa giải
 const getSeasons = async (req, res, next) => {
@@ -178,7 +178,7 @@ const getSeasonIdBySeasonName = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   getSeasons,
   createSeason,
   updateSeason,

@@ -1,14 +1,14 @@
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const User = require("../../../../models/User"); // Import model User
-const {
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import User from "../../../../models/User.js"; // Import model User
+import {
   RegisterSchema,
   LoginSchema,
   UpdatePasswordSchema,
   UpdateUsernameSchema,
   DeleteUserSchema,
-} = require("../../../../schemas/userSchema"); // Import schemas
-const { successResponse } = require("../../../../utils/responseFormat");
+} from "../../../../schemas/userSchema.js"; // Import schemas
+import { successResponse } from "../../../../utils/responseFormat.js";
 
 // Đăng ký tài khoản
 const registerUser = async (req, res, next) => {
@@ -198,7 +198,7 @@ const deleteUser = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   registerUser,
   loginUser,
   updatePasswordUser,
