@@ -1,40 +1,54 @@
-// Updated by trungquandev.com's author on May 13 2023
-// Sample Eslint config for React project
-module.exports = {
-  env: { browser: true, es2020: true, node: true },
-  extends: [
-    "eslint:recommended",
-    "plugin:react/recommended",
-    "plugin:react/jsx-runtime",
-    "plugin:react-hooks/recommended",
-  ],
-  parserOptions: { ecmaVersion: "latest", sourceType: "module" },
-  settings: { react: { version: "18.3" } },
-  plugins: ["react", "react-hooks", "react-refresh"],
-  rules: {
-    "react-refresh/only-export-components": "warn",
-    "react-hooks/rules-of-hooks": "error",
-    "react-hooks/exhaustive-deps": "warn",
-    "react/prop-types": 0,
-    "react/display-name": 0,
+const react = require("eslint-plugin-react");
+const reactHooks = require("eslint-plugin-react-hooks");
+const reactRefresh = require("eslint-plugin-react-refresh");
 
-    "no-console": 1,
-    "no-lonely-if": 1,
-    "no-unused-vars": 1,
-    "no-trailing-spaces": 1,
-    "no-multi-spaces": 1,
-    "no-multiple-empty-lines": 1,
-    "space-before-blocks": ["error", "always"],
-    "object-curly-spacing": [1, "always"],
-    indent: ["warn", 2],
-    semi: [1, "never"],
-    quotes: ["error", "single"],
-    "array-bracket-spacing": 1,
-    "linebreak-style": 0,
-    "no-unexpected-multiline": "warn",
-    "keyword-spacing": 1,
-    "comma-dangle": 1,
-    "comma-spacing": 1,
-    "arrow-spacing": 1,
+module.exports = [
+  {
+    files: ["**/*.js", "**/*.jsx"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "commonjs",
+      globals: {
+        browser: true,
+        es2020: true,
+        node: true,
+      },
+    },
+    plugins: {
+      react,
+      "react-hooks": reactHooks,
+      "react-refresh": reactRefresh,
+    },
+    settings: {
+      react: { version: "detect" },
+    },
+    rules: {
+      "no-undef": "warn",
+      "no-unused-vars": "warn",
+      "no-console": "warn",
+      "react/jsx-uses-react": "off",
+      "react/react-in-jsx-scope": "off",
+      "react/prop-types": "off",
+      "react/display-name": "off",
+      "react-hooks/rules-of-hooks": "warn",
+      "react-hooks/exhaustive-deps": "warn",
+      "react-refresh/only-export-components": "warn",
+      "no-lonely-if": "warn",
+      "no-trailing-spaces": "warn",
+      "no-multi-spaces": "warn",
+      "no-multiple-empty-lines": ["warn", { max: 1 }],
+      "space-before-blocks": ["warn", "always"],
+      "object-curly-spacing": ["warn", "always"],
+      indent: ["warn", 2],
+      semi: ["warn", "never"],
+      quotes: ["warn", "single"],
+      "array-bracket-spacing": ["warn", "never"],
+      "linebreak-style": "off",
+      "no-unexpected-multiline": "warn",
+      "keyword-spacing": ["warn", { before: true, after: true }],
+      "comma-dangle": "warn",
+      "comma-spacing": "warn",
+      "arrow-spacing": "warn",
+    },
   },
-};
+];
