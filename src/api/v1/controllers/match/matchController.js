@@ -135,7 +135,7 @@ const getMatchesBySeasonId = async (req, res, next) => {
     );
   }
   try {
-    SeasonId = new mongoose.Types.ObjectId(season_id);
+    let SeasonId = new mongoose.Types.ObjectId(season_id);
     const matches = await Match.find({ season_id: SeasonId });
     if (!matches || matches.length === 0) {
       return next(
