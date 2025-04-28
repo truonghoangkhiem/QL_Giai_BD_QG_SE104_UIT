@@ -134,20 +134,70 @@ const getMatchesBySeasonId = async (req, res, next) => {
       Object.assign(new Error(error.errors[0].message), { status: 400 })
     );
   }
+
   try {
     let SeasonId = new mongoose.Types.ObjectId(season_id);
-    const matches = await Match.find({ season_id: SeasonId });
+
+    // Sử dụng aggregate để join dữ liệu từ collection teams
+    const matches = await Match.aggregate([
+      // Lọc các trận đấu theo season_id
+      { $match: { season_id: SeasonId } },
+      // Join với collection teams cho team1
+      {
+        $lookup: {
+          from: 'teams', // Tên collection teams trong MongoDB (thường là lowercase)
+          localField: 'team1', // Trường team1 trong matches (ObjectId)
+          foreignField: '_id', // Trường _id trong teams
+          as: 'team1_data', // Tên mảng chứa dữ liệu team1
+        },
+      },
+      // Join với collection teams cho team2
+      {
+        $lookup: {
+          from: 'teams',
+          localField: 'team2',
+          foreignField: '_id',
+          as: 'team2_data',
+        },
+      },
+      // Unwind để biến mảng team1_data và team2_data thành object
+      { $unwind: { path: '$team1_data', preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: '$team2_data', preserveNullAndEmptyArrays: true } },
+      // Định dạng dữ liệu trả về
+      {
+        $project: {
+          id: '$_id', // Đổi _id thành id để đồng bộ với frontend
+          season_id: 1,
+          team1: {
+            team_name: { $ifNull: ['$team1_data.team_name', 'N/A'] },
+            logo: { $ifNull: ['$team1_data.logo', 'https://placehold.co/20x20?text=Team'] },
+          },
+          team2: {
+            team_name: { $ifNull: ['$team2_data.team_name', 'N/A'] },
+            logo: { $ifNull: ['$team2_data.logo', 'https://placehold.co/20x20?text=Team'] },
+          },
+          date: 1,
+          stadium: 1,
+          score: 1,
+          _id: 0, // Loại bỏ trường _id gốc
+        },
+      },
+      // Sắp xếp theo ngày tăng dần (tùy chọn, nếu bạn muốn làm ở backend)
+      { $sort: { date: 1 } },
+    ]);
+
     if (!matches || matches.length === 0) {
       return next(
-        Object.assign(new Error("No matches found for this season"), {
+        Object.assign(new Error('No matches found for this season'), {
           status: 404,
         })
       );
     }
+
     return successResponse(
       res,
       matches,
-      "Fetched all matches by season ID successfully"
+      'Fetched all matches by season ID successfully'
     );
   } catch (error) {
     return next(error);
