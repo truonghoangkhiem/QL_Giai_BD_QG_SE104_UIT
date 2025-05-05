@@ -277,7 +277,7 @@ const getMatchesByTeamId = async (req, res, next) => {
     );
   }
   try {
-    TeamId = new mongoose.Types.ObjectId(team_id);
+    const TeamId = new mongoose.Types.ObjectId(team_id);
     const matches = await Match.find({
       $or: [{ team1: TeamId }, { team2: TeamId }],
     }).populate("team1 team2 season_id");
