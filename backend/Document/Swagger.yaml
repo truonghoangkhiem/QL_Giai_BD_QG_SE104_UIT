@@ -1655,7 +1655,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /api/player_results/season/{seasonid}:
+  /api/player_results/season/{seasonid}/{date}:
     get:
       tags:
         - playerresults
@@ -1663,14 +1663,22 @@ paths:
       description: Retrieves the latest player results for a specific season up to a given date
       operationId: getPlayerResultbySeasonIdAndDate
       parameters:
-        - $ref: "#/components/parameters/SeasonId"
-      requestBody:
-        description: Date to filter player results
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/FilterDateRequest"
+        - name: seasonid
+          in: path
+          description: ID of the season (MongoDB ObjectId)
+          required: true
+          schema:
+            type: string
+            pattern: "^[0-9a-fA-F]{24}$"
+            example: "507f1f77bcf86cd799439011"
+        - name: date
+          in: path
+          description: Date to filter player results (format YYYY-MM-DD)
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2023-05-06"
       responses:
         "200":
           description: Latest player results retrieved successfully
@@ -1679,7 +1687,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/PlayerResultsResponse"
         "400":
-          description: Invalid input
+          description: Invalid season ID or date format
           content:
             application/json:
               schema:
