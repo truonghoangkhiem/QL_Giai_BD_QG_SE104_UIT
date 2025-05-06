@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import Matches from '../components/Matches';
 import MatchForm from '../components/MatchForm';
 
@@ -6,6 +6,17 @@ const MatchesPage = ({ token }) => {
   const [showForm, setShowForm] = useState(false);
   const [editingMatch, setEditingMatch] = useState(null);
   const [matches, setMatches] = useState([]);
+
+  // Memoize setMatches
+  const memoizedSetMatches = useCallback((newMatches) => {
+    setMatches(newMatches);
+  }, []);
+
+  // Memoize onPastMatchesFetched
+  const onPastMatchesFetched = useCallback((pastMatches) => {
+    // Xử lý pastMatches nếu cần
+    console.log('Past matches fetched:', pastMatches);
+  }, []);
 
   return (
     <div className="container mx-auto p-4">
@@ -15,7 +26,7 @@ const MatchesPage = ({ token }) => {
             editingMatch={editingMatch}
             setEditingMatch={setEditingMatch}
             setShowForm={setShowForm}
-            setMatches={setMatches}
+            setMatches={memoizedSetMatches}
             token={token}
           />
         ) : (
@@ -34,10 +45,11 @@ const MatchesPage = ({ token }) => {
           )}
           <Matches
             matches={matches}
-            setMatches={setMatches}
+            setMatches={memoizedSetMatches}
             setEditingMatch={setEditingMatch}
             setShowForm={setShowForm}
             token={token}
+            onPastMatchesFetched={onPastMatchesFetched}
           />
         </>
       )}
