@@ -241,34 +241,32 @@ const deleteTeam = async (req, res, next) => {
 // Lấy đội bóng theo season_id
 const getTeamsByIDSeason = async (req, res, next) => {
   try {
-    const { success, error } = SeasonIdSchema.safeParse({ id: req.params.id });
+    const { success, error } = SeasonIdSchema.safeParse({ id: req.params.season_id });
     if (!success) {
       const validationError = new Error(error.errors[0].message);
       validationError.status = 400;
       return next(validationError);
     }
-
-    const season_id = new mongoose.Types.ObjectId(req.params.id);
+    const season_id = new mongoose.Types.ObjectId(req.params.season_id);
     const season = await Season.findById(season_id);
     if (!season) {
       const error = new Error("Season not found");
       error.status = 404;
       return next(error);
     }
-
     const teams = await Team.find({ season_id });
     if (teams.length === 0) {
       const error = new Error("No teams found for this season");
       error.status = 404;
       return next(error);
     }
-
     return successResponse(
       res,
       teams,
       "Fetched teams successfully for this season"
     );
   } catch (error) {
+    console.error("Error in getTeamsByIDSeason:", error);
     return next(error);
   }
 };

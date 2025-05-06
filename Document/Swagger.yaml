@@ -597,7 +597,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /api/teams/seasons/{id}:
+  /api/teams/seasons/{season_id}:
     get:
       tags:
         - teams
