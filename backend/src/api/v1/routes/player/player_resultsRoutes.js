@@ -15,7 +15,7 @@ import { errorMiddleware } from "../../middleware/errorMiddleware.js";
 const router = express.Router();
 
 router.post("/", authenticateToken, createPlayerResults);
-router.get("/season/:seasonid", getPlayerResultbySeasonIdAndDate);
+router.get("/season/:seasonid/:date", getPlayerResultbySeasonIdAndDate);
 router.get("/player/:playerid", getPlayerResultsById);
 router.put("/match/:matchid", authenticateToken, updatePlayerResultsafterMatch);
 router.put("/:id", authenticateToken, updatePlayerResults);

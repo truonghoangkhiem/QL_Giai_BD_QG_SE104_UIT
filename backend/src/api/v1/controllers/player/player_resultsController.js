@@ -86,8 +86,7 @@ const createPlayerResults = async (req, res, next) => {
 
 // Lấy kết quả cầu thủ theo mùa giải và ngày
 const getPlayerResultbySeasonIdAndDate = async (req, res, next) => {
-  const { seasonid } = req.params;
-  const { date } = req.body;
+  const { seasonid, date } = req.params;
   try {
     const { success, error } = GetPlayerResultBySeasonIdAndDateSchema.safeParse(
       { seasonid, date }
