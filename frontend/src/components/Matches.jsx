@@ -77,7 +77,7 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
     if (selectedSeasonId) {
       const filtered = teams.filter((team) => team.season_id.toString() === selectedSeasonId);
       setFilteredTeams(filtered);
-      setSelectedTeamId(''); // Đặt lại đội bóng khi mùa giải thay đổi
+      setSelectedTeamId('');
     } else {
       setFilteredTeams(teams);
     }
@@ -120,7 +120,7 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
         const pastMatches = matchesData
           .filter((match) => {
             const matchDate = new Date(match.date);
-            return matchDate instanceof Date && !isNaN(matchDate) && matchDate <= today && match.score;
+            return matchDate instanceof Date && !isNaN(matchDate) && matchDate <= today;
           })
           .sort((a, b) => new Date(b.date) - new Date(a.date))
           .slice(0, 5);
@@ -180,7 +180,7 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
     setSelectedDate('');
     setSelectedTeamId('');
     setCurrentPage(1);
-    setError(''); // Đặt lại lỗi khi thay đổi mùa giải
+    setError('');
   }, []);
 
   const handleResetFilter = useCallback(() => {
@@ -195,7 +195,7 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
   const pastMatches = matches
     .filter((match) => {
       const matchDate = new Date(match.date);
-      return matchDate instanceof Date && !isNaN(matchDate) && matchDate <= today && match.score;
+      return matchDate instanceof Date && !isNaN(matchDate) && matchDate <= today;
     })
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -204,8 +204,7 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
       const matchDate = new Date(match.date);
       return matchDate instanceof Date && !isNaN(matchDate) && matchDate > today;
     })
-    .sort((a, b) => new Date(a.date) - new Date(a.date))
-    .slice(0, limit || undefined);
+    .sort((a, b) => new Date(a.date) - new Date(a.date));
 
   // Calculate paginated matches
   const indexOfLastMatch = currentPage * matchesPerPage;
@@ -214,21 +213,21 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
   const paginatedUpcomingMatches = upcomingMatches.slice(indexOfFirstMatch, indexOfLastMatch);
 
   // Calculate total pages
-  const totalPastPages = Math.ceil(pastMatches.length / matchesPerPage);
-  const totalUpcomingPages = Math.ceil(upcomingMatches.length / matchesPerPage);
+  const totalPastPages = Math.ceil(pastMatches.length / matchesPerPage) || 1;
+  const totalUpcomingPages = Math.ceil(upcomingMatches.length / matchesPerPage) || 1;
 
   const handleNextPage = useCallback(() => {
     const totalPages = activeTab === 'upcoming' ? totalUpcomingPages : totalPastPages;
     if (currentPage < totalPages) {
       setCurrentPage((prev) => prev + 1);
     }
-  }, [activeTab, totalUpcomingPages, totalPastPages]);
+  }, [activeTab, totalUpcomingPages, totalPastPages, currentPage]);
 
   const handlePrevPage = useCallback(() => {
     if (currentPage > 1) {
       setCurrentPage((prev) => prev - 1);
     }
-  }, []);
+  }, [currentPage]);
 
   const renderMatches = (list, isLive) => (
     list.length > 0 ? (
@@ -272,7 +271,9 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
         </div>
       ))
     ) : (
-      <p className="text-center text-gray-500 py-4">Không có trận đấu.</p>
+      <p className="text-center text-gray-500 py-4">
+        {activeTab === 'upcoming' ? 'Không có trận đấu sắp diễn ra.' : 'Không có trận đấu đã diễn ra.'}
+      </p>
     )
   );
 
@@ -307,7 +308,6 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
   // Hiển thị giao diện chính khi không có lỗi
   return (
     <div className="container mx-auto p-6 bg-gray-50 min-h-screen flex">
-      {/* Container "Lọc trận đấu" chỉ hiển thị khi không có lỗi */}
       <div className="w-64 pr-6">
         <div className="bg-white rounded-xl shadow-md p-6 mb-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">Lọc trận đấu</h2>
@@ -413,25 +413,27 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
             {activeTab === 'upcoming' && renderMatches(paginatedUpcomingMatches, false)}
             {activeTab === 'past' && renderMatches(paginatedPastMatches, true)}
           </div>
-          <div className="flex justify-between items-center mt-4">
-            <button
-              onClick={handlePrevPage}
-              disabled={currentPage === 1}
-              className={`px-4 py-2 rounded-lg ${currentPage === 1 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
-            >
-              Trang trước
-            </button>
-            <span className="text-gray-600">
-              Trang {currentPage} / {activeTab === 'upcoming' ? totalUpcomingPages : totalPastPages}
-            </span>
-            <button
-              onClick={handleNextPage}
-              disabled={currentPage >= (activeTab === 'upcoming' ? totalUpcomingPages : totalPastPages)}
-              className={`px-4 py-2 rounded-lg ${currentPage >= (activeTab === 'upcoming' ? totalUpcomingPages : totalPastPages) ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
-            >
-              Trang tiếp theo
-            </button>
-          </div>
+          {(activeTab === 'upcoming' ? paginatedUpcomingMatches.length : paginatedPastMatches.length) > 0 && (
+            <div className="flex justify-between items-center mt-4">
+              <button
+                onClick={handlePrevPage}
+                disabled={currentPage === 1}
+                className={`px-4 py-2 rounded-lg ${currentPage === 1 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+              >
+                Trang trước
+              </button>
+              <span className="text-gray-600">
+                Trang {currentPage} / {activeTab === 'upcoming' ? totalUpcomingPages : totalPastPages}
+              </span>
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage >= (activeTab === 'upcoming' ? totalUpcomingPages : totalPastPages)}
+                className={`px-4 py-2 rounded-lg ${currentPage >= (activeTab === 'upcoming' ? totalUpcomingPages : totalPastPages) ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+              >
+                Trang tiếp theo
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
