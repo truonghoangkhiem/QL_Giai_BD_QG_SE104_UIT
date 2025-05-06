@@ -845,7 +845,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /api/matches/season/{seasonid}:
+  /api/matches/seasons/{seasonid}:
     get:
       tags:
         - matches
