@@ -5,13 +5,12 @@ import PlayerForm from '../components/PlayerForm';
 const PlayersPage = ({ token }) => {
     const [showForm, setShowForm] = useState(false);
     const [editingPlayer, setEditingPlayer] = useState(null);
-    const [refreshKey, setRefreshKey] = useState(0); // State để trigger làm mới danh sách
+    const [players, setPlayers] = useState([]);
     const [success, setSuccess] = useState('');
 
     const handleSuccess = (message) => {
         setSuccess(message);
         setTimeout(() => setSuccess(''), 3000);
-        setRefreshKey((prev) => prev + 1); // Trigger làm mới danh sách
     };
 
     return (
@@ -23,8 +22,9 @@ const PlayersPage = ({ token }) => {
                         editingPlayer={editingPlayer}
                         setEditingPlayer={setEditingPlayer}
                         setShowForm={setShowForm}
+                        setPlayers={setPlayers}
                         token={token}
-                        onSuccess={handleSuccess} // Truyền callback để thông báo thành công
+                        onSuccess={handleSuccess}
                     />
                 ) : (
                     <>
@@ -39,9 +39,10 @@ const PlayersPage = ({ token }) => {
                             <p className="text-gray-500 mb-4"></p>
                         )}
                         <Players
-                            key={refreshKey} // Sử dụng key để trigger re-render và làm mới dữ liệu
                             setEditingPlayer={setEditingPlayer}
                             setShowForm={setShowForm}
+                            setPlayers={setPlayers}
+                            players={players}
                             token={token}
                         />
                     </>
