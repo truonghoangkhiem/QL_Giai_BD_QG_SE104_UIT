@@ -412,7 +412,7 @@ paths:
       description: Truy vấn danh sách các quy định (regulations) liên quan đến một mùa giải dựa trên `season_id`. Trả về tất cả quy định có `season_id` khớp với tham số đầu vào.
       operationId: getRegulationsBySeasonId
       tags:
-        - Quy định
+        - regulations
       parameters:
         - name: season_id
           in: path
