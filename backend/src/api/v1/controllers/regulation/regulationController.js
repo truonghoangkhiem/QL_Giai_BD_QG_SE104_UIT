@@ -7,6 +7,7 @@ import {
   GetIdRegulationsSchema,
   VALID_REGULATIONS,
 } from "../../../../schemas/regulationSchema.js";
+import { SeasonIdSchema } from "../../../../schemas/seasonSchema.js";
 import mongoose from "mongoose";
 
 // Kiểm tra logic dữ liệu
@@ -62,6 +63,28 @@ const validateRules = (regulation_name, rules) => {
       return false;
   }
   return true;
+};
+
+const getRegulationsBySeasonId = async (req, res, next) => {
+  const { season_id } = req.params;
+  try {
+    console.log(`Tìm quy định với season_id: ${season_id}`); // Debug log
+    const { success, error } = SeasonIdSchema.safeParse({ id: season_id });
+    if (!success) {
+      const validationError = new Error(`ID mùa giải không hợp lệ: ${error.errors[0].message}`);
+      validationError.status = 400;
+      return next(validationError);
+    }
+    const regulations = await Regulation.find({ season_id: new mongoose.Types.ObjectId(season_id) });
+    return successResponse(
+      res,
+      regulations,
+      "Lấy quy định theo mùa giải thành công"
+    );
+  } catch (error) {
+    console.error(`Lỗi trong getRegulationsBySeasonId: ${error.message}`); // Debug log
+    return next(error);
+  }
 };
 
 // API tạo quy định
@@ -261,4 +284,5 @@ export {
   updateRegulation,
   deleteRegulation,
   getIdRegulations,
+  getRegulationsBySeasonId,
 };

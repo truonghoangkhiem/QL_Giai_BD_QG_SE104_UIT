@@ -5,6 +5,7 @@ import {
   createRegulation,
   updateRegulation,
   deleteRegulation,
+  getRegulationsBySeasonId,
   getIdRegulations,
 } from "../../controllers/regulation/regulationController.js";
 
@@ -14,6 +15,7 @@ import { errorMiddleware } from "../../middleware/errorMiddleware.js";
 const router = express.Router();
 
 router.get("/", getRegulations); ///
+router.get("/season/:season_id", getRegulationsBySeasonId); // Route mới dùng season_id
 router.get("/:id", getRegulationById); ///
 router.get("/:season_id/:regulation_name", getIdRegulations); ///
 router.post("/", authenticateToken, createRegulation); ///

@@ -406,6 +406,148 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/regulations/season/{season_id}:
+    get:
+      summary: Lấy danh sách quy định theo ID mùa giải
+      description: Truy vấn danh sách các quy định (regulations) liên quan đến một mùa giải dựa trên `season_id`. Trả về tất cả quy định có `season_id` khớp với tham số đầu vào.
+      operationId: getRegulationsBySeasonId
+      tags:
+        - Quy định
+      parameters:
+        - name: season_id
+          in: path
+          description: ID của mùa giải (ObjectId MongoDB, 24 ký tự hex)
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+            example: '507f1f77bcf86cd799439011'
+      responses:
+        '200':
+          description: Lấy danh sách quy định thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    description: Trạng thái yêu cầu
+                    example: success
+                  message:
+                    type: string
+                    description: Thông báo mô tả kết quả
+                    example: Lấy quy định theo mùa giải thành công
+                  data:
+                    type: array
+                    description: Danh sách các quy định
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          description: ID của quy định (ObjectId)
+                          example: '67dd9599017c56868489609f'
+                        season_id:
+                          type: string
+                          description: ID của mùa giải liên quan (ObjectId)
+                          example: '507f1f77bcf86cd799439011'
+                        regulation_name:
+                          type: string
+                          description: Tên quy định
+                          example: 'Match Rules'
+                        rules:
+                          type: object
+                          description: Các quy tắc cụ thể của quy định
+                          additionalProperties: true
+                          example:
+                            matchRounds: 2
+                            homeTeamRule: 'Home team provides the ball'
+                        type:
+                          type: string
+                          description: Loại quy định (tùy chọn)
+                          example: 'match'
+                        createdAt:
+                          type: string
+                          format: date-time
+                          description: Thời gian tạo quy định
+                          example: '2025-04-02T03:11:48.674Z'
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          description: Thời gian cập nhật quy định
+                          example: '2025-04-02T03:11:48.674Z'
+                        __v:
+                          type: integer
+                          description: Phiên bản tài liệu (MongoDB)
+                          example: 0
+              example:
+                status: success
+                message: Lấy quy định theo mùa giải thành công
+                data:
+                  - _id: '67dd9599017c56868489609f'
+                    season_id: '507f1f77bcf86cd799439011'
+                    regulation_name: 'Match Rules'
+                    rules:
+                      matchRounds: 2
+                      homeTeamRule: 'Home team provides the ball'
+                    type: 'match'
+                  - _id: '67ecaaf4c19fb6545e56d99b'
+                    season_id: '507f1f77bcf86cd799439011'
+                    regulation_name: 'Age Regulation'
+                    rules:
+                      minAge: 18
+                      maxAge: 35
+                      minPlayersPerTeam: 5
+                      maxPlayersPerTeam: 11
+                      maxForeignPlayers: 3
+                    createdAt: '2025-04-02T03:11:48.674Z'
+                    updatedAt: '2025-04-02T03:11:48.674Z'
+                    __v: 0
+                    type: 'age'
+        '400':
+          description: ID mùa giải không hợp lệ
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [error]
+                    example: error
+                  message:
+                    type: string
+                    example: "ID mùa giải không hợp lệ: id phải là ObjectId hợp lệ"
+        '404':
+          description: Không tìm thấy mùa giải
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [error]
+                    example: error
+                  message:
+                    type: string
+                    example: "Không tìm thấy mùa giải với ID: 507f1f77bcf86cd799439011"
+        '500':
+          description: Lỗi server không xác định
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [error]
+                    example: error
+                  message:
+                    type: string
+                    example: "Lỗi server không xác định"
 
   /api/teams/{season_id}/{team_name}:
     get:
