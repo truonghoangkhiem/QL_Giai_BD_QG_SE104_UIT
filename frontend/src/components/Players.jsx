@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import PlayerForm from './PlayerForm';
 
-const Players = ({ setEditingPlayer, setShowForm, token }) => {
-    const [players, setPlayers] = useState([]);
+const Players = ({ setEditingPlayer, setShowForm, token, setPlayers, players }) => {
     const [playerResults, setPlayerResults] = useState({});
     const [seasons, setSeasons] = useState([]);
     const [selectedSeason, setSelectedSeason] = useState('');
@@ -16,7 +15,9 @@ const Players = ({ setEditingPlayer, setShowForm, token }) => {
     useEffect(() => {
         const fetchSeasons = async () => {
             try {
-                const response = await axios.get(`${API_URL}/api/seasons`);
+                const response = await axios.get(`${API_URL}/api/seasons`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
                 const seasonsData = response.data.data || [];
                 setSeasons(seasonsData);
                 if (seasonsData.length > 0) {
@@ -28,7 +29,7 @@ const Players = ({ setEditingPlayer, setShowForm, token }) => {
         };
 
         fetchSeasons();
-    }, []);
+    }, [token]);
 
     useEffect(() => {
         if (!selectedSeason) return;
@@ -37,15 +38,17 @@ const Players = ({ setEditingPlayer, setShowForm, token }) => {
             setLoading(true);
             setError('');
             try {
-                const playersResponse = await axios.get(`${API_URL}/api/players`);
+                const playersResponse = await axios.get(`${API_URL}/api/players`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
                 const playersData = playersResponse.data.data || [];
                 setPlayers(playersData);
 
                 if (playersData.length > 0 && selectedSeason) {
                     const dateObj = new Date();
                     const date = dateObj.toISOString().split('T')[0];
-                    const response = await axios.get(`${API_URL}/api/player_results/season/${selectedSeason}`, {
-                        params: { date },
+                    const response = await axios.get(`${API_URL}/api/player_results/season/${selectedSeason}/${date}`, {
+                        headers: { Authorization: `Bearer ${token}` },
                     });
                     const results = Array.isArray(response.data.data) ? response.data.data : [];
 
@@ -53,8 +56,8 @@ const Players = ({ setEditingPlayer, setShowForm, token }) => {
                     playersData.forEach((player) => {
                         const playerResult = results.find((result) => result.player_id === player._id);
                         resultsMap[player._id] = playerResult || {
-                            matchesplayed: 0,
-                            totalGoals: 0,
+                            matchesPlayed: 0,
+                            goals: 0,
                             assists: 0,
                             yellowCards: 0,
                             redCards: 0,
@@ -67,22 +70,27 @@ const Players = ({ setEditingPlayer, setShowForm, token }) => {
                     }
                 }
             } catch (err) {
-                setError('Không thể tải dữ liệu.');
+                setError(err.response?.data?.message || 'Không thể tải dữ liệu.');
             } finally {
                 setLoading(false);
             }
         };
 
         fetchPlayersAndResults();
-    }, [selectedSeason]);
+    }, [selectedSeason, token, setPlayers]);
 
     const formatDate = (dateString) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('vi-VN', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-        });
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) throw new Error('Invalid date');
+            return date.toLocaleDateString('vi-VN', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+            });
+        } catch {
+            return 'N/A';
+        }
     };
 
     const handleEdit = (player) => {
@@ -91,6 +99,7 @@ const Players = ({ setEditingPlayer, setShowForm, token }) => {
     };
 
     const handleDelete = async (id) => {
+        setError('');
         try {
             await axios.delete(`${API_URL}/api/players/${id}`, {
                 headers: { Authorization: `Bearer ${token}` },
@@ -141,8 +150,8 @@ const Players = ({ setEditingPlayer, setShowForm, token }) => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {players.map((player) => {
                         const results = playerResults[player._id] || {
-                            matchesplayed: 0,
-                            totalGoals: 0,
+                            matchesPlayed: 0,
+                            goals: 0,
                             assists: 0,
                             yellowCards: 0,
                             redCards: 0,
@@ -154,7 +163,6 @@ const Players = ({ setEditingPlayer, setShowForm, token }) => {
                                 className="bg-gray-100 hover:bg-gray-200 transition-all duration-200 border border-gray-200 rounded-lg p-5 shadow-sm"
                             >
                                 <div className="grid grid-cols-2 gap-4">
-                                    {/* Column 1: Image, Name, Number */}
                                     <div className="flex flex-col items-center">
                                         <img
                                             src={`https://via.placeholder.com/50?text=${player.name[0]}`}
@@ -165,13 +173,12 @@ const Players = ({ setEditingPlayer, setShowForm, token }) => {
                                         <h3 className="text-lg font-medium text-gray-800 text-center">{player.name}</h3>
                                         <p className="text-sm text-gray-500 text-center">#{player.number || 'N/A'}</p>
                                     </div>
-                                    {/* Column 2: Player Details */}
                                     <div className="text-sm text-gray-600 space-y-1">
                                         <p>Vị trí: <span className="text-gray-800">{player.position || 'N/A'}</span></p>
                                         <p>Quốc tịch: <span className="text-gray-800">{player.nationality || 'N/A'}</span></p>
-                                        <p>Ngày sinh: <span className="text-gray-800">{formatDate(player.dateOfBirth)}</span></p>
-                                        <p>Số trận: {results.matchesplayed}</p>
-                                        <p>Bàn thắng: {results.totalGoals}</p>
+                                        <p>Ngày sinh: <span className="text-gray-800">{formatDate(player.dob)}</span></p>
+                                        <p>Số trận: {results.matchesPlayed}</p>
+                                        <p>Bàn thắng: {results.goals}</p>
                                         <p>Kiến tạo: {results.assists}</p>
                                         <p>Thẻ vàng: {results.yellowCards}</p>
                                         <p>Thẻ đỏ: {results.redCards}</p>
