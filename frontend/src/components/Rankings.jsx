@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 
-const Rankings = ({ seasonId, token, seasons, formatDate }) => {
+const Rankings = ({ seasonId, token, seasons, formatDate, setSelectedSeasonId }) => {
     const [teamResults, setTeamResults] = useState([]);
     const [teams, setTeams] = useState([]);
     const [regulation, setRegulation] = useState(null);
@@ -10,7 +10,6 @@ const Rankings = ({ seasonId, token, seasons, formatDate }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedTeam, setSelectedTeam] = useState('');
-    const [selectedSeasonId, setSelectedSeasonId] = useState(seasonId);
     const teamsPerPage = 10;
 
     const defaultLogoUrl = 'https://th.bing.com/th/id/OIP.iiLfIvv8F-PfjMrjObypGgHaHa?rs=1&pid=ImgDetMain';
@@ -34,7 +33,7 @@ const Rankings = ({ seasonId, token, seasons, formatDate }) => {
 
     // Xử lý thay đổi mùa giải
     const handleSeasonChange = (e) => {
-        setSelectedSeasonId(e.target.value);
+        setSelectedSeasonId(e.target.value); // Cập nhật selectedSeasonId trong RankingsPage
         setSelectedDate('');
         setSelectedTeam('');
         setCurrentPage(1);
@@ -43,7 +42,7 @@ const Rankings = ({ seasonId, token, seasons, formatDate }) => {
     // Lấy dữ liệu
     useEffect(() => {
         const fetchData = async () => {
-            if (!selectedSeasonId || !/^[0-9a-fA-F]{24}$/.test(selectedSeasonId)) {
+            if (!seasonId || !/^[0-9a-fA-F]{24}$/.test(seasonId)) {
                 setError('Mùa giải không hợp lệ.');
                 setLoading(false);
                 return;
@@ -61,10 +60,10 @@ const Rankings = ({ seasonId, token, seasons, formatDate }) => {
                 // Lấy danh sách đội bóng
                 let teamsResponse;
                 try {
-                    teamsResponse = await axios.get(`http://localhost:5000/api/teams/seasons/${selectedSeasonId}`, config);
+                    teamsResponse = await axios.get(`http://localhost:5000/api/teams/seasons/${seasonId}`, config);
                 } catch (err) {
                     if (err.response?.status === 401 && token) {
-                        teamsResponse = await axios.get(`http://localhost:5000/api/teams/seasons/${selectedSeasonId}`);
+                        teamsResponse = await axios.get(`http://localhost:5000/api/teams/seasons/${seasonId}`);
                     } else {
                         throw new Error('Không thể lấy danh sách đội bóng: ' + (err.response?.data?.message || err.message));
                     }
@@ -78,7 +77,7 @@ const Rankings = ({ seasonId, token, seasons, formatDate }) => {
                 setTeams(teamsData);
 
                 // Lấy kết quả đội bóng
-                const teamResultsResponse = await axios.get(`http://localhost:5000/api/team_results/season/${selectedSeasonId}`, config);
+                const teamResultsResponse = await axios.get(`http://localhost:5000/api/team_results/season/${seasonId}`, config);
                 if (teamResultsResponse.data.status !== 'success' || !Array.isArray(teamResultsResponse.data.data)) {
                     throw new Error('Dữ liệu kết quả đội bóng không hợp lệ.');
                 }
@@ -89,7 +88,7 @@ const Rankings = ({ seasonId, token, seasons, formatDate }) => {
 
                 // Lấy ID quy định xếp hạng
                 const regulationIdResponse = await axios.get(
-                    `http://localhost:5000/api/regulations/${selectedSeasonId}/Ranking%20Rules`,
+                    `http://localhost:5000/api/regulations/${seasonId}/Ranking%20Rules`,
                     config
                 );
                 if (regulationIdResponse.data.status !== 'success' || !regulationIdResponse.data.data) {
@@ -128,7 +127,7 @@ const Rankings = ({ seasonId, token, seasons, formatDate }) => {
         };
 
         fetchData();
-    }, [selectedSeasonId, token]);
+    }, [seasonId, token]); // Sử dụng seasonId từ props thay vì state nội bộ
 
     // Xử lý và sắp xếp dữ liệu
     const rankingCriteria = regulation?.rules?.rankingCriteria || ['points', 'goalsDifference', 'goalsForAway'];
@@ -295,7 +294,7 @@ const Rankings = ({ seasonId, token, seasons, formatDate }) => {
                     </label>
                     <select
                         id="season-select"
-                        value={selectedSeasonId || ''}
+                        value={seasonId || ''}
                         onChange={handleSeasonChange}
                         className="w-full sm:w-64 bg-white border border-gray-200 rounded-lg px-4 py-2 text-gray-700 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition duration-200 hover:border-blue-400 hover:shadow-md"
                     >
