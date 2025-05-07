@@ -2,24 +2,32 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import TeamForm from './TeamForm';
 
-const Teams = ({ setEditingTeam, setShowForm, token }) => {
+const Teams = ({ setEditingTeam, setShowForm, token, selectedSeason }) => {
     const [teams, setTeams] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
     useEffect(() => {
         const fetchTeams = async () => {
+            if (!selectedSeason) {
+                setTeams([]);
+                setError('Vui lòng chọn một mùa giải');
+                setLoading(false);
+                return;
+            }
             try {
-                const response = await axios.get('http://localhost:5000/api/teams/');
-                setTeams(response.data.data);
+                const response = await axios.get(`http://localhost:5000/api/teams/seasons/${selectedSeason}`);
+                setTeams(response.data.data || []); // Đảm bảo luôn là mảng
+                setError(''); // Xóa lỗi nếu thành công
                 setLoading(false);
             } catch (err) {
-                setError('Không thể tải danh sách đội bóng');
+                setError(err.response?.data?.message || 'Không thể tải danh sách đội bóng');
+                setTeams([]);
                 setLoading(false);
             }
         };
         fetchTeams();
-    }, []);
+    }, [selectedSeason]);
 
     const handleEdit = (team) => {
         setEditingTeam(team);
@@ -31,7 +39,7 @@ const Teams = ({ setEditingTeam, setShowForm, token }) => {
             await axios.delete(`http://localhost:5000/api/teams/${id}`);
             setTeams(teams.filter((team) => team._id !== id));
         } catch (err) {
-            setError('Không thể xóa đội bóng');
+            setError(err.response?.data?.message || 'Không thể xóa đội bóng');
         }
     };
 
@@ -40,8 +48,10 @@ const Teams = ({ setEditingTeam, setShowForm, token }) => {
 
     return (
         <div className="bg-white container mx-auto p-4">
-            <h2 className="bg-gradient-to-r from-slate-600 to-slate-800 text-4xl font-extrabold text-white py-3 px-6 rounded-lg drop-shadow-md mb-4 text-center font-heading hover:brightness-110 transition-all duration-200">Danh sách đội bóng</h2>
-            {teams.length === 0 ? (
+            <h2 className="bg-gradient-to-r from-slate-600 to-slate-800 text-4xl font-extrabold text-white py-3 px-6 rounded-lg drop-shadow-md mb-4 text-center font-heading hover:brightness-110 transition-all duration-200">
+                Danh sách đội bóng
+            </h2>
+            {teams.length === 0 && !error ? (
                 <p className="text-gray-500 text-center">Không có đội bóng nào.</p>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">

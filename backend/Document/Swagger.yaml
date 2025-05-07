@@ -2001,7 +2001,6 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-
   parameters:
     RegulationId:
       name: id
@@ -2110,7 +2109,6 @@ components:
     PlayerRankingId:
       name: id
       in: path
-      required: true
       schema:
         type: string
       example: "67d0ec1a412c1edc00d21182"
