@@ -1,142 +1,403 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 
-const Rankings = ({ seasonId, token }) => {
-    const [rankings, setRankings] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+const Rankings = ({ seasonId, token, seasons, formatDate }) => {
+  const [teamResults, setTeamResults] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [regulation, setRegulation] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedTeam, setSelectedTeam] = useState('');
+  const [selectedSeasonId, setSelectedSeasonId] = useState(seasonId);
+  const teamsPerPage = 10;
 
-    // Placeholder URL cho logo mặc định (thay bằng URL bạn cung cấp)
-    const defaultLogoUrl = 'https://th.bing.com/th/id/OIP.dSoxOf16Bt30Ntp4xXxg6gAAAA?rs=1&pid=ImgDetMain'; // Thay bằng URL hình ảnh mặc định
+  const defaultLogoUrl = 'https://th.bing.com/th/id/OIP.iiLfIvv8F-PfjMrjObypGgHaHa?rs=1&pid=ImgDetMain';
 
-    useEffect(() => {
-        if (!seasonId) return;
+  // Xử lý lỗi hình ảnh
+  const handleImageError = (e) => {
+    e.target.src = defaultLogoUrl;
+  };
 
-        const fetchRankings = async () => {
-            setLoading(true);
-            try {
-                const response = await axios.get(`http://localhost:5000/api/rankings/${seasonId}`);
-                if (!response.data.success || !Array.isArray(response.data.data)) {
-                    throw new Error('Invalid data format from API');
-                }
-                const data = response.data.data;
+  // Xử lý thay đổi ngày
+  const handleDateChange = (e) => {
+    setSelectedDate(e.target.value);
+    setCurrentPage(1);
+  };
 
-                // Kiểm tra nếu dữ liệu không populate đúng
-                if (data.length > 0 && !data[0].team_result_id?.team_id?.team_name) {
-                    console.warn('Data is not fully populated. Using partial data with fallback.');
-                    setError('Dữ liệu không được populate đầy đủ. Tên đội bóng không khả dụng.');
-                }
+  // Xử lý thay đổi đội bóng
+  const handleTeamChange = (e) => {
+    setSelectedTeam(e.target.value);
+    setCurrentPage(1);
+  };
 
-                setRankings(data);
-                setLoading(false);
-            } catch (err) {
-                console.error('Fetch error:', err.message);
-                setError('Không thể tải danh sách xếp hạng đội bóng.');
-                setRankings([]);
-                setLoading(false);
-            }
-        };
-        fetchRankings();
-    }, [seasonId]);
+  // Xử lý thay đổi mùa giải
+  const handleSeasonChange = (e) => {
+    setSelectedSeasonId(e.target.value);
+    setSelectedDate('');
+    setSelectedTeam('');
+    setCurrentPage(1);
+  };
 
-    const handleDelete = async (id) => {
-        if (!token) {
-            alert('Vui lòng đăng nhập để xóa xếp hạng.');
-            return;
-        }
+  // Lấy dữ liệu
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!selectedSeasonId || !/^[0-9a-fA-F]{24}$/.test(selectedSeasonId)) {
+        setError('Mùa giải không hợp lệ.');
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError('');
+      setTeamResults([]);
+      setTeams([]);
+      setRegulation(null);
+
+      try {
+        const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+
+        // Lấy danh sách đội bóng
+        let teamsResponse;
         try {
-            await axios.delete(`http://localhost:5000/api/rankings/${id}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-            setRankings(rankings.filter((ranking) => ranking._id !== id));
+          teamsResponse = await axios.get(`http://localhost:5000/api/teams/seasons/${selectedSeasonId}`, config);
         } catch (err) {
-            setError('Không thể xóa xếp hạng');
+          if (err.response?.status === 401 && token) {
+            teamsResponse = await axios.get(`http://localhost:5000/api/teams/seasons/${selectedSeasonId}`);
+          } else {
+            throw new Error('Không thể lấy danh sách đội bóng: ' + (err.response?.data?.message || err.message));
+          }
         }
+
+        if (teamsResponse.data.status !== 'success' || !Array.isArray(teamsResponse.data.data)) {
+          throw new Error('Dữ liệu đội bóng không hợp lệ.');
+        }
+
+        const teamsData = teamsResponse.data.data;
+        setTeams(teamsData);
+
+        // Lấy kết quả đội bóng
+        const teamResultsResponse = await axios.get(`http://localhost:5000/api/team_results/season/${selectedSeasonId}`, config);
+        if (teamResultsResponse.data.status !== 'success' || !Array.isArray(teamResultsResponse.data.data)) {
+          throw new Error('Dữ liệu kết quả đội bóng không hợp lệ.');
+        }
+
+        const allTeamResults = teamResultsResponse.data.data;
+        setTeamResults(allTeamResults);
+
+        // Lấy ID quy định xếp hạng
+        const regulationIdResponse = await axios.get(
+          `http://localhost:5000/api/regulations/${selectedSeasonId}/Ranking%20Rules`,
+          config
+        );
+        if (regulationIdResponse.data.status !== 'success' || !regulationIdResponse.data.data) {
+          throw new Error('Không tìm thấy quy định xếp hạng.');
+        }
+
+        const regulationId = regulationIdResponse.data.data;
+
+        // Lấy chi tiết quy định xếp hạng
+        const regulationResponse = await axios.get(
+          `http://localhost:5000/api/regulations/${regulationId}`,
+          config
+        );
+        if (regulationResponse.data.status !== 'success' || !regulationResponse.data.data) {
+          throw new Error('Không thể lấy chi tiết quy định xếp hạng.');
+        }
+
+        const regulationData = regulationResponse.data.data;
+        if (
+          regulationData.regulation_name !== 'Ranking Rules' ||
+          !Array.isArray(regulationData.rules?.rankingCriteria)
+        ) {
+          throw new Error('Quy định không hợp lệ hoặc thiếu tiêu chí xếp hạng.');
+        }
+        setRegulation(regulationData);
+        setLoading(false);
+      } catch (err) {
+        console.error('Lỗi khi lấy dữ liệu:', {
+          message: err.message,
+          status: err.response?.status,
+          data: err.response?.data,
+        });
+        setError('Mùa giải không có thông tin.');
+        setLoading(false);
+      }
     };
 
-    if (loading) return <p className="text-lg">Đang tải...</p>;
-    if (error && rankings.length === 0) return <p className="text-red-500 text-lg">{error}</p>;
+    fetchData();
+  }, [selectedSeasonId, token]);
 
-    return (
-        <div className="container mx-auto p-6">
-            {error && <p className="text-yellow-500 text-lg mb-6">{error}</p>}
-            {rankings.length > 0 ? (
-                <div className="overflow-x-auto">
-                    <table className="min-w-full max-w-6xl mx-auto border-2 border-gray-300 shadow-lg">
-                        <thead>
-                            <tr className="bg-blue-950 text-white">
-                                <th className="py-4 px-8 border-b-2 border-gray-300 text-left text-xl font-bold">Xếp hạng</th>
-                                <th className="py-4 px-8 border-b-2 border-gray-300 text-left text-xl font-bold">Tên đội</th>
-                                <th className="py-4 px-8 border-b-2 border-gray-300 text-left text-xl font-bold">Số trận</th>
-                                <th className="py-4 px-8 border-b-2 border-gray-300 text-left text-xl font-bold">Thắng</th>
-                                <th className="py-4 px-8 border-b-2 border-gray-300 text-left text-xl font-bold">Hòa</th>
-                                <th className="py-4 px-8 border-b-2 border-gray-300 text-left text-xl font-bold">Thua</th>
-                                <th className="py-4 px-8 border-b-2 border-gray-300 text-left text-xl font-bold">Bàn thắng</th>
-                                <th className="py-4 px-8 border-b-2 border-gray-300 text-left text-xl font-bold">Bàn thua</th>
-                                <th className="py-4 px-8 border-b-2 border-gray-300 text-left text-xl font-bold">Hiệu số</th>
-                                <th className="py-4 px-8 border-b-2 border-gray-300 text-left text-xl font-bold">Điểm</th>
-                                <th className="py-4 px-8 border-b-2 border-gray-300 text-left text-xl font-bold">Ngày</th>
-                                {token && <th className="py-4 px-8 border-b-2 border-gray-300 text-left text-xl font-bold">Hành động</th>}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {rankings.map((ranking, index) => (
-                                <tr
-                                    key={ranking._id}
-                                    className={`hover:bg-gray-200 ${index % 2 === 0 ? 'bg-gray-100' : 'bg-white'}`}
-                                >
-                                    <td className="py-4 px-8 border-b-2 border-gray-300 text-lg text-gray-800">{ranking.rank || 'N/A'}</td>
-                                    <td className="w-64 py-4 px-8 border-b-2 border-gray-300 text-lg text-gray-800">
-                                        <div className="flex items-center space-x-3 min-w-0">
-                                            {ranking.team_result_id?.team_id?.logo ? (
-                                                <img
-                                                    src={ranking.team_result_id.team_id.logo}
-                                                    alt={`${ranking.team_result_id.team_id.team_name} logo`}
-                                                    className="w-10 h-10 rounded-full flex-shrink-0"
-                                                />
-                                            ) : (
-                                                <img
-                                                    src={defaultLogoUrl}
-                                                    alt="Default logo"
-                                                    className="w-10 h-10 rounded-full flex-shrink-0"
-                                                />
-                                            )}
-                                            <span className="truncate text-lg text-gray-800" title={ranking.team_result_id?.team_id?.team_name || 'Không xác định'}>
-                                                {ranking.team_result_id?.team_id?.team_name || 'Không xác định'}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td className="py-4 px-8 border-b-2 border-gray-300 text-lg text-gray-800">{ranking.team_result_id?.matchplayed || 0}</td>
-                                    <td className="py-4 px-8 border-b-2 border-gray-300 text-lg text-gray-800">{ranking.team_result_id?.wins || 0}</td>
-                                    <td className="py-4 px-8 border-b-2 border-gray-300 text-lg text-gray-800">{ranking.team_result_id?.draws || 0}</td>
-                                    <td className="py-4 px-8 border-b-2 border-gray-300 text-lg text-gray-800">{ranking.team_result_id?.losses || 0}</td>
-                                    <td className="py-4 px-8 border-b-2 border-gray-300 text-lg text-gray-800">{ranking.team_result_id?.goalsFor || 0}</td>
-                                    <td className="py-4 px-8 border-b-2 border-gray-300 text-lg text-gray-800">{ranking.team_result_id?.goalsAgainst || 0}</td>
-                                    <td className="py-4 px-8 border-b-2 border-gray-300 text-lg text-gray-800">{ranking.team_result_id?.goalsDifference || 0}</td>
-                                    <td className="py-4 px-8 border-b-2 border-gray-300 text-lg text-gray-800">{ranking.team_result_id?.points || 0}</td>
-                                    <td className="py-4 px-8 border-b-2 border-gray-300 text-lg text-gray-800">{new Date(ranking.date).toLocaleDateString()}</td>
-                                    {token && (
-                                        <td className="py-4 px-8 border-b-2 border-gray-300">
-                                            <button
-                                                onClick={() => handleDelete(ranking._id)}
-                                                className="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition duration-200"
-                                            >
-                                                Xóa
-                                            </button>
-                                        </td>
-                                    )}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            ) : (
-                <p className="text-gray-500 text-lg">Chưa có dữ liệu xếp hạng đội bóng.</p>
-            )}
-        </div>
+  // Xử lý và sắp xếp dữ liệu
+  const rankingCriteria = regulation?.rules?.rankingCriteria || ['points', 'goalsDifference', 'goalsForAway'];
+
+  const enrichedResults = useMemo(() => {
+    if (!teamResults.length || !teams.length) {
+      return [];
+    }
+
+    let filteredResults = teamResults;
+    if (selectedDate) {
+      const selectedDateObj = new Date(selectedDate);
+      filteredResults = teamResults.filter(result => {
+        const resultDate = new Date(result.date);
+        return resultDate <= selectedDateObj;
+      });
+    }
+
+    const latestResultsByTeam = teams
+      .map(team => {
+        const resultsForTeam = filteredResults
+          .filter(result => 
+            result && typeof result === 'object' && result.team_id && result.team_id.toString() === team._id
+          );
+        if (resultsForTeam.length === 0) {
+          return null;
+        }
+        return resultsForTeam.sort((a, b) => {
+          const dateA = new Date(a.date);
+          const dateB = new Date(b.date);
+          return dateB - dateA;
+        })[0];
+      })
+      .filter(result => result !== null);
+
+    const validTeamIds = new Set(
+      latestResultsByTeam
+        .filter(result => result && typeof result === 'object' && result.team_id)
+        .map(result => result.team_id.toString())
     );
+    let filteredTeams = teams.filter(team => validTeamIds.has(team._id));
+
+    if (selectedTeam) {
+      filteredTeams = filteredTeams.filter(team => team._id === selectedTeam);
+    }
+
+    return filteredTeams
+      .map(team => {
+        const result = latestResultsByTeam.find(r => r.team_id.toString() === team._id);
+        if (!result) {
+          console.warn(`Không tìm thấy kết quả cho đội: ${team.team_name} (${team._id})`);
+          return null;
+        }
+
+        let headToHeadPoints = {};
+        if (result.headToHeadPoints instanceof Map) {
+          headToHeadPoints = Object.fromEntries(result.headToHeadPoints);
+        } else if (typeof result.headToHeadPoints === 'object' && result.headToHeadPoints !== null) {
+          headToHeadPoints = result.headToHeadPoints;
+        } else {
+          console.warn(`headToHeadPoints không hợp lệ cho team_id: ${result.team_id}`, result.headToHeadPoints);
+        }
+
+        return {
+          teamId: result.team_id.toString(),
+          teamName: team.team_name || 'Đội không xác định',
+          logo: team.logo || defaultLogoUrl,
+          points: Number(result.points) || 0,
+          goalsDifference: Number(result.goalsDifference) || 0,
+          goalsForAway: Number(result.goalsForAway) || 0,
+          headToHeadPoints,
+          matchPlayed: Number(result.matchplayed) || 0,
+          wins: Number(result.wins) || 0,
+          draws: Number(result.draws) || 0,
+          losses: Number(result.losses) || 0,
+          goalsFor: Number(result.goalsFor) || 0,
+          goalsAgainst: Number(result.goalsAgainst) || 0,
+        };
+      })
+      .filter(team => team !== null)
+      .sort((a, b) => {
+        for (const criterion of rankingCriteria) {
+          if (criterion === 'points') {
+            if (a.points !== b.points) return b.points - a.points;
+          } else if (criterion === 'goalsDifference') {
+            if (a.goalsDifference !== b.goalsDifference) return b.goalsDifference - a.goalsDifference;
+          } else if (criterion === 'goalsForAway') {
+            if (a.goalsForAway !== b.goalsForAway) return b.goalsForAway - a.goalsForAway;
+          } else if (criterion === 'headToHeadPoints') {
+            const pointsA = (a.headToHeadPoints && typeof a.headToHeadPoints === 'object' && b.teamId in a.headToHeadPoints)
+              ? Number(a.headToHeadPoints[b.teamId]) || 0
+              : 0;
+            const pointsB = (b.headToHeadPoints && typeof b.headToHeadPoints === 'object' && a.teamId in b.headToHeadPoints)
+              ? Number(b.headToHeadPoints[a.teamId]) || 0
+              : 0;
+            if (pointsA !== pointsB) return pointsB - pointsA;
+          }
+        }
+        return 0;
+      })
+      .map((result, index) => ({ ...result, rank: index + 1 }));
+  }, [teamResults, teams, rankingCriteria, selectedDate, selectedTeam]);
+
+  // Phân trang
+  const indexOfLastTeam = currentPage * teamsPerPage;
+  const indexOfFirstTeam = indexOfLastTeam - teamsPerPage;
+  const paginatedResults = enrichedResults.slice(indexOfFirstTeam, indexOfLastTeam);
+  const totalPages = Math.ceil(enrichedResults.length / teamsPerPage);
+
+  // Điều hướng trang
+  const handleNextPage = useCallback(() => {
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+    }
+  }, [currentPage, totalPages]);
+
+  const handlePrevPage = useCallback(() => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  }, [currentPage]);
+
+  // Trạng thái loading
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-lg p-8">
+      {/* Bộ lọc */}
+      <div className="mb-8 flex flex-col sm:flex-row justify-center gap-4">
+        <div className="flex items-center gap-3">
+          <label htmlFor="season-select" className="text-sm font-medium text-gray-700">
+            Mùa giải:
+          </label>
+          <select
+            id="season-select"
+            value={selectedSeasonId || ''}
+            onChange={handleSeasonChange}
+            className="w-full sm:w-64 bg-white border border-gray-200 rounded-lg px-4 py-2 text-gray-700 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition duration-200 hover:border-blue-400 hover:shadow-md"
+          >
+            <option value="">Chọn mùa giải</option>
+            {seasons.map(season => (
+              <option key={season._id} value={season._id}>
+                {`${season.season_name} (${formatDate(season.start_date)} - ${formatDate(season.end_date)})`}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-3">
+          <label htmlFor="date-filter" className="text-sm font-medium text-gray-700">
+            Ngày:
+          </label>
+          <input
+            type="date"
+            id="date-filter"
+            value={selectedDate}
+            onChange={handleDateChange}
+            className="w-full sm:w-48 bg-white border border-gray-200 rounded-lg px-4 py-2 text-gray-700 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition duration-200 hover:border-blue-400 hover:shadow-md"
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <label htmlFor="team-filter" className="text-sm font-medium text-gray-700">
+            Đội bóng:
+          </label>
+          <select
+            id="team-filter"
+            value={selectedTeam}
+            onChange={handleTeamChange}
+            className="w-full sm:w-64 bg-white border border-gray-200 rounded-lg px-4 py-2 text-gray-700 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition duration-200 hover:border-blue-400 hover:shadow-md"
+          >
+            <option value="">Tất cả đội bóng</option>
+            {teams.map(team => (
+              <option key={team._id} value={team._id}>
+                {team.team_name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Thông báo lỗi hoặc không có dữ liệu */}
+      {(error || enrichedResults.length === 0) && (
+        <p className="text-center text-gray-500 py-4">
+          {error || 'Mùa giải không có thông tin.'}
+        </p>
+      )}
+
+      {/* Bảng xếp hạng */}
+      {enrichedResults.length > 0 && (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full table-auto border-collapse">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Hạng</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Đội</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Trận</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Thắng</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Hòa</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Thua</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Bàn thắng</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Bàn thua</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Hiệu số</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Điểm</th>
+                  {rankingCriteria.includes('goalsForAway') && (
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Bàn thắng sân khách</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedResults.map(team => (
+                  <tr key={team.rank} className="border-b border-gray-100 hover:bg-blue-50 transition duration-150">
+                    <td className="px-6 py-4 text-gray-700">{team.rank}</td>
+                    <td className="px-6 py-4 flex items-center gap-3">
+                      <img
+                        src={team.logo}
+                        alt={`${team.teamName} logo`}
+                        className="w-8 h-8 rounded-full object-cover shadow-sm"
+                        onError={handleImageError}
+                      />
+                      <span className="font-medium text-gray-800">{team.teamName}</span>
+                    </td>
+                    <td className="px-6 py-4 text-center text-gray-700">{team.matchPlayed}</td>
+                    <td className="px-6 py-4 text-center text-gray-700">{team.wins}</td>
+                    <td className="px-6 py-4 text-center text-gray-700">{team.draws}</td>
+                    <td className="px-6 py-4 text-center text-gray-700">{team.losses}</td>
+                    <td className="px-6 py-4 text-center text-gray-700">{team.goalsFor}</td>
+                    <td className="px-6 py-4 text-center text-gray-700">{team.goalsAgainst}</td>
+                    <td className="px-6 py-4 text-center text-gray-700">{team.goalsDifference}</td>
+                    <td className="px-6 py-4 text-center text-gray-700">{team.points}</td>
+                    {rankingCriteria.includes('goalsForAway') && (
+                      <td className="px-6 py-4 text-center text-gray-700">{team.goalsForAway}</td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex justify-between items-center mt-6">
+            <button
+              onClick={handlePrevPage}
+              disabled={currentPage === 1}
+              className={`px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium transition duration-200 ${
+                currentPage === 1 ? 'bg-gray-100 cursor-not-allowed' : 'hover:bg-blue-100 hover:shadow-md'
+              }`}
+            >
+              Trang trước
+            </button>
+            <span className="text-gray-600 font-medium">
+              Trang {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={handleNextPage}
+              disabled={currentPage >= totalPages}
+              className={`px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium transition duration-200 ${
+                currentPage >= totalPages ? 'bg-gray-100 cursor-not-allowed' : 'hover:bg-blue-100 hover:shadow-md'
+              }`}
+            >
+              Trang tiếp theo
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
 };
 
 export default Rankings;

@@ -1,92 +1,105 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import Rankings from '../components/Rankings';
-import PlayerRankings from '../components/PlayerRankings';
 
 const RankingsPage = ({ token }) => {
-    const [seasons, setSeasons] = useState([]);
-    const [selectedSeasonId, setSelectedSeasonId] = useState(null);
-    const [error, setError] = useState(null);
+  const [seasons, setSeasons] = useState([]);
+  const [selectedSeasonId, setSelectedSeasonId] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-    // Tải danh sách mùa giải
-    useEffect(() => {
-        const fetchSeasons = async () => {
-            try {
-                console.log('Fetching seasons from API...');
-                const response = await fetch('http://localhost:5000/api/seasons');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                const result = await response.json();
-                console.log('API response:', result);
-                if (!result.success || !Array.isArray(result.data)) {
-                    throw new Error('Invalid data format from API');
-                }
-                const activeSeasons = result.data.filter(season => season.status === true);
-                setSeasons(activeSeasons);
-                if (activeSeasons.length > 0) {
-                    setSelectedSeasonId(activeSeasons[0]._id);
-                }
-            } catch (err) {
-                console.error('Fetch seasons failed:', err.message);
-                setSeasons([
-                    {
-                        _id: '67ceaf8b444f610224ed67df',
-                        season_name: 'V-League 2017',
-                        start_date: '2025-01-10',
-                        end_date: '2025-06-30',
-                        status: true,
-                    },
-                    {
-                        _id: '67ceaf8b444f610224ed67e0',
-                        season_name: 'V-League 2018',
-                        start_date: '2026-01-10',
-                        end_date: '2026-06-30',
-                        status: true,
-                    },
-                ]);
-                setSelectedSeasonId('67ceaf8b444f610224ed67df');
-                setError(`Không thể tải danh sách mùa giải từ API: ${err.message}. Hiển thị dữ liệu giả.`);
-            }
-        };
-        fetchSeasons();
-    }, []);
+  // Lấy danh sách mùa giải
+  useEffect(() => {
+    const fetchSeasons = async (retryCount = 1) => {
+      setLoading(true);
+      setError(null);
 
-    // Hàm định dạng ngày
-    const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('vi-VN');
+      try {
+        const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+        const response = await axios.get('http://localhost:5000/api/seasons', config);
+
+        const isSuccess = response.data.success === true || response.data.status === 'success';
+        if (!isSuccess || !Array.isArray(response.data.data)) {
+          throw new Error('Dữ liệu mùa giải không hợp lệ.');
+        }
+
+        const activeSeasons = response.data.data.filter(season => season.status === true);
+        setSeasons(activeSeasons);
+
+        if (activeSeasons.length > 0) {
+          setSelectedSeasonId(activeSeasons[0]._id);
+        } else {
+          setError('Không có mùa giải nào đang hoạt động.');
+        }
+      } catch (err) {
+        console.error('Lỗi khi lấy danh sách mùa giải:', {
+          message: err.message,
+          status: err.response?.status,
+          data: err.response?.data,
+        });
+
+        if (retryCount > 0) {
+          console.log('Thử lại API sau 2 giây...');
+          setTimeout(() => fetchSeasons(retryCount - 1), 2000);
+          return;
+        }
+
+        setError(
+          err.response?.status === 401
+            ? 'Không có quyền truy cập. Vui lòng đăng nhập lại.'
+            : err.response?.status === 404
+            ? 'Không tìm thấy API mùa giải.'
+            : err.response?.status === 500
+            ? 'Lỗi server. Vui lòng thử lại sau.'
+            : `Không thể tải danh sách mùa giải: ${err.message}`
+        );
+      } finally {
+        setLoading(false);
+      }
     };
 
+    fetchSeasons();
+  }, [token]);
+
+  // Định dạng ngày
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Không xác định';
+    const date = new Date(dateString);
+    return isNaN(date) ? 'Ngày không hợp lệ' : date.toLocaleDateString('vi-VN');
+  };
+
+  // Lấy tên mùa giải được chọn
+  const selectedSeasonName = seasons.find(season => season._id === selectedSeasonId)?.season_name || '';
+
+  // Trạng thái loading
+  if (loading) {
     return (
-        <div className="container mx-auto p-4">
-            <h2 className="text-2xl font-bold mb-4">Xếp hạng</h2>
-            {error && <p className="text-red-500 mb-4">{error}</p>}
-            <div className="mb-4">
-                <label htmlFor="season-select" className="mr-2 font-semibold">
-                    Chọn mùa giải:
-                </label>
-                <select
-                    id="season-select"
-                    value={selectedSeasonId || ''}
-                    onChange={(e) => setSelectedSeasonId(e.target.value)}
-                    className="border p-2 rounded"
-                >
-                    {seasons.length > 0 ? (
-                        seasons.map(season => (
-                            <option key={season._id} value={season._id}>
-                                {`${season.season_name} (${formatDate(season.start_date)} - ${formatDate(season.end_date)})`}
-                            </option>
-                        ))
-                    ) : (
-                        <option value="">Không có mùa giải</option>
-                    )}
-                </select>
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Xếp hạng đội bóng</h3>
-            <Rankings seasonId={selectedSeasonId} token={token} />
-            <h3 className="text-xl font-semibold mt-8 mb-2">Xếp hạng cầu thủ</h3>
-            <PlayerRankings seasonId={selectedSeasonId} token={token} />
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
+      </div>
     );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Tiêu đề */}
+        <h1 className="text-4xl font-bold text-gray-800 text-center mb-10">
+          Bảng Xếp Hạng {selectedSeasonName && `- ${selectedSeasonName}`}
+        </h1>
+
+        {/* Thông báo lỗi */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-lg shadow-lg mx-auto max-w-2xl">
+            {error}
+          </div>
+        )}
+
+        {/* Hiển thị component Rankings */}
+        <Rankings seasonId={selectedSeasonId} token={token} seasons={seasons} formatDate={formatDate} />
+      </div>
+    </div>
+  );
 };
 
 export default RankingsPage;
