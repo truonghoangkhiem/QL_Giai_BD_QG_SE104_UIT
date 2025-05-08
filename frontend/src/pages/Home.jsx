@@ -5,6 +5,7 @@ import axios from 'axios';
 
 const Home = () => {
     const [upcomingMatches, setUpcomingMatches] = useState([]);
+    const [pastMatches, setPastMatches] = useState([]);
     const [leagueName, setLeagueName] = useState('Bảng xếp hạng mùa giải hiện tại');
     const [seasonId, setSeasonId] = useState(null);
     const [error, setError] = useState(null);
@@ -41,33 +42,43 @@ const Home = () => {
         fetchCurrentSeasons();
     }, []);
 
-    // Lấy danh sách các trận đấu sắp diễn ra
+    // Lấy danh sách các trận đấu
     useEffect(() => {
-        const fetchUpcomingMatches = async () => {
+        const fetchMatches = async () => {
             if (!seasonId) return;
             try {
                 const response = await axios.get(`http://localhost:5000/api/matches/seasons/${seasonId}`);
                 const matchesData = response.data.data || response.data || [];
                 const currentDate = new Date();
+
+                // Trận đấu sắp diễn ra
                 const upcoming = matchesData
                     .filter((match) => new Date(match.date) > currentDate)
                     .sort((a, b) => new Date(a.date) - new Date(b.date)) // Sắp xếp theo ngày tăng dần
                     .slice(0, 5); // Giới hạn 5 trận
                 setUpcomingMatches(upcoming);
+
+                // Trận đấu đã kết thúc
+                const past = matchesData
+                    .filter((match) => new Date(match.date) <= currentDate)
+                    .sort((a, b) => new Date(b.date) - new Date(a.date)) // Sắp xếp theo ngày giảm dần
+                    .slice(0, 5); // Giới hạn 5 trận
+                setPastMatches(past);
             } catch (err) {
                 console.error('Lỗi khi lấy danh sách trận đấu:', err);
                 setError('Không thể tải danh sách trận đấu. Vui lòng thử lại sau.');
             }
         };
 
-        fetchUpcomingMatches();
+        fetchMatches();
     }, [seasonId]);
 
     // Hàm xử lý khi người dùng chọn một mùa giải
     const handleSeasonSelect = (season) => {
         setSeasonId(season._id);
         setLeagueName(season.season_name || 'Bảng xếp hạng mùa giải hiện tại');
-        setUpcomingMatches([]); // Reset upcomingMatches để tránh hiển thị dữ liệu cũ
+        setUpcomingMatches([]); // Reset upcomingMatches
+        setPastMatches([]); // Reset pastMatches
     };
 
     // Hàm định dạng ngày giờ
@@ -104,17 +115,10 @@ const Home = () => {
         }
     };
 
-    const latestMatch = upcomingMatches[0];
+    const latestMatch = pastMatches[0];
 
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center">
-            {/* Thông báo lỗi nếu có */}
-            {error && (
-                <div className="w-full bg-red-100 text-red-700 p-4 text-center">
-                    {error}
-                </div>
-            )}
-
             {/* Div với background hình ảnh */}
             <div
                 className="relative w-full h-[60vh] bg-local bg-center bg-cover bg-no-repeat flex flex-col items-center justify-center"
@@ -160,14 +164,14 @@ const Home = () => {
 
                 {/* Nội dung chính */}
                 <div className="w-full md:w-3/4 bg-white/95 rounded-2xl shadow-xl p-8 backdrop-blur-sm animate-slide-up">
-                    {/* Section trận đấu gần nhất */}
+                    {/* Section trận đấu đã kết thúc gần nhất */}
                     <div className="mb-12">
                         <Link to="/matches">
                             <h3 className="bg-gradient-to-r from-slate-600 to-slate-800 text-3xl font-extrabold text-white py-3 px-6 rounded-lg drop-shadow-md mb-6 text-center font-heading hover:brightness-110 transition-all duration-200">
-                                Trận đấu sắp diễn ra gần nhất
+                                Trận đấu đã kết thúc gần nhất
                             </h3>
                         </Link>
-                        {upcomingMatches.length > 0 && latestMatch ? (
+                        {pastMatches.length > 0 && latestMatch ? (
                             <div className="bg-white shadow-md p-6 rounded-lg flex flex-col items-center transition-all duration-300 hover:shadow-lg">
                                 <div className="flex justify-between w-full mb-4 text-sm text-gray-600 font-medium">
                                     <span>{formatMatchDate(latestMatch.date)}</span>
@@ -208,7 +212,7 @@ const Home = () => {
                                 </div>
                             </div>
                         ) : (
-                            <p className="text-center text-gray-500 text-lg">Không có trận đấu nào sắp diễn ra trong mùa giải này.</p>
+                            <p className="text-center text-gray-500 text-lg">Không có trận đấu nào đã kết thúc trong mùa giải này.</p>
                         )}
                     </div>
 
@@ -234,13 +238,13 @@ const Home = () => {
                             </h3>
                         </Link>
                         {upcomingMatches.length > 0 ? (
-                            <div className="relative">
+                            <div className="relative flex items-center">
                                 {/* Nút điều hướng trái */}
                                 <button
                                     onClick={handleScrollLeft}
-                                    className={`absolute left-[-32px] top-0 h-full px-4 rounded-md bg-blue-600 text-white hover:bg-blue-700 hover:scale-105 border border-gray-200 shadow-md transition-all duration-200 z-10 flex items-center justify-center ${upcomingMatches.length <= 1 ? 'hidden' : ''}`}
+                                    className={`flex-shrink-0 w-6 h-full bg-gray-300 text-gray-700 hover:bg-gray-400 hover:scale-105 rounded-lg shadow-lg transition-all duration-200 z-10 flex items-center justify-center ${upcomingMatches.length <= 1 ? 'hidden' : ''}`}
                                 >
-                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
                                     </svg>
                                 </button>
@@ -248,7 +252,7 @@ const Home = () => {
                                 {/* Container cuộn */}
                                 <div
                                     ref={scrollContainerRef}
-                                    className="flex gap-4 pb-4 overflow-x-hidden w-full"
+                                    className="flex-1 flex gap-4 pb-4 overflow-x-hidden"
                                     style={{
                                         scrollBehavior: 'smooth',
                                         scrollbarWidth: 'none', /* Firefox */
@@ -279,13 +283,13 @@ const Home = () => {
                                                             'https://th.bing.com/th/id/OIP.iiLfIvv8F-PfjMrjObypGgHaHa?rs=1&pid=ImgDetMain')
                                                         }
                                                     />
-                                                    <span className="text-sm font-medium text-gray-800 text-left truncate">
+                                                    <span className="text-sm font-medium text-gray-800 text-left flex-1">
                                                         {match.team1?.team_name || 'Team 1'}
                                                     </span>
                                                 </div>
-                                                <div className="text-xl font-bold text-gray-700">{match.score || 'VS'}</div>
+                                                <div className="text-xl font-bold text-gray-700">VS</div>
                                                 <div className="flex items-center gap-2 w-1/3 justify-end">
-                                                    <span className="text-sm font-medium text-gray-800 text-right truncate">
+                                                    <span className="text-sm font-medium text-gray-800 text-right flex-1">
                                                         {match.team2?.team_name || 'Team 2'}
                                                     </span>
                                                     <img
@@ -321,9 +325,9 @@ const Home = () => {
                                 {/* Nút điều hướng phải */}
                                 <button
                                     onClick={handleScrollRight}
-                                    className={`absolute right-[-32px] top-0 h-full px-4 rounded-md bg-blue-600 text-white hover:bg-blue-700 hover:scale-105 border border-gray-200 shadow-md transition-all duration-200 z-10 flex items-center justify-center ${upcomingMatches.length <= 1 ? 'hidden' : ''}`}
+                                    className={`flex-shrink-0 w-6 h-full bg-gray-300 text-gray-700 hover:bg-gray-400 hover:scale-105 rounded-lg shadow-lg transition-all duration-200 z-10 flex items-center justify-center ${upcomingMatches.length <= 1 ? 'hidden' : ''}`}
                                 >
-                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
                                     </svg>
                                 </button>
@@ -334,7 +338,7 @@ const Home = () => {
                         <div className="mt-8 text-center">
                             <Link
                                 to="/matches"
-                                className="inline-block bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all duration-300 transform hover:scale-105"
+                                className="inline-block bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all duration-200 transform hover:scale-105"
                             >
                                 Xem tất cả trận đấu
                             </Link>
