@@ -21,6 +21,7 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
 
     const API_URL = 'http://localhost:5000';
 
+    // Fetch seasons on mount
     useEffect(() => {
         const fetchSeasons = async () => {
             setLoadingSeasons(true);
@@ -34,23 +35,25 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
                     setSelectedSeason(seasonsData[0]._id);
                 }
             } catch (err) {
-                setError('Không thể tải danh sách mùa giải: ' + (err.message || 'Lỗi không xác định'));
+                setError(`Không thể tải danh sách mùa giải: ${err.response?.data?.message || err.message}`);
             } finally {
                 setLoadingSeasons(false);
             }
         };
 
-        fetchSeasons();
+        if (token) fetchSeasons();
     }, [token]);
 
+    // Fetch teams when season changes
     useEffect(() => {
-        if (!selectedSeason) return;
-
-        setSelectedTeam('');
-        setFormData((prev) => ({ ...prev, team_id: '' }));
+        if (!selectedSeason || !token) return;
 
         const fetchTeams = async () => {
             setLoadingTeams(true);
+            setTeams([]);
+            setSelectedTeam('');
+            setFormData((prev) => ({ ...prev, team_id: '' }));
+
             try {
                 const response = await axios.get(`${API_URL}/api/teams/seasons/${selectedSeason}`, {
                     headers: { Authorization: `Bearer ${token}` },
@@ -62,7 +65,7 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
                     setFormData((prev) => ({ ...prev, team_id: teamsData[0]._id }));
                 }
             } catch (err) {
-                setError('Không thể tải danh sách đội bóng: ' + (err.message || 'Lỗi không xác định'));
+                setError(`Không thể tải danh sách đội bóng: ${err.response?.data?.message || err.message}`);
             } finally {
                 setLoadingTeams(false);
             }
@@ -71,6 +74,7 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
         fetchTeams();
     }, [selectedSeason, token]);
 
+    // Populate form when editing a player
     useEffect(() => {
         if (editingPlayer) {
             setFormData({
@@ -88,104 +92,116 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
                     const response = await axios.get(`${API_URL}/api/teams/${editingPlayer.team_id}`, {
                         headers: { Authorization: `Bearer ${token}` },
                     });
-                    const team = response.data.data;
-                    setSelectedSeason(team.season_id || '');
+                    setSelectedSeason(response.data.data.season_id || '');
                 } catch (err) {
-                    setError('Không thể tải thông tin mùa giải của đội: ' + (err.message || 'Lỗi không xác định'));
+                    setError(`Không thể tải thông tin mùa giải: ${err.response?.data?.message || err.message}`);
                 }
             };
             if (editingPlayer.team_id) fetchTeamSeason();
         }
     }, [editingPlayer, token]);
 
+    // Sync selected team with formData
     useEffect(() => {
         setFormData((prev) => ({ ...prev, team_id: selectedTeam }));
     }, [selectedTeam]);
 
+    // Validate form inputs
     const validateForm = () => {
+        if (!formData.name.trim()) {
+            setError('Tên cầu thủ không được để trống');
+            return false;
+        }
         const numberValue = Number(formData.number);
         if (!Number.isInteger(numberValue) || numberValue <= 0) {
             setError('Số áo phải là số nguyên dương');
             return false;
         }
-        const today = new Date();
+        if (!formData.position.trim()) {
+            setError('Vị trí không được để trống');
+            return false;
+        }
+        if (!formData.nationality.trim()) {
+            setError('Quốc tịch không được để trống');
+            return false;
+        }
         const dob = new Date(formData.dob);
-        if (dob > today) {
-            setError('Ngày sinh không được là ngày trong tương lai');
+        const today = new Date();
+        if (isNaN(dob.getTime()) || dob > today) {
+            setError('Ngày sinh không hợp lệ hoặc trong tương lai');
             return false;
         }
         return true;
     };
 
-    const calculateAge = (dob) => {
-        const birthDate = new Date(dob);
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-        const dayDiff = today.getDate() - birthDate.getDate();
-
-        if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
-            age--;
-        }
-
-        return age;
-    };
-
+    // Check team constraints (max players, foreign players, age, jersey number)
     const checkTeamConstraints = async () => {
         try {
-            const response = await axios.get(`${API_URL}/api/players/team/${selectedTeam}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            const players = response.data.data || [];
-            const foreignPlayers = players.filter(player => player.isForeigner === true);
-            const numberExists = players.some(player => player.number === formData.number.toString());
-            if (numberExists) {
+            const [playersResponse, teamResponse, regulationResponse] = await Promise.all([
+                axios.get(`${API_URL}/api/players/team/${selectedTeam}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                }),
+                axios.get(`${API_URL}/api/teams/${selectedTeam}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                }),
+                axios.get(`${API_URL}/api/regulations/season/${selectedSeason}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                }),
+            ]);
+
+            const players = playersResponse.data.data || [];
+            const team = teamResponse.data.data;
+            const regulations = regulationResponse.data.data || [];
+
+            // Validate team and season consistency
+            if (!team || team.season_id !== selectedSeason) {
+                setError('Đội bóng không thuộc mùa giải đã chọn');
+                return false;
+            }
+
+            // Check jersey number
+            if (players.some((player) => player.number === formData.number.toString() && player._id !== editingPlayer?._id)) {
                 setError('Số áo này đã được sử dụng trong đội');
                 return false;
             }
 
-            const teamResponse = await axios.get(`${API_URL}/api/teams/${selectedTeam}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            const team = teamResponse.data.data;
-            if (!team || team.season_id !== selectedSeason) {
-                setError('Đội bóng không thuộc mùa giải đã chọn. Vui lòng chọn lại đội bóng hoặc cập nhật season_id của đội bóng trong database.');
-                return false;
-            }
-
-            const regulationResponse = await axios.get(`${API_URL}/api/regulations/season/${selectedSeason}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            const regulations = regulationResponse.data.data || [];
-            const ageRegulation = regulations.find(reg => reg.regulation_name === 'Age Regulation');
+            // Find age regulation
+            const ageRegulation = regulations.find((reg) => reg.regulation_name === 'Age Regulation');
             if (!ageRegulation) {
                 setError('Không tìm thấy quy định độ tuổi cho mùa giải này');
                 return false;
             }
+
             const { maxPlayersPerTeam, maxForeignPlayers, minAge, maxAge } = ageRegulation.rules;
 
-            if (players.length >= maxPlayersPerTeam) {
-                setError('Đội đã đạt số lượng cầu thủ tối đa');
-                return false;
-            }
-            if (formData.isForeigner && foreignPlayers.length >= maxForeignPlayers) {
-                setError('Đội đã vượt quá số lượng cầu thủ ngoại quốc cho phép');
+            // Check max players
+            if (!editingPlayer && players.length >= maxPlayersPerTeam) {
+                setError(`Đội đã đạt số lượng tối đa (${maxPlayersPerTeam} cầu thủ)`);
                 return false;
             }
 
-            const playerAge = calculateAge(formData.dob);
+            // Check foreign players
+            const foreignPlayers = players.filter((player) => player.isForeigner);
+            if (formData.isForeigner && foreignPlayers.length >= maxForeignPlayers && !editingPlayer?.isForeigner) {
+                setError(`Đội đã đạt số lượng tối đa (${maxForeignPlayers} cầu thủ ngoại)`);
+                return false;
+            }
+
+            // Check age
+            const playerAge = Math.floor((new Date() - new Date(formData.dob)) / (365.25 * 24 * 60 * 60 * 1000));
             if (playerAge < minAge || playerAge > maxAge) {
-                setError(`Độ tuổi phải từ ${minAge} đến ${maxAge} (theo quy định của mùa giải)`);
+                setError(`Độ tuổi phải từ ${minAge} đến ${maxAge}`);
                 return false;
             }
 
             return true;
         } catch (err) {
-            setError('Không thể kiểm tra quy định đội bóng: ' + (err.message || 'Lỗi không xác định'));
+            setError(`Không thể kiểm tra quy định đội bóng: ${err.response?.data?.message || err.message}`);
             return false;
         }
     };
 
+    // Handle form submission
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
@@ -210,95 +226,54 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
                 isForeigner: formData.isForeigner,
             };
 
-            const requiredFields = ['team_id', 'name', 'number', 'position', 'nationality', 'dob', 'isForeigner'];
-            const missingFields = requiredFields.filter(field => dataToSend[field] === undefined || dataToSend[field] === '');
-            if (missingFields.length > 0) {
-                setError(`Thiếu các trường bắt buộc: ${missingFields.join(', ')}`);
-                return;
-            }
-
-            console.log('Submitting player data:', dataToSend);
             let response;
             if (editingPlayer) {
-                const updateData = { ...dataToSend };
-                delete updateData.team_id;
-                response = await axios.put(`${API_URL}/api/players/${editingPlayer._id}`, updateData, config);
+                response = await axios.put(`${API_URL}/api/players/${editingPlayer._id}`, dataToSend, config);
                 setPlayers((prev) =>
                     prev.map((player) => (player._id === editingPlayer._id ? response.data.data : player))
                 );
-                if (typeof onSuccess === 'function') {
-                    onSuccess('Cập nhật cầu thủ thành công!');
-                }
+                onSuccess?.('Cập nhật cầu thủ thành công!');
             } else {
                 response = await axios.post(`${API_URL}/api/players`, dataToSend, config);
-                console.log('Player API response:', response.data);
                 const newPlayer = response.data.data;
 
-                if (!newPlayer || !newPlayer._id) {
-                    console.error('Invalid player API response:', response.data);
-                    setError('Không thể tạo cầu thủ: Phản hồi từ server không chứa thông tin cầu thủ.');
+                if (!newPlayer?._id) {
+                    setError('Không thể tạo cầu thủ: Phản hồi từ server không hợp lệ');
                     return;
                 }
 
+                // Create PlayerResult
                 try {
-                    const currentDate = new Date();
-                    currentDate.setUTCHours(0, 0, 0, 0);
                     const playerResultData = {
                         player_id: newPlayer._id,
                         season_id: selectedSeason,
                         team_id: selectedTeam,
-                        date: currentDate.toISOString(),
-                        matchesplayed: 0,
-                        totalGoals: 0,
-                        assists: 0,
-                        yellowCards: 0,
-                        redCards: 0,
                     };
 
-                    const requiredPlayerResultFields = ['player_id', 'season_id', 'team_id', 'date', 'matchesplayed', 'totalGoals', 'assists', 'yellowCards', 'redCards'];
-                    const missingPlayerResultFields = requiredPlayerResultFields.filter(
-                        field => playerResultData[field] === undefined || playerResultData[field] === ''
-                    );
-                    if (missingPlayerResultFields.length > 0) {
-                        throw new Error(`Thiếu các trường bắt buộc cho PlayerResult: ${missingPlayerResultFields.join(', ')}`);
-                    }
-
-                    console.log('Creating playerResult with data:', playerResultData);
                     await axios.post(`${API_URL}/api/player_results`, playerResultData, config);
-
                     setPlayers((prev) => [...prev, newPlayer]);
-                    if (typeof onSuccess === 'function') {
-                        onSuccess('Thêm cầu thủ và PlayerResult thành công!');
-                    }
+                    onSuccess?.('Thêm cầu thủ và kết quả thi đấu thành công!');
                 } catch (playerResultErr) {
+                    // Rollback player creation
                     try {
                         await axios.delete(`${API_URL}/api/players/${newPlayer._id}`, config);
-                        console.log('Rolled back player creation for player:', newPlayer._id);
                     } catch (rollbackErr) {
-                        console.error('Failed to roll back player creation:', rollbackErr);
+                        console.error('Không thể hủy tạo cầu thủ:', rollbackErr);
                     }
 
-                    const playerResultErrorData = playerResultErr.response?.data || { message: playerResultErr.message || 'Lỗi không xác định từ server' };
-                    let playerResultErrorMessage = typeof playerResultErrorData.message === 'string'
-                        ? playerResultErrorData.message
-                        : 'Không thể tạo PlayerResult, lỗi không xác định';
-
-                    if (playerResultErrorMessage.includes('Player result already exists')) {
-                        playerResultErrorMessage = 'PlayerResult đã tồn tại cho cầu thủ này trong mùa giải này. Vui lòng xóa PlayerResult cũ nếu muốn tạo lại.';
-                    } else if (playerResultErrorMessage.includes('Invalid')) {
-                        playerResultErrorMessage = `Dữ liệu không hợp lệ: ${playerResultErrorMessage}`;
-                    } else if (playerResultErr.response?.status === 401) {
-                        playerResultErrorMessage = 'Phiên đăng nhập hết hạn, không thể tạo PlayerResult.';
-                    } else if (playerResultErr.response?.status === 404) {
-                        playerResultErrorMessage = 'Không tìm thấy cầu thủ hoặc mùa giải khi tạo PlayerResult.';
-                    } else if (playerResultErr.response?.status === 500) {
-                        playerResultErrorMessage = 'Lỗi server khi tạo PlayerResult, có thể do dữ liệu không hợp lệ hoặc lỗi hệ thống.';
+                    const errMsg = playerResultErr.response?.data?.message || playerResultErr.message;
+                    if (errMsg.includes('Player result already exists')) {
+                        setError('Kết quả thi đấu đã tồn tại cho cầu thủ này trong mùa giải này');
+                    } else if (errMsg.includes('Player not found') || errMsg.includes('Season not found')) {
+                        setError('Không tìm thấy cầu thủ hoặc mùa giải');
+                    } else {
+                        setError(`Không thể tạo kết quả thi đấu: ${errMsg}`);
                     }
-
-                    setError(`Không thể tạo cầu thủ do lỗi khi tạo PlayerResult: ${playerResultErrorMessage}`);
                     return;
                 }
             }
+
+            // Reset form
             setShowForm(false);
             setEditingPlayer(null);
             setFormData({
@@ -313,29 +288,24 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
             setSelectedSeason('');
             setSelectedTeam('');
         } catch (err) {
-            const errorData = err.response?.data || { message: err.message || 'Lỗi không xác định' };
-            console.error('Error adding/updating player:', errorData);
-            const errorMessage = typeof errorData.message === 'string' ? errorData.message : 'Không thể lưu cầu thủ';
-            if (errorMessage.includes('player number already exists')) {
+            const errMsg = err.response?.data?.message || err.message;
+            if (errMsg.includes('player number already exists')) {
                 setError('Số áo này đã được sử dụng trong đội');
-            } else if (errorMessage.includes('too many foreign players')) {
-                setError('Đội đã vượt quá số lượng cầu thủ ngoại quốc cho phép');
-            } else if (errorMessage.includes('age out of range')) {
-                setError('Độ tuổi của cầu thủ không phù hợp với quy định');
+            } else if (errMsg.includes('too many foreign players')) {
+                setError('Đội đã vượt quá số lượng cầu thủ ngoại quốc');
+            } else if (errMsg.includes('age out of range')) {
+                setError('Độ tuổi không phù hợp với quy định');
             } else if (err.response?.status === 401) {
-                setError('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại');
+                setError('Phiên đăng nhập hết hạn');
             } else if (err.response?.status === 404) {
-                setError('Đội bóng không tồn tại');
-            } else if (err.response?.status === 500) {
-                setError('Quy định mùa giải không tồn tại');
-            } else if (errorMessage.includes('Required')) {
-                setError('Thiếu trường bắt buộc. Vui lòng kiểm tra dữ liệu nhập: ' + JSON.stringify(errorData));
+                setError('Đội bóng hoặc mùa giải không tồn tại');
             } else {
-                setError(errorMessage);
+                setError(`Lỗi: ${errMsg}`);
             }
         }
     };
 
+    // Handle form cancellation
     const handleCancel = () => {
         setShowForm(false);
         setEditingPlayer(null);
@@ -359,13 +329,15 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
             {error && <p className="text-red-500 mb-4">{error}</p>}
             <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
                 <div>
-                    <label htmlFor="season-select" className="block text-gray-600 mb-1">Mùa giải:</label>
+                    <label htmlFor="season-select" className="block text-gray-600 mb-1">
+                        Mùa giải:
+                    </label>
                     <select
                         id="season-select"
                         value={selectedSeason}
                         onChange={(e) => setSelectedSeason(e.target.value)}
-                        className="w-full p-2 border rounded"
-                        disabled={loadingSeasons}
+                        className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-600"
+                        disabled={loadingSeasons || editingPlayer}
                         required
                     >
                         {loadingSeasons ? (
@@ -382,12 +354,14 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
                     </select>
                 </div>
                 <div>
-                    <label htmlFor="team-select" className="block text-gray-600 mb-1">Đội bóng:</label>
+                    <label htmlFor="team-select" className="block text-gray-600 mb-1">
+                        Đội bóng:
+                    </label>
                     <select
                         id="team-select"
                         value={selectedTeam}
                         onChange={(e) => setSelectedTeam(e.target.value)}
-                        className="w-full p-2 border rounded"
+                        className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-600"
                         disabled={loadingTeams || !selectedSeason || editingPlayer}
                         required
                     >
@@ -409,7 +383,7 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="Tên cầu thủ"
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-600"
                     required
                 />
                 <input
@@ -417,7 +391,7 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
                     value={formData.number}
                     onChange={(e) => setFormData({ ...formData, number: e.target.value })}
                     placeholder="Số áo"
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-600"
                     min="1"
                     required
                 />
@@ -426,7 +400,7 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
                     value={formData.position}
                     onChange={(e) => setFormData({ ...formData, position: e.target.value })}
                     placeholder="Vị trí"
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-600"
                     required
                 />
                 <input
@@ -434,15 +408,14 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
                     value={formData.nationality}
                     onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
                     placeholder="Quốc tịch"
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-600"
                     required
                 />
                 <input
                     type="date"
                     value={formData.dob}
                     onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
-                    placeholder="Ngày sinh"
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-600"
                     required
                 />
                 <div className="flex items-center">
@@ -453,12 +426,14 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
                         onChange={(e) => setFormData({ ...formData, isForeigner: e.target.checked })}
                         className="mr-2"
                     />
-                    <label htmlFor="isForeigner" className="text-gray-600">Cầu thủ ngoại quốc</label>
+                    <label htmlFor="isForeigner" className="text-gray-600">
+                        Cầu thủ ngoại quốc
+                    </label>
                 </div>
                 <div className="flex space-x-2">
                     <button
                         type="submit"
-                        className="bg-blue-600 text-white p-2 rounded disabled:bg-blue-300"
+                        className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:bg-blue-300"
                         disabled={!selectedSeason || !selectedTeam || loadingSeasons || loadingTeams}
                     >
                         Lưu
@@ -466,7 +441,7 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
                     <button
                         type="button"
                         onClick={handleCancel}
-                        className="bg-gray-500 text-white p-2 rounded"
+                        className="bg-gray-500 text-white p-2 rounded hover:bg-gray-600"
                     >
                         Hủy
                     </button>

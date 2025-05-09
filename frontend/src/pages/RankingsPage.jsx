@@ -48,10 +48,10 @@ const RankingsPage = ({ token }) => {
                     err.response?.status === 401
                         ? 'Không có quyền truy cập. Vui lòng đăng nhập lại.'
                         : err.response?.status === 404
-                        ? 'Không tìm thấy API mùa giải.'
-                        : err.response?.status === 500
-                        ? 'Lỗi server. Vui lòng thử lại sau.'
-                        : `Không thể tải danh sách mùa giải: ${err.message}`
+                            ? 'Không tìm thấy API mùa giải.'
+                            : err.response?.status === 500
+                                ? 'Lỗi server. Vui lòng thử lại sau.'
+                                : `Không thể tải danh sách mùa giải: ${err.message}`
                 );
             } finally {
                 setLoading(false);
@@ -82,9 +82,9 @@ const RankingsPage = ({ token }) => {
 
     return (
         <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-7xl mx-auto ">
                 {/* Tiêu đề */}
-                <h1 className="text-4xl font-bold text-gray-800 text-center mb-10">
+                <h1 className="bg-gray-900 text-white text-3xl font-bold py-3 px-6 rounded-none border-l-8 border-red-600 mb-6 text-center tracking-wide hover:brightness-110 transition-all duration-200">
                     Bảng Xếp Hạng {selectedSeasonName && `- ${selectedSeasonName}`}
                 </h1>
 

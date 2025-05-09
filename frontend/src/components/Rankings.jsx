@@ -353,7 +353,7 @@ const Rankings = ({ seasonId, token, seasons, formatDate, setSelectedSeasonId, h
                     <div className="overflow-x-auto">
                         <table className="w-full table-auto border-collapse">
                             <thead>
-                                <tr className="bg-gray-50">
+                                <tr className="bg-gray-400 ">
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Hạng</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Đội</th>
                                     <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Trận</th>

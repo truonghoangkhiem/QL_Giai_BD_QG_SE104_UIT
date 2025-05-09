@@ -1,19 +1,58 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 
 <head>
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
-
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="Quản lý giải đấu bóng đá chuyên nghiệp - theo dõi trận đấu, đội bóng, cầu thủ, mùa giải và bảng xếp hạng." />
+  <meta name="keywords"
+    content="bóng đá, quản lý giải đấu, trận đấu, đội bóng, cầu thủ, mùa giải, xếp hạng, football league" />
+  <meta name="author" content="Football League Management" />
+  <meta name="theme-color" content="#DC2626" />
+
+  <!-- Open Graph Meta Tags -->
+  <meta property="og:title" content="Football League Management" />
+  <meta property="og:description"
+    content="Quản lý giải đấu bóng đá chuyên nghiệp - theo dõi trận đấu, đội bóng, cầu thủ, mùa giải và bảng xếp hạng." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://yourwebsite.com" />
+  <meta property="og:image" content="https://cdn.bettingexpert.com/assets/football-banner.webp" />
+
+  <!-- Twitter Card Meta Tags -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Football League Management" />
+  <meta name="twitter:description"
+    content="Quản lý giải đấu bóng đá chuyên nghiệp - theo dõi trận đấu, đội bóng, cầu thủ, mùa giải và bảng xếp hạng." />
+  <meta name="twitter:image" content="https://cdn.bettingexpert.com/assets/football-banner.webp" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/1053/1053244.png" />
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS -->
   <link href="./output.css" rel="stylesheet">
+
   <title>Football League Management</title>
+
+  <style>
+    body {
+      font-family: 'Be Vietnam Pro', sans-serif;
+      background: linear-gradient(rgba(243, 244, 246, 0.95), rgba(243, 244, 246, 0.95)), url('https://www.transparenttextures.com/patterns/soccer-field.png');
+      background-size: cover;
+      background-attachment: fixed;
+    }
+  </style>
 </head>
 
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
+  <script>
+    (function () { function c() { var b = a.contentDocument || a.contentWindow.document; if (b) { var d = b.createElement('script'); d.innerHTML = "window.__CF$cv$params={r:'93cfddaf0823bfe3',t:'MTc0Njc3OTc1Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);"; b.getElementsByTagName('head')[0].appendChild(d) } } if (document.body) { var a = document.createElement('iframe'); a.height = 1; a.width = 1; a.style.position = 'absolute'; a.style.top = 0; a.style.left = 0; a.style.border = 'none'; a.style.visibility = 'hidden'; document.body.appendChild(a); if ('loading' !== document.readyState) c(); else if (window.addEventListener) document.addEventListener('DOMContentLoaded', c); else { var e = document.onreadystatechange || function () { }; document.onreadystatechange = function (b) { e(b); 'loading' !== document.readyState && (document.onreadystatechange = e, c()) } } } })();
+  </script>
 </body>
 
 </html>

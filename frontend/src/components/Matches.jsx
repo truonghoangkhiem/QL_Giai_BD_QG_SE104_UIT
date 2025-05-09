@@ -131,7 +131,7 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
         console.error('Lỗi lấy trận đấu:', err.response?.data || err.message);
         setError(
           err.response?.status === 404
-            ? 'Mùa giải, ngày hoặc đội bóng không hợp lệ'
+            ? 'Mùa giải, ngày hoặc đội bóng không có trận đấu nào'
             : 'Không thể tải danh sách trận đấu'
         );
         setLoading(false);
