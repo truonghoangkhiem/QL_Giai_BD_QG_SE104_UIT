@@ -6,14 +6,16 @@ const Players = ({ setEditingPlayer, setShowForm, token, setPlayers, players }) 
     const [playerResults, setPlayerResults] = useState({});
     const [filteredPlayers, setFilteredPlayers] = useState([]);
     const [seasons, setSeasons] = useState([]);
+    const [teams, setTeams] = useState([]); // Thêm state cho teams
     const [selectedSeason, setSelectedSeason] = useState('67ceaf87444f610224ed67de');
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // Ngày hôm nay: 2025-05-08
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
     const API_URL = 'http://localhost:5000';
 
+    // Lấy danh sách mùa giải
     useEffect(() => {
         const fetchSeasons = async () => {
             try {
@@ -34,6 +36,27 @@ const Players = ({ setEditingPlayer, setShowForm, token, setPlayers, players }) 
         fetchSeasons();
     }, [token]);
 
+    // Lấy danh sách đội bóng theo season_id
+    useEffect(() => {
+        if (!selectedSeason) return;
+
+        const fetchTeams = async () => {
+            try {
+                const response = await axios.get(`${API_URL}/api/teams/seasons/${selectedSeason}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                const teamsData = response.data.data || [];
+                setTeams(teamsData);
+                console.log('Fetched teams for season:', teamsData);
+            } catch (err) {
+                setError(`Không thể tải danh sách đội bóng cho mùa giải ${selectedSeason}.`);
+            }
+        };
+
+        fetchTeams();
+    }, [selectedSeason, token]);
+
+    // Lấy cầu thủ và kết quả cầu thủ
     useEffect(() => {
         if (!selectedSeason || !selectedDate) return;
 
@@ -67,16 +90,16 @@ const Players = ({ setEditingPlayer, setShowForm, token, setPlayers, players }) 
                     return;
                 }
 
-                // Lọc player_results để chỉ giữ lại các bản ghi có date < selectedDate
+                // Lọc player_results theo ngày
                 const selectedDateObj = new Date(selectedDate);
                 selectedDateObj.setUTCHours(0, 0, 0, 0);
                 const filteredResults = results.filter((result) => {
                     const resultDate = new Date(result.date);
-                    return resultDate < selectedDateObj;
+                    return resultDate <= selectedDateObj;
                 });
-                console.log('Filtered player_results (date < selectedDate):', filteredResults);
+                console.log('Filtered player_results (date <= selectedDate):', filteredResults);
 
-                // Ánh xạ player_results thành object với tên trường đúng
+                // Ánh xạ player_results
                 const resultsMap = {};
                 filteredResults.forEach((result) => {
                     resultsMap[result.player_id] = {
@@ -85,17 +108,17 @@ const Players = ({ setEditingPlayer, setShowForm, token, setPlayers, players }) 
                         assists: result.assists || 0,
                         yellowCards: result.yellowCards || 0,
                         redCards: result.redCards || 0,
+                        team_id: result.team_id, // Lưu team_id từ player_results
                     };
                 });
                 setPlayerResults(resultsMap);
                 console.log('Mapped playerResults:', resultsMap);
 
-                // Lọc cầu thủ dựa trên filtered player_results
+                // Lọc cầu thủ dựa trên player_results
                 if (filteredResults.length > 0) {
                     const playerIdsWithResults = new Set(filteredResults.map(result => result.player_id));
                     const matchedPlayers = playersData.filter(player => playerIdsWithResults.has(player._id));
                     setFilteredPlayers(matchedPlayers);
-                    // Kiểm tra xem có cầu thủ nào không có playerResults tương ứng không
                     matchedPlayers.forEach(player => {
                         if (!resultsMap[player._id]) {
                             console.warn(`No playerResults found for player with ID: ${player._id}`);
@@ -154,6 +177,25 @@ const Players = ({ setEditingPlayer, setShowForm, token, setPlayers, players }) 
         }
     };
 
+    // Nhóm cầu thủ theo team_id từ player_results
+    const groupPlayersByTeam = () => {
+        const grouped = {};
+        filteredPlayers.forEach(player => {
+            const playerResult = playerResults[player._id];
+            const teamId = playerResult?.team_id || player.team_id || 'unknown'; // Ưu tiên team_id từ player_results
+            if (!grouped[teamId]) {
+                const team = teams.find(t => t._id === teamId) || {
+                    team_name: 'Đội không xác định',
+                    logo: 'https://th.bing.com/th/id/OIP.dSoxOf16Bt30Ntp4xXxg6gAAAA?rs=1&pid=ImgDetMain',
+                    _id: teamId
+                };
+                grouped[teamId] = { team, players: [] };
+            }
+            grouped[teamId].players.push(player);
+        });
+        return Object.values(grouped);
+    };
+
     if (loading) return <p className="text-center text-gray-500">Đang tải...</p>;
 
     return (
@@ -196,62 +238,79 @@ const Players = ({ setEditingPlayer, setShowForm, token, setPlayers, players }) 
             {error && <p className="text-center text-red-500 mb-4">{error}</p>}
 
             {filteredPlayers.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredPlayers.map((player) => {
-                        const results = playerResults[player._id] || {
-                            matchesPlayed: 0,
-                            goals: 0,
-                            assists: 0,
-                            yellowCards: 0,
-                            redCards: 0,
-                        };
-
-                        return (
-                            <div
-                                key={player._id}
-                                className="bg-gray-100 hover:bg-gray-200 transition-all duration-200 border border-gray-200 rounded-lg p-5 shadow-sm"
-                            >
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="flex flex-col items-center">
-                                        <img
-                                            src={`https://via.placeholder.com/50?text=${player.name[0]}`}
-                                            alt={`${player.name}`}
-                                            className="w-16 h-16 rounded-full object-cover mb-3"
-                                            onError={(e) => (e.target.src = 'https://th.bing.com/th/id/OIP.2Kb4oZ95hq4HKWdUFHweAAAAAA?w=166&h=180&c=7&pcl=292827&r=0&o=5&dpr=1.3&pid=1.7')}
-                                        />
-                                        <h3 className="text-lg font-medium text-gray-800 text-center">{player.name}</h3>
-                                        <p className="text-sm text-gray-500 text-center">#{player.number || 'N/A'}</p>
-                                    </div>
-                                    <div className="text-sm text-gray-600 space-y-1">
-                                        <p>Vị trí: <span className="text-gray-800">{player.position || 'N/A'}</span></p>
-                                        <p>Quốc tịch: <span className="text-gray-800">{player.nationality || 'N/A'}</span></p>
-                                        <p>Ngày sinh: <span className="text-gray-800">{formatDate(player.dob)}</span></p>
-                                        <p>Số trận: {results.matchesPlayed != null ? results.matchesPlayed : 'N/A'}</p>
-                                        <p>Bàn thắng: {results.goals != null ? results.goals : 'N/A'}</p>
-                                        <p>Kiến tạo: {results.assists != null ? results.assists : 'N/A'}</p>
-                                        <p>Thẻ vàng: {results.yellowCards != null ? results.yellowCards : 'N/A'}</p>
-                                        <p>Thẻ đỏ: {results.redCards != null ? results.redCards : 'N/A'}</p>
-                                    </div>
-                                </div>
-                                {token && setEditingPlayer && setShowForm && (
-                                    <div className="mt-4 flex space-x-2 justify-center">
-                                        <button
-                                            onClick={() => handleEdit(player)}
-                                            className="px-3 py-1 rounded bg-beige text-white hover:opacity-90 text-sm"
-                                        >
-                                            Sửa
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(player._id)}
-                                            className="px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600 text-sm"
-                                        >
-                                            Xóa
-                                        </button>
-                                    </div>
-                                )}
+                <div className="space-y-8">
+                    {groupPlayersByTeam().map(({ team, players }) => (
+                        <div key={team._id} className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                            {/* Tiêu đề đội bóng */}
+                            <div className="flex items-center mb-4">
+                                <img
+                                    src={team.logo || 'https://via.placeholder.com/50'}
+                                    alt={`${team.team_name} logo`}
+                                    className="w-12 h-12 rounded-full object-cover mr-4"
+                                    onError={(e) => (e.target.src = 'https://via.placeholder.com/50')}
+                                />
+                                <h3 className="text-2xl font-bold text-gray-800">{team.team_name}</h3>
                             </div>
-                        );
-                    })}
+                            {/* Lưới cầu thủ */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {players.map((player) => {
+                                    const results = playerResults[player._id] || {
+                                        matchesPlayed: 0,
+                                        goals: 0,
+                                        assists: 0,
+                                        yellowCards: 0,
+                                        redCards: 0,
+                                    };
+
+                                    return (
+                                        <div
+                                            key={player._id}
+                                            className="bg-gray-100 hover:bg-gray-200 transition-all duration-200 border border-gray-200 rounded-lg p-5 shadow-sm"
+                                        >
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="flex flex-col items-center">
+                                                    <img
+                                                        src={`https://via.placeholder.com/50?text=${player.name[0]}`}
+                                                        alt={`${player.name}`}
+                                                        className="w-16 h-16 rounded-full object-cover mb-3"
+                                                        onError={(e) => (e.target.src = 'https://th.bing.com/th/id/OIP.2Kb4oZ95hq4HKWdUFHweAAAAAA?w=166&h=180&c=7&pcl=292827&r=0&o=5&dpr=1.3&pid=1.7')}
+                                                    />
+                                                    <h3 className="text-lg font-medium text-gray-800 text-center">{player.name}</h3>
+                                                    <p className="text-sm text-gray-500 text-center">#{player.number || 'N/A'}</p>
+                                                </div>
+                                                <div className="text-sm text-gray-600 space-y-1">
+                                                    <p>Vị trí: <span className="text-gray-800">{player.position || 'N/A'}</span></p>
+                                                    <p>Quốc tịch: <span className="text-gray-800">{player.nationality || 'N/A'}</span></p>
+                                                    <p>Ngày sinh: <span className="text-gray-800">{formatDate(player.dob)}</span></p>
+                                                    <p>Số trận: {results.matchesPlayed != null ? results.matchesPlayed : 'N/A'}</p>
+                                                    <p>Bàn thắng: {results.goals != null ? results.goals : 'N/A'}</p>
+                                                    <p>Kiến tạo: {results.assists != null ? results.assists : 'N/A'}</p>
+                                                    <p>Thẻ vàng: {results.yellowCards != null ? results.yellowCards : 'N/A'}</p>
+                                                    <p>Thẻ đỏ: {results.redCards != null ? results.redCards : 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                            {token && setEditingPlayer && setShowForm && (
+                                                <div className="mt-4 flex space-x-2 justify-center">
+                                                    <button
+                                                        onClick={() => handleEdit(player)}
+                                                        className="px-3 py-1 rounded bg-beige text-white hover:opacity-90 text-sm"
+                                                    >
+                                                        Sửa
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(player._id)}
+                                                        className="px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600 text-sm"
+                                                    >
+                                                        Xóa
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
                 </div>
             ) : (
                 <p className="text-center text-gray-500">Không có cầu thủ nào khớp với mùa giải và ngày đã chọn.</p>

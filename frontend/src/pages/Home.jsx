@@ -167,12 +167,12 @@ const Home = () => {
                     {/* Section trận đấu đã kết thúc gần nhất */}
                     <div className="mb-12">
                         <Link to="/matches">
-                            <h3 className="bg-gradient-to-r from-slate-600 to-slate-800 text-3xl font-extrabold text-white py-3 px-6 rounded-lg drop-shadow-md mb-6 text-center font-heading hover:brightness-110 transition-all duration-200">
+                            <h3 className="bg-gray-900 text-white text-3xl font-bold py-3 px-6 rounded-none border-l-8 border-red-600 mb-6 text-center tracking-wide hover:brightness-110 transition-all duration-200 ">
                                 Trận đấu đã kết thúc gần nhất
                             </h3>
                         </Link>
                         {pastMatches.length > 0 && latestMatch ? (
-                            <div className="bg-white shadow-md p-6 rounded-lg flex flex-col items-center transition-all duration-300 hover:shadow-lg">
+                            <div className="bg-white shadow-md p-6 rounded-lg flex flex-col items-center transition-all duration-300 hover:shadow-lg ">
                                 <div className="flex justify-between w-full mb-4 text-sm text-gray-600 font-medium">
                                     <span>{formatMatchDate(latestMatch.date)}</span>
                                     <span>🏟 {latestMatch.stadium || 'Không xác định'}</span>
@@ -218,22 +218,28 @@ const Home = () => {
 
                     {/* Section bảng xếp hạng */}
                     <div className="mb-12">
-                        <Link to="/rankings">
-                            <h3 className="bg-gradient-to-r from-slate-600 to-slate-800 text-3xl font-extrabold text-white py-3 px-6 rounded-lg drop-shadow-md mb-6 text-center font-heading hover:brightness-110 transition-all duration-200">
-                                {leagueName}
-                            </h3>
-                        </Link>
+                        <h3 className="bg-gray-900 text-white text-3xl font-bold py-3 px-6 rounded-none border-l-8 border-red-600 mb-6 text-center tracking-wide hover:brightness-110 transition-all duration-200">
+                            {leagueName}
+                        </h3>
                         {seasonId ? (
                             <Rankings seasonId={seasonId} hideDropdown={true} />
                         ) : (
                             <p className="text-center text-gray-500 text-lg">Không có mùa giải nào đang diễn ra.</p>
                         )}
+                        <div className="mt-8 text-center">
+                            <Link
+                                to="/rankings"
+                                className="inline-block bg-red-600 text-white uppercase font-bold py-2 px-6 rounded-full hover:bg-red-700 transition-all duration-200"
+                            >
+                                Xem tất cả
+                            </Link>
+                        </div>
                     </div>
 
                     {/* Section trận đấu sắp diễn ra - Hiển thị card ngang với nút điều hướng */}
                     <div>
                         <Link to="/matches">
-                            <h3 className="bg-gradient-to-r from-slate-600 to-slate-800 text-3xl font-extrabold text-white py-3 px-6 rounded-lg drop-shadow-md mb-6 text-center font-heading hover:brightness-110 transition-all duration-200">
+                            <h3 className="bg-gray-900 text-white text-3xl font-bold py-3 px-6 rounded-none border-l-8 border-red-600 mb-6 text-center tracking-wide hover:brightness-110 transition-all duration-200">
                                 Các trận đấu sắp diễn ra
                             </h3>
                         </Link>
@@ -242,10 +248,22 @@ const Home = () => {
                                 {/* Nút điều hướng trái */}
                                 <button
                                     onClick={handleScrollLeft}
-                                    className={`flex-shrink-0 w-6 h-full bg-gray-300 text-gray-700 hover:bg-gray-400 hover:scale-105 rounded-lg shadow-lg transition-all duration-200 z-10 flex items-center justify-center ${upcomingMatches.length <= 1 ? 'hidden' : ''}`}
+                                    className={`flex-shrink-0 w-6 h-full bg-gray-300 text-gray-700 hover:bg-gray-400 hover:scale-105 rounded-lg shadow-lg transition-all duration-200 z-10 flex items-center justify-center ${upcomingMatches.length <= 1 ? 'hidden' : ''
+                                        }`}
                                 >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
+                                    <svg
+                                        className="w-4 h-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth="2"
+                                            d="M15 19l-7-7 7-7"
+                                        ></path>
                                     </svg>
                                 </button>
 
@@ -262,10 +280,10 @@ const Home = () => {
                                     {upcomingMatches.slice(0, 5).map((match) => (
                                         <div
                                             key={match._id}
-                                            className="flex-shrink-0 w-72 bg-white rounded-lg shadow-md p-4 transition-all duration-300 hover:shadow-lg"
+                                            className="flex-shrink-0 w-72 bg-gray-50 rounded-lg border border-gray-200 border-l-4 shadow-md p-4 transition-all duration-300 hover:shadow-lg hover:border-red-500"
                                         >
                                             <div className="text-center mb-3">
-                                                <span className="text-sm text-gray-600 font-medium">
+                                                <span className="text-sm text-gray-800 font-semibold">
                                                     {formatMatchDate(match.date)}
                                                 </span>
                                             </div>
@@ -277,19 +295,21 @@ const Home = () => {
                                                             'https://th.bing.com/th/id/OIP.iiLfIvv8F-PfjMrjObypGgHaHa?rs=1&pid=ImgDetMain'
                                                         }
                                                         alt={`${match.team1?.team_name || 'Team 1'} logo`}
-                                                        className="w-8 h-8 object-contain rounded-full border border-gray-200"
+                                                        className="w-10 h-10 object-contain rounded-full border border-gray-200 shadow-sm"
                                                         onError={(e) =>
                                                         (e.target.src =
                                                             'https://th.bing.com/th/id/OIP.iiLfIvv8F-PfjMrjObypGgHaHa?rs=1&pid=ImgDetMain')
                                                         }
                                                     />
-                                                    <span className="text-sm font-medium text-gray-800 text-left flex-1">
+                                                    <span className="text-sm font-semibold text-gray-800 text-left flex-1">
                                                         {match.team1?.team_name || 'Team 1'}
                                                     </span>
                                                 </div>
-                                                <div className="text-xl font-bold text-gray-700">VS</div>
+                                                <div className="text-xl font-bold text-gray-700 bg-gray-100 px-4 py-1 rounded-md">
+                                                    VS
+                                                </div>
                                                 <div className="flex items-center gap-2 w-1/3 justify-end">
-                                                    <span className="text-sm font-medium text-gray-800 text-right flex-1">
+                                                    <span className="text-sm font-semibold text-gray-800 text-right flex-1">
                                                         {match.team2?.team_name || 'Team 2'}
                                                     </span>
                                                     <img
@@ -298,7 +318,7 @@ const Home = () => {
                                                             'https://th.bing.com/th/id/OIP.iiLfIvv8F-PfjMrjObypGgHaHa?rs=1&pid=ImgDetMain'
                                                         }
                                                         alt={`${match.team2?.team_name || 'Team 2'} logo`}
-                                                        className="w-8 h-8 object-contain rounded-full border border-gray-200"
+                                                        className="w-10 h-10 object-contain rounded-full border border-gray-200 shadow-sm"
                                                         onError={(e) =>
                                                         (e.target.src =
                                                             'https://th.bing.com/th/id/OIP.iiLfIvv8F-PfjMrjObypGgHaHa?rs=1&pid=ImgDetMain')
@@ -307,7 +327,7 @@ const Home = () => {
                                                 </div>
                                             </div>
                                             <div className="text-center">
-                                                <span className="text-sm text-gray-600 font-medium">
+                                                <span className="text-sm text-gray-600 font-semibold">
                                                     🏟 {match.stadium || 'Không xác định'}
                                                 </span>
                                             </div>
@@ -325,10 +345,22 @@ const Home = () => {
                                 {/* Nút điều hướng phải */}
                                 <button
                                     onClick={handleScrollRight}
-                                    className={`flex-shrink-0 w-6 h-full bg-gray-300 text-gray-700 hover:bg-gray-400 hover:scale-105 rounded-lg shadow-lg transition-all duration-200 z-10 flex items-center justify-center ${upcomingMatches.length <= 1 ? 'hidden' : ''}`}
+                                    className={`flex-shrink-0 w-6 h-full bg-gray-300 text-gray-700 hover:bg-gray-400 hover:scale-105 rounded-lg shadow-lg transition-all duration-200 z-10 flex items-center justify-center ${upcomingMatches.length <= 1 ? 'hidden' : ''
+                                        }`}
                                 >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                                    <svg
+                                        className="w-4 h-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth="2"
+                                            d="M9 5l7 7-7 7"
+                                        ></path>
                                     </svg>
                                 </button>
                             </div>
@@ -338,7 +370,7 @@ const Home = () => {
                         <div className="mt-8 text-center">
                             <Link
                                 to="/matches"
-                                className="inline-block bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all duration-200 transform hover:scale-105"
+                                className="inline-block bg-red-600 text-white uppercase font-bold py-2 px-6 rounded-full hover:bg-red-700 transition-all duration-200"
                             >
                                 Xem tất cả trận đấu
                             </Link>
