@@ -19,38 +19,54 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
             winPoints: '',
             drawPoints: '',
             losePoints: '',
-            rankingCriteria: [], // Mảng các object { criterion: string, priority: string } để quản lý giao diện
+            rankingCriteria: [
+                { criterion: 'points', priority: '' },
+                { criterion: 'goalDifference', priority: '' },
+                { criterion: 'goalsFor', priority: '' },
+                { criterion: 'headToHead', priority: '' },
+            ],
         },
     });
     const [seasons, setSeasons] = useState([]);
+    const [existingRegulations, setExistingRegulations] = useState([]);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
 
-    // Danh sách tiêu chí cố định
     const rankingCriteriaOptions = ['points', 'goalDifference', 'goalsFor', 'headToHead'];
 
     useEffect(() => {
-        const fetchSeasons = async () => {
+        const fetchSeasonsAndRegulations = async () => {
             try {
-                const response = await axios.get('http://localhost:5000/api/seasons');
-                setSeasons(response.data.data);
-                if (!editingRegulation && response.data.data.length > 0) {
+                const [seasonsResponse, regulationsResponse] = await Promise.all([
+                    axios.get('http://localhost:5000/api/seasons'),
+                    axios.get('http://localhost:5000/api/regulations'),
+                ]);
+                setSeasons(seasonsResponse.data.data);
+                setExistingRegulations(regulationsResponse.data.data);
+                if (!editingRegulation && seasonsResponse.data.data.length > 0) {
                     setFormData((prev) => ({
                         ...prev,
-                        season_id: response.data.data[0]._id,
-                        season_name: response.data.data[0].season_name,
+                        season_id: seasonsResponse.data.data[0]._id,
+                        season_name: seasonsResponse.data.data[0].season_name,
                     }));
                 }
             } catch (err) {
-                setError('Không thể tải danh sách mùa giải');
+                setError('Không thể tải dữ liệu mùa giải hoặc quy định');
             }
         };
-        fetchSeasons();
+        fetchSeasonsAndRegulations();
     }, [editingRegulation]);
 
     useEffect(() => {
         if (editingRegulation) {
             const rules = editingRegulation.rules || {};
+            const rankingCriteria = rankingCriteriaOptions.map((criterion) => {
+                const priority = rules.rankingCriteria?.indexOf(criterion) + 1;
+                return {
+                    criterion,
+                    priority: priority > 0 ? priority.toString() : '',
+                };
+            });
             setFormData({
                 season_id: editingRegulation.season_id,
                 season_name: editingRegulation.season_name,
@@ -71,11 +87,7 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                     winPoints: rules.winPoints?.toString() || '',
                     drawPoints: rules.drawPoints?.toString() || '',
                     losePoints: rules.losePoints?.toString() || '',
-                    // Chuyển mảng chuỗi thành mảng object với priority mặc định
-                    rankingCriteria: rules.rankingCriteria?.map((criterion, index) => ({
-                        criterion,
-                        priority: (index + 1).toString(), // Gán priority theo thứ tự hiện tại
-                    })) || [],
+                    rankingCriteria,
                 },
             });
         }
@@ -116,26 +128,8 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
         }
     };
 
-    const handleRankingCriteriaChange = (criterion, checked, priority = '') => {
-        let newCriteria = [...formData.rules.rankingCriteria];
-        if (checked) {
-            // Thêm tiêu chí mới nếu được chọn
-            newCriteria.push({ criterion, priority });
-        } else {
-            // Xóa tiêu chí nếu bỏ chọn
-            newCriteria = newCriteria.filter(item => item.criterion !== criterion);
-        }
-        setFormData({
-            ...formData,
-            rules: {
-                ...formData.rules,
-                rankingCriteria: newCriteria,
-            },
-        });
-    };
-
     const handlePriorityChange = (criterion, priority) => {
-        const newCriteria = formData.rules.rankingCriteria.map(item => {
+        const newCriteria = formData.rules.rankingCriteria.map((item) => {
             if (item.criterion === criterion) {
                 return { ...item, priority };
             }
@@ -152,6 +146,7 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError('');
         try {
             let rules = {};
             switch (formData.regulation_name) {
@@ -163,8 +158,14 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                         maxPlayersPerTeam: parseInt(formData.rules.maxPlayersPerTeam, 10),
                         maxForeignPlayers: parseInt(formData.rules.maxForeignPlayers, 10),
                     };
-                    if (Object.values(rules).some(val => isNaN(val) || val < 0)) {
-                        throw new Error('Vui lòng nhập số hợp lệ (lớn hơn hoặc bằng 0) cho tất cả các trường');
+                    if (Object.values(rules).some((val) => isNaN(val) || val <= 0)) {
+                        throw new Error('Vui lòng nhập số hợp lệ (lớn hơn 0) cho tất cả các trường');
+                    }
+                    if (rules.minAge >= rules.maxAge) {
+                        throw new Error('Tuổi tối thiểu phải nhỏ hơn tuổi tối đa');
+                    }
+                    if (rules.minPlayersPerTeam > rules.maxPlayersPerTeam) {
+                        throw new Error('Số cầu thủ tối thiểu phải nhỏ hơn hoặc bằng số cầu thủ tối đa');
                     }
                     break;
                 case 'Match Rules':
@@ -172,8 +173,8 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                         matchRounds: parseInt(formData.rules.matchRounds, 10),
                         homeTeamRule: formData.rules.homeTeamRule,
                     };
-                    if (isNaN(rules.matchRounds) || rules.matchRounds < 0) {
-                        throw new Error('Số vòng đấu phải là số hợp lệ (lớn hơn hoặc bằng 0)');
+                    if (isNaN(rules.matchRounds) || rules.matchRounds <= 0) {
+                        throw new Error('Số vòng đấu phải là số hợp lệ (lớn hơn 0)');
                     }
                     if (!rules.homeTeamRule) {
                         throw new Error('Quy tắc đội nhà không được để trống');
@@ -181,7 +182,7 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                     break;
                 case 'Goal Rules':
                     rules = {
-                        goalTypes: formData.rules.goalTypes.split(',').map(item => item.trim()).filter(item => item),
+                        goalTypes: formData.rules.goalTypes.split(',').map((item) => item.trim()).filter((item) => item),
                         goalTimeLimit: {
                             minMinute: parseInt(formData.rules.goalTimeLimit.minMinute, 10),
                             maxMinute: parseInt(formData.rules.goalTimeLimit.maxMinute, 10),
@@ -190,9 +191,13 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                     if (!rules.goalTypes.length) {
                         throw new Error('Loại bàn thắng không được để trống');
                     }
-                    if (isNaN(rules.goalTimeLimit.minMinute) || isNaN(rules.goalTimeLimit.maxMinute) || 
-                        rules.goalTimeLimit.minMinute < 0 || rules.goalTimeLimit.maxMinute < 0) {
-                        throw new Error('Giới hạn thời gian phải là số hợp lệ (lớn hơn hoặc bằng 0)');
+                    if (
+                        isNaN(rules.goalTimeLimit.minMinute) ||
+                        isNaN(rules.goalTimeLimit.maxMinute) ||
+                        rules.goalTimeLimit.minMinute <= 0 ||
+                        rules.goalTimeLimit.maxMinute <= 0
+                    ) {
+                        throw new Error('Giới hạn thời gian phải là số hợp lệ (lớn hơn 0)');
                     }
                     break;
                 case 'Ranking Rules':
@@ -202,36 +207,36 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                         losePoints: parseInt(formData.rules.losePoints, 10),
                         rankingCriteria: [],
                     };
-                    if (formData.rules.winPoints === '' || isNaN(rules.winPoints) || rules.winPoints < 0) {
-                        throw new Error('Điểm thắng phải là số hợp lệ (lớn hơn hoặc bằng 0)');
+                    if (isNaN(rules.winPoints) || rules.winPoints <= 0) {
+                        throw new Error('Điểm thắng phải là số hợp lệ (lớn hơn 0)');
                     }
-                    if (formData.rules.drawPoints === '' || isNaN(rules.drawPoints) || rules.drawPoints < 0) {
-                        throw new Error('Điểm hòa phải là số hợp lệ (lớn hơn hoặc bằng 0)');
+                    if (isNaN(rules.drawPoints) || rules.drawPoints <= 0) {
+                        throw new Error('Điểm hòa phải là số hợp lệ (lớn hơn 0)');
                     }
-                    if (formData.rules.losePoints === '' || isNaN(rules.losePoints) || rules.losePoints < 0) {
+                    if (isNaN(rules.losePoints) || rules.losePoints < 0) {
                         throw new Error('Điểm thua phải là số hợp lệ (lớn hơn hoặc bằng 0)');
                     }
-                    // Sắp xếp rankingCriteria theo priority và chỉ lấy mảng các chuỗi criterion
+                    if (rules.winPoints <= rules.drawPoints || rules.drawPoints <= rules.losePoints) {
+                        throw new Error('Điểm thắng phải lớn hơn điểm hòa, điểm hòa phải lớn hơn điểm thua');
+                    }
                     const sortedCriteria = formData.rules.rankingCriteria
-                        .filter(item => item.priority) // Lọc các tiêu chí có priority
-                        .map(item => ({
+                        .filter((item) => item.priority)
+                        .map((item) => ({
                             criterion: item.criterion,
                             priority: parseInt(item.priority, 10),
                         }))
-                        .sort((a, b) => a.priority - b.priority) // Sắp xếp theo priority tăng dần
-                        .map(item => item.criterion); // Chỉ lấy criterion
+                        .sort((a, b) => a.priority - b.priority)
+                        .map((item) => item.criterion);
                     rules.rankingCriteria = sortedCriteria;
-                    if (!rules.rankingCriteria.length) {
-                        throw new Error('Phải chọn ít nhất một tiêu chí xếp hạng và nhập mức độ ưu tiên');
+                    if (rules.rankingCriteria.length !== 4) {
+                        throw new Error('Phải chọn mức độ ưu tiên cho tất cả bốn tiêu chí xếp hạng');
                     }
-                    // Validate priority
                     const priorities = formData.rules.rankingCriteria
-                        .filter(item => item.priority)
-                        .map(item => parseInt(item.priority, 10));
-                    if (priorities.some(p => isNaN(p) || p < 1)) {
-                        throw new Error('Mức độ ưu tiên phải là số hợp lệ (lớn hơn hoặc bằng 1)');
+                        .filter((item) => item.priority)
+                        .map((item) => parseInt(item.priority, 10));
+                    if (priorities.some((p) => isNaN(p) || p < 1 || p > 4)) {
+                        throw new Error('Mức độ ưu tiên phải là số từ 1 đến 4');
                     }
-                    // Kiểm tra trùng lặp priority
                     const uniquePriorities = new Set(priorities);
                     if (uniquePriorities.size !== priorities.length) {
                         throw new Error('Mức độ ưu tiên không được trùng lặp');
@@ -246,25 +251,29 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                 regulation_name: formData.regulation_name,
                 rules,
             };
+            console.log('Data sent to backend:', data);
             const headers = { Authorization: `Bearer ${token}` };
             let response;
             if (editingRegulation) {
                 response = await axios.put(
                     `http://localhost:5000/api/regulations/${editingRegulation._id}`,
-                    data,
+                    { rules },
                     { headers }
                 );
                 setRegulations((prev) =>
                     prev.map((regulation) =>
                         regulation._id === editingRegulation._id
-                            ? { ...response.data.data, season_name: formData.season_name }
+                            ? { ...regulation, rules: response.data.data?.rules || rules }
                             : regulation
                     )
                 );
                 setSuccessMessage('Sửa quy định thành công');
             } else {
                 response = await axios.post('http://localhost:5000/api/regulations/', data, { headers });
-                setRegulations((prev) => [...prev, { ...response.data.data, season_name: formData.season_name }]);
+                setRegulations((prev) => [
+                    ...prev,
+                    { ...response.data.data, season_name: formData.season_name },
+                ]);
                 setSuccessMessage('Thêm quy định thành công');
             }
             setTimeout(() => {
@@ -274,6 +283,7 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                 setError('');
             }, 3000);
         } catch (err) {
+            console.error('Error details:', err.response?.data);
             setError(err.response?.data?.message || err.message || 'Không thể lưu quy định');
         }
     };
@@ -289,10 +299,18 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                             </label>
                             <input
                                 id="minAge"
-                                type="number"
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
                                 value={formData.rules.minAge}
                                 onChange={(e) => handleInputChange(e, 'minAge')}
-                                className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 shadow-sm"
+                                onKeyDown={(e) => {
+                                    const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
+                                    if (!/[0-9]/.test(e.key) && !allowedKeys.includes(e.key)) {
+                                        e.preventDefault();
+                                    }
+                                }}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                                 placeholder="Nhập tuổi tối thiểu (ví dụ: 18)"
                                 required
                             />
@@ -303,10 +321,18 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                             </label>
                             <input
                                 id="maxAge"
-                                type="number"
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
                                 value={formData.rules.maxAge}
                                 onChange={(e) => handleInputChange(e, 'maxAge')}
-                                className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 shadow-sm"
+                                onKeyDown={(e) => {
+                                    const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
+                                    if (!/[0-9]/.test(e.key) && !allowedKeys.includes(e.key)) {
+                                        e.preventDefault();
+                                    }
+                                }}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                                 placeholder="Nhập tuổi tối đa (ví dụ: 40)"
                                 required
                             />
@@ -318,9 +344,10 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                             <input
                                 id="minPlayersPerTeam"
                                 type="number"
+                                min="1"
                                 value={formData.rules.minPlayersPerTeam}
                                 onChange={(e) => handleInputChange(e, 'minPlayersPerTeam')}
-                                className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 shadow-sm"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                                 placeholder="Nhập số cầu thủ tối thiểu (ví dụ: 11)"
                                 required
                             />
@@ -332,9 +359,10 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                             <input
                                 id="maxPlayersPerTeam"
                                 type="number"
+                                min="1"
                                 value={formData.rules.maxPlayersPerTeam}
                                 onChange={(e) => handleInputChange(e, 'maxPlayersPerTeam')}
-                                className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 shadow-sm"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                                 placeholder="Nhập số cầu thủ tối đa (ví dụ: 25)"
                                 required
                             />
@@ -346,9 +374,10 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                             <input
                                 id="maxForeignPlayers"
                                 type="number"
+                                min="1"
                                 value={formData.rules.maxForeignPlayers}
                                 onChange={(e) => handleInputChange(e, 'maxForeignPlayers')}
-                                className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 shadow-sm"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                                 placeholder="Nhập số ngoại binh tối đa (ví dụ: 3)"
                                 required
                             />
@@ -365,9 +394,10 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                             <input
                                 id="matchRounds"
                                 type="number"
+                                min="1"
                                 value={formData.rules.matchRounds}
                                 onChange={(e) => handleInputChange(e, 'matchRounds')}
-                                className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 shadow-sm"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                                 placeholder="Nhập số vòng đấu (ví dụ: 2)"
                                 required
                             />
@@ -381,7 +411,7 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                                 type="text"
                                 value={formData.rules.homeTeamRule}
                                 onChange={(e) => handleInputChange(e, 'homeTeamRule')}
-                                className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 shadow-sm"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                                 placeholder="Nhập quy tắc đội nhà (ví dụ: Đội nhà cung cấp bóng)"
                                 required
                             />
@@ -400,7 +430,7 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                                 type="text"
                                 value={formData.rules.goalTypes}
                                 onChange={(e) => handleInputChange(e, 'goalTypes')}
-                                className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 shadow-sm"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                                 placeholder="Nhập các loại bàn thắng, cách nhau bởi dấu phẩy (ví dụ: normal, penalty)"
                                 required
                             />
@@ -412,9 +442,10 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                             <input
                                 id="minMinute"
                                 type="number"
+                                min="1"
                                 value={formData.rules.goalTimeLimit.minMinute}
                                 onChange={(e) => handleInputChange(e, 'goalTimeLimit', 'minMinute')}
-                                className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 shadow-sm"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                                 placeholder="Nhập phút tối thiểu (ví dụ: 1)"
                                 required
                             />
@@ -426,9 +457,10 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                             <input
                                 id="maxMinute"
                                 type="number"
+                                min="1"
                                 value={formData.rules.goalTimeLimit.maxMinute}
                                 onChange={(e) => handleInputChange(e, 'goalTimeLimit', 'maxMinute')}
-                                className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 shadow-sm"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                                 placeholder="Nhập phút tối đa (ví dụ: 90)"
                                 required
                             />
@@ -444,10 +476,18 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                             </label>
                             <input
                                 id="winPoints"
-                                type="number"
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
                                 value={formData.rules.winPoints}
                                 onChange={(e) => handleInputChange(e, 'winPoints')}
-                                className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 shadow-sm"
+                                onKeyDown={(e) => {
+                                    const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
+                                    if (!/[0-9]/.test(e.key) && !allowedKeys.includes(e.key)) {
+                                        e.preventDefault();
+                                    }
+                                }}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                                 placeholder="Nhập điểm thắng (ví dụ: 3)"
                                 required
                             />
@@ -458,10 +498,18 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                             </label>
                             <input
                                 id="drawPoints"
-                                type="number"
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
                                 value={formData.rules.drawPoints}
                                 onChange={(e) => handleInputChange(e, 'drawPoints')}
-                                className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 shadow-sm"
+                                onKeyDown={(e) => {
+                                    const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
+                                    if (!/[0-9]/.test(e.key) && !allowedKeys.includes(e.key)) {
+                                        e.preventDefault();
+                                    }
+                                }}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                                 placeholder="Nhập điểm hòa (ví dụ: 1)"
                                 required
                             />
@@ -472,10 +520,18 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                             </label>
                             <input
                                 id="losePoints"
-                                type="number"
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
                                 value={formData.rules.losePoints}
                                 onChange={(e) => handleInputChange(e, 'losePoints')}
-                                className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 shadow-sm"
+                                onKeyDown={(e) => {
+                                    const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
+                                    if (!/[0-9]/.test(e.key) && !allowedKeys.includes(e.key)) {
+                                        e.preventDefault();
+                                    }
+                                }}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                                 placeholder="Nhập điểm thua (ví dụ: 0)"
                                 required
                             />
@@ -484,29 +540,21 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                             <label className="block text-lg font-medium text-gray-700 mb-2">
                                 Tiêu chí xếp hạng
                             </label>
-                            {rankingCriteriaOptions.map(criterion => (
-                                <div key={criterion} className="flex items-center space-x-3 mb-2">
-                                    <input
-                                        type="checkbox"
-                                        id={`criterion-${criterion}`}
-                                        checked={formData.rules.rankingCriteria.some(item => item.criterion === criterion)}
-                                        onChange={(e) => handleRankingCriteriaChange(criterion, e.target.checked, '')}
-                                        className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                    />
-                                    <label htmlFor={`criterion-${criterion}`} className="text-lg text-gray-700 flex-1">
-                                        {criterion}
-                                    </label>
-                                    {formData.rules.rankingCriteria.some(item => item.criterion === criterion) && (
-                                        <input
-                                            type="number"
-                                            value={formData.rules.rankingCriteria.find(item => item.criterion === criterion)?.priority || ''}
-                                            onChange={(e) => handlePriorityChange(criterion, e.target.value)}
-                                            className="w-24 p-2 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 shadow-sm"
-                                            placeholder="Ưu tiên"
-                                            required
-                                            min="1"
-                                        />
-                                    )}
+                            {formData.rules.rankingCriteria.map((item) => (
+                                <div key={item.criterion} className="flex items-center space-x-3 mb-4">
+                                    <label className="text-lg text-gray-700 flex-1">{item.criterion}</label>
+                                    <select
+                                        value={item.priority}
+                                        onChange={(e) => handlePriorityChange(item.criterion, e.target.value)}
+                                        className="w-24 px-2 py-2 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                                        required
+                                    >
+                                        <option value="">Chọn</option>
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                        <option value="4">4</option>
+                                    </select>
                                 </div>
                             ))}
                         </div>
@@ -518,12 +566,28 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
     };
 
     return (
-        <div className="max-w-lg mx-auto p-6 bg-white shadow-md rounded-lg">
+        <div className="max-w-lg mx-auto p-6 bg-white shadow-lg rounded-xl">
             <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
                 {editingRegulation ? 'Sửa quy định' : 'Thêm quy định'}
             </h2>
-            {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
-            {successMessage && <p className="text-green-500 mb-4 text-center">{successMessage}</p>}
+            {error && (
+                <p className="text-red-500 mb-4 text-center font-medium">{error}</p>
+            )}
+            {successMessage && (
+                <p className="text-green-500 mb-4 text-center font-medium">{successMessage}</p>
+            )}
+            {!editingRegulation && existingRegulations.length > 0 && (
+                <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2">Quy định hiện có</h3>
+                    <ul className="list-disc pl-5 text-gray-600">
+                        {existingRegulations
+                            .filter((reg) => reg.season_id === formData.season_id)
+                            .map((reg) => (
+                                <li key={reg._id} className="text-base">{reg.regulation_name}</li>
+                            ))}
+                    </ul>
+                </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                     <label htmlFor="season-select" className="block text-lg font-medium text-gray-700 mb-2">
@@ -533,7 +597,7 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                         id="season-select"
                         value={formData.season_id}
                         onChange={handleSeasonChange}
-                        className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 shadow-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                         required
                     >
                         {seasons.length === 0 ? (
@@ -555,7 +619,7 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                         id="regulation-name"
                         value={formData.regulation_name}
                         onChange={(e) => setFormData({ ...formData, regulation_name: e.target.value })}
-                        className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 shadow-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                         required
                     >
                         <option value="">Chọn tên quy định</option>
@@ -569,7 +633,7 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                 <div className="flex justify-center space-x-4">
                     <button
                         type="submit"
-                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition shadow-md"
+                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-shadow shadow-md"
                     >
                         Lưu
                     </button>
@@ -581,7 +645,7 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                             setError('');
                             setSuccessMessage('');
                         }}
-                        className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition shadow-md"
+                        className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-shadow shadow-md"
                     >
                         Hủy
                     </button>
