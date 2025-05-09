@@ -9,33 +9,33 @@ const RegulationsPage = ({ token }) => {
 
     return (
         <div className="min-h-screen bg-gray-100 font-sans">
-            <div className="container mx-auto p-4 bg-white">
+            <div className="container mx-auto p-6 bg-white">
                 {showForm ? (
                     <RegulationForm
                         editingRegulation={editingRegulation}
                         setEditingRegulation={setEditingRegulation}
                         setShowForm={setShowForm}
                         setRegulations={setRegulations}
-                        token={token} // Truyền token để RegulationForm kiểm tra quyền
+                        token={token}
                     />
                 ) : (
-                    <>
-                        {token ? (
+                    <div className="flex flex-col items-center">
+                        <Regulations
+                            regulations={regulations}
+                            setRegulations={setRegulations}
+                            setEditingRegulation={setEditingRegulation}
+                            setShowForm={setShowForm}
+                            token={token}
+                        />
+                        {token && (
                             <button
                                 onClick={() => setShowForm(true)}
-                                className="bg-blue-600 text-white p-2 rounded mb-4"
+                                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition shadow-md text-lg mt-6"
                             >
                                 Thêm quy định
                             </button>
-                        ) : (
-                            <p className="text-gray-500 mb-4"></p>
                         )}
-                        <Regulations
-                            setEditingRegulation={setEditingRegulation}
-                            setShowForm={setShowForm}
-                            token={token} // Truyền token để Regulations kiểm tra quyền
-                        />
-                    </>
+                    </div>
                 )}
             </div>
         </div>

@@ -1569,14 +1569,98 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreatePlayerRequest"
+              type: object
+              required:
+                - team_id
+                - name
+                - dob
+                - nationality
+                - position
+                - isForeigner
+                - number
+              properties:
+                team_id:
+                  type: string
+                  example: 67d15dddb9412e544d984b86
+                  description: ObjectId of the team
+                name:
+                  type: string
+                  example: John Doe
+                  description: Full name of the player
+                dob:
+                  type: string
+                  format: date
+                  example: 1990-05-15
+                  description: Date of birth of the player
+                nationality:
+                  type: string
+                  example: CountryName
+                  description: Nationality of the player
+                position:
+                  type: string
+                  example: Forward
+                  description: Playing position of the player
+                isForeigner:
+                  type: boolean
+                  example: false
+                  description: Indicates if the player is a foreigner
+                number:
+                  type: string
+                  example: "11"
+                  description: Player's jersey number
       responses:
         "201":
           description: Player created successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SuccessResponse"
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Created player successfully
+                  data:
+                    type: object
+                    properties:
+                      team_id:
+                        type: string
+                        example: 67d15dddb9412e544d984b86
+                      name:
+                        type: string
+                        example: John Doe
+                      dob:
+                        type: string
+                        format: date-time
+                        example: 1990-05-15T00:00:00.000Z
+                      nationality:
+                        type: string
+                        example: CountryName
+                      position:
+                        type: string
+                        example: Forward
+                      isForeigner:
+                        type: boolean
+                        example: false
+                      number:
+                        type: string
+                        example: "11"
+                      _id:
+                        type: string
+                        example: 681d898372255f2a3c80666d
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: 2025-05-09T04:50:11.936Z
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: 2025-05-09T04:50:11.936Z
+                      __v:
+                        type: integer
+                        example: 0
         "400":
           description: Invalid input, player number already exists, team has maximum players, too many foreign players, or age out of range
           content:

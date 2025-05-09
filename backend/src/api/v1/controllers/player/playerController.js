@@ -132,7 +132,7 @@ const createPlayer = async (req, res, next) => {
         )
       );
 
-    await Player.create({
+    const data = await Player.create({
       team_id,
       name,
       dob,
@@ -141,7 +141,7 @@ const createPlayer = async (req, res, next) => {
       isForeigner,
       number,
     });
-    return successResponse(res, null, "Created player successfully", 201);
+    return successResponse(res, data, "Created player successfully", 201);
   } catch (error) {
     return next(error);
   }
