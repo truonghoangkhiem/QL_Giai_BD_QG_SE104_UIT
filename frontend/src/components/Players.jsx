@@ -4,8 +4,10 @@ import PlayerForm from './PlayerForm';
 
 const Players = ({ setEditingPlayer, setShowForm, token, setPlayers, players }) => {
     const [playerResults, setPlayerResults] = useState({});
+    const [filteredPlayers, setFilteredPlayers] = useState([]);
     const [seasons, setSeasons] = useState([]);
-    const [selectedSeason, setSelectedSeason] = useState('');
+    const [selectedSeason, setSelectedSeason] = useState('67ceaf87444f610224ed67de');
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // Ngày hôm nay: 2025-05-08
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -20,9 +22,10 @@ const Players = ({ setEditingPlayer, setShowForm, token, setPlayers, players }) 
                 });
                 const seasonsData = response.data.data || [];
                 setSeasons(seasonsData);
-                if (seasonsData.length > 0) {
+                if (seasonsData.length > 0 && !selectedSeason) {
                     setSelectedSeason(seasonsData[0]._id);
                 }
+                console.log('Fetched seasons:', seasonsData);
             } catch (err) {
                 setError('Không thể tải danh sách mùa giải.');
             }
@@ -32,52 +35,85 @@ const Players = ({ setEditingPlayer, setShowForm, token, setPlayers, players }) 
     }, [token]);
 
     useEffect(() => {
-        if (!selectedSeason) return;
+        if (!selectedSeason || !selectedDate) return;
 
         const fetchPlayersAndResults = async () => {
             setLoading(true);
             setError('');
             try {
+                // Lấy danh sách cầu thủ
                 const playersResponse = await axios.get(`${API_URL}/api/players`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 const playersData = playersResponse.data.data || [];
                 setPlayers(playersData);
+                console.log('Fetched players:', playersData);
 
-                if (playersData.length > 0 && selectedSeason) {
-                    const dateObj = new Date();
-                    const date = dateObj.toISOString().split('T')[0];
-                    const response = await axios.get(`${API_URL}/api/player_results/season/${selectedSeason}/${date}`, {
+                // Lấy player_results
+                let results = [];
+                try {
+                    const response = await axios.get(`${API_URL}/api/player_results/season/${selectedSeason}/${selectedDate}`, {
                         headers: { Authorization: `Bearer ${token}` },
                     });
-                    const results = Array.isArray(response.data.data) ? response.data.data : [];
+                    results = Array.isArray(response.data.data) ? response.data.data : [];
+                    console.log('Fetched player_results:', results);
+                } catch (err) {
+                    const errorData = err.response ? err.response.data : { message: err.message || 'Lỗi không xác định' };
+                    const errorMessage = typeof errorData.message === 'string' ? errorData.message : 'Không thể lấy kết quả thi đấu.';
+                    setError(`Không có kết quả thi đấu cho ngày ${selectedDate}: ${errorMessage}`);
+                    setPlayerResults({});
+                    setFilteredPlayers([]);
+                    setLoading(false);
+                    return;
+                }
 
-                    const resultsMap = {};
-                    playersData.forEach((player) => {
-                        const playerResult = results.find((result) => result.player_id === player._id);
-                        resultsMap[player._id] = playerResult || {
-                            matchesPlayed: 0,
-                            goals: 0,
-                            assists: 0,
-                            yellowCards: 0,
-                            redCards: 0,
-                        };
+                // Lọc player_results để chỉ giữ lại các bản ghi có date < selectedDate
+                const selectedDateObj = new Date(selectedDate);
+                selectedDateObj.setUTCHours(0, 0, 0, 0);
+                const filteredResults = results.filter((result) => {
+                    const resultDate = new Date(result.date);
+                    return resultDate < selectedDateObj;
+                });
+                console.log('Filtered player_results (date < selectedDate):', filteredResults);
+
+                // Ánh xạ player_results thành object với tên trường đúng
+                const resultsMap = {};
+                filteredResults.forEach((result) => {
+                    resultsMap[result.player_id] = {
+                        matchesPlayed: result.matchesplayed || 0,
+                        goals: result.totalGoals || 0,
+                        assists: result.assists || 0,
+                        yellowCards: result.yellowCards || 0,
+                        redCards: result.redCards || 0,
+                    };
+                });
+                setPlayerResults(resultsMap);
+                console.log('Mapped playerResults:', resultsMap);
+
+                // Lọc cầu thủ dựa trên filtered player_results
+                if (filteredResults.length > 0) {
+                    const playerIdsWithResults = new Set(filteredResults.map(result => result.player_id));
+                    const matchedPlayers = playersData.filter(player => playerIdsWithResults.has(player._id));
+                    setFilteredPlayers(matchedPlayers);
+                    // Kiểm tra xem có cầu thủ nào không có playerResults tương ứng không
+                    matchedPlayers.forEach(player => {
+                        if (!resultsMap[player._id]) {
+                            console.warn(`No playerResults found for player with ID: ${player._id}`);
+                        }
                     });
-                    setPlayerResults(resultsMap);
-
-                    if (results.length === 0) {
-                        setError('Không có kết quả thi đấu nào.');
-                    }
+                } else {
+                    setFilteredPlayers([]);
                 }
             } catch (err) {
-                setError(err.response?.data?.message || 'Không thể tải dữ liệu.');
+                setError(err.response?.data?.message || 'Không thể tải dữ liệu cầu thủ.');
+                setFilteredPlayers([]);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchPlayersAndResults();
-    }, [selectedSeason, token, setPlayers]);
+    }, [selectedSeason, selectedDate, token, setPlayers]);
 
     const formatDate = (dateString) => {
         try {
@@ -105,6 +141,7 @@ const Players = ({ setEditingPlayer, setShowForm, token, setPlayers, players }) 
                 headers: { Authorization: `Bearer ${token}` },
             });
             setPlayers(players.filter((player) => player._id !== id));
+            setFilteredPlayers(filteredPlayers.filter((player) => player._id !== id));
             setPlayerResults((prev) => {
                 const updatedResults = { ...prev };
                 delete updatedResults[id];
@@ -124,31 +161,43 @@ const Players = ({ setEditingPlayer, setShowForm, token, setPlayers, players }) 
             {success && <p className="text-center text-green-600 mb-4">{success}</p>}
             <h2 className="bg-gradient-to-r from-slate-600 to-slate-800 text-4xl font-extrabold text-white py-3 px-6 rounded-lg drop-shadow-md mb-4 text-center font-heading hover:brightness-110 transition-all duration-200">Danh sách cầu thủ</h2>
 
-            <div className="mb-6 text-center">
-                <label htmlFor="season-select" className="mr-2 text-gray-600">Chọn mùa giải:</label>
-                <select
-                    id="season-select"
-                    value={selectedSeason}
-                    onChange={(e) => setSelectedSeason(e.target.value)}
-                    className="border border-gray-300 rounded px-3 py-1 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-beige"
-                >
-                    {seasons.length === 0 ? (
-                        <option value="">Không có mùa giải</option>
-                    ) : (
-                        seasons.map((season) => (
-                            <option key={season._id} value={season._id}>
-                                {season.season_name} ({formatDate(season.start_date)} - {formatDate(season.end_date)})
-                            </option>
-                        ))
-                    )}
-                </select>
+            <div className="mb-6 text-center space-y-4">
+                <div>
+                    <label htmlFor="season-select" className="mr-2 text-gray-600">Chọn mùa giải:</label>
+                    <select
+                        id="season-select"
+                        value={selectedSeason}
+                        onChange={(e) => setSelectedSeason(e.target.value)}
+                        className="border border-gray-300 rounded px-3 py-1 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-beige"
+                    >
+                        {seasons.length === 0 ? (
+                            <option value="">Không có mùa giải</option>
+                        ) : (
+                            seasons.map((season) => (
+                                <option key={season._id} value={season._id}>
+                                    {season.season_name} ({formatDate(season.start_date)} - {formatDate(season.end_date)})
+                                </option>
+                            ))
+                        )}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="date-select" className="mr-2 text-gray-600">Chọn ngày:</label>
+                    <input
+                        type="date"
+                        id="date-select"
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className="border border-gray-300 rounded px-3 py-1 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-beige"
+                    />
+                </div>
             </div>
 
             {error && <p className="text-center text-red-500 mb-4">{error}</p>}
 
-            {players.length > 0 && !error && (
+            {filteredPlayers.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {players.map((player) => {
+                    {filteredPlayers.map((player) => {
                         const results = playerResults[player._id] || {
                             matchesPlayed: 0,
                             goals: 0,
@@ -177,11 +226,11 @@ const Players = ({ setEditingPlayer, setShowForm, token, setPlayers, players }) 
                                         <p>Vị trí: <span className="text-gray-800">{player.position || 'N/A'}</span></p>
                                         <p>Quốc tịch: <span className="text-gray-800">{player.nationality || 'N/A'}</span></p>
                                         <p>Ngày sinh: <span className="text-gray-800">{formatDate(player.dob)}</span></p>
-                                        <p>Số trận: {results.matchesPlayed}</p>
-                                        <p>Bàn thắng: {results.goals}</p>
-                                        <p>Kiến tạo: {results.assists}</p>
-                                        <p>Thẻ vàng: {results.yellowCards}</p>
-                                        <p>Thẻ đỏ: {results.redCards}</p>
+                                        <p>Số trận: {results.matchesPlayed != null ? results.matchesPlayed : 'N/A'}</p>
+                                        <p>Bàn thắng: {results.goals != null ? results.goals : 'N/A'}</p>
+                                        <p>Kiến tạo: {results.assists != null ? results.assists : 'N/A'}</p>
+                                        <p>Thẻ vàng: {results.yellowCards != null ? results.yellowCards : 'N/A'}</p>
+                                        <p>Thẻ đỏ: {results.redCards != null ? results.redCards : 'N/A'}</p>
                                     </div>
                                 </div>
                                 {token && setEditingPlayer && setShowForm && (
@@ -204,6 +253,8 @@ const Players = ({ setEditingPlayer, setShowForm, token, setPlayers, players }) 
                         );
                     })}
                 </div>
+            ) : (
+                <p className="text-center text-gray-500">Không có cầu thủ nào khớp với mùa giải và ngày đã chọn.</p>
             )}
         </div>
     );

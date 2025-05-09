@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 
-const Rankings = ({ seasonId, token, seasons, formatDate, setSelectedSeasonId }) => {
+const Rankings = ({ seasonId, token, seasons, formatDate, setSelectedSeasonId, hideDropdown = false }) => {
     const [teamResults, setTeamResults] = useState([]);
     const [teams, setTeams] = useState([]);
     const [regulation, setRegulation] = useState(null);
@@ -33,7 +33,7 @@ const Rankings = ({ seasonId, token, seasons, formatDate, setSelectedSeasonId })
 
     // Xử lý thay đổi mùa giải
     const handleSeasonChange = (e) => {
-        setSelectedSeasonId(e.target.value); // Cập nhật selectedSeasonId trong RankingsPage
+        setSelectedSeasonId(e.target.value);
         setSelectedDate('');
         setSelectedTeam('');
         setCurrentPage(1);
@@ -127,7 +127,7 @@ const Rankings = ({ seasonId, token, seasons, formatDate, setSelectedSeasonId })
         };
 
         fetchData();
-    }, [seasonId, token]); // Sử dụng seasonId từ props thay vì state nội bộ
+    }, [seasonId, token]);
 
     // Xử lý và sắp xếp dữ liệu
     const rankingCriteria = regulation?.rules?.rankingCriteria || ['points', 'goalsDifference', 'goalsForAway'];
@@ -149,7 +149,7 @@ const Rankings = ({ seasonId, token, seasons, formatDate, setSelectedSeasonId })
         const latestResultsByTeam = teams
             .map(team => {
                 const resultsForTeam = filteredResults
-                    .filter(result => 
+                    .filter(result =>
                         result && typeof result === 'object' && result.team_id && result.team_id.toString() === team._id
                     );
                 if (resultsForTeam.length === 0) {
@@ -286,57 +286,59 @@ const Rankings = ({ seasonId, token, seasons, formatDate, setSelectedSeasonId })
 
     return (
         <div className="bg-white rounded-2xl shadow-lg p-8">
-            {/* Bộ lọc */}
-            <div className="mb-8 flex flex-col sm:flex-row justify-center gap-4">
-                <div className="flex items-center gap-3">
-                    <label htmlFor="season-select" className="text-sm font-medium text-gray-700">
-                        Mùa giải:
-                    </label>
-                    <select
-                        id="season-select"
-                        value={seasonId || ''}
-                        onChange={handleSeasonChange}
-                        className="w-full sm:w-64 bg-white border border-gray-200 rounded-lg px-4 py-2 text-gray-700 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition duration-200 hover:border-blue-400 hover:shadow-md"
-                    >
-                        <option value="">Chọn mùa giải</option>
-                        {safeSeasons.map(season => (
-                            <option key={season._id || `season-${Math.random()}`} value={season._id || ''}>
-                                {`${season.season_name || 'Không xác định'} (${safeFormatDate(season.start_date)} - ${safeFormatDate(season.end_date)})`}
-                            </option>
-                        ))}
-                    </select>
+            {/* Bộ lọc - Ẩn nếu hideDropdown là true */}
+            {!hideDropdown && (
+                <div className="mb-8 flex flex-col sm:flex-row justify-center gap-4">
+                    <div className="flex items-center gap-3">
+                        <label htmlFor="season-select" className="text-sm font-medium text-gray-700">
+                            Mùa giải:
+                        </label>
+                        <select
+                            id="season-select"
+                            value={seasonId || ''}
+                            onChange={handleSeasonChange}
+                            className="w-full sm:w-64 bg-white border border-gray-200 rounded-lg px-4 py-2 text-gray-700 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition duration-200 hover:border-blue-400 hover:shadow-md"
+                        >
+                            <option value="">Chọn mùa giải</option>
+                            {safeSeasons.map(season => (
+                                <option key={season._id || `season-${Math.random()}`} value={season._id || ''}>
+                                    {`${season.season_name || 'Không xác định'} (${safeFormatDate(season.start_date)} - ${safeFormatDate(season.end_date)})`}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <label htmlFor="date-filter" className="text-sm font-medium text-gray-700">
+                            Ngày:
+                        </label>
+                        <input
+                            type="date"
+                            id="date-filter"
+                            value={selectedDate}
+                            onChange={handleDateChange}
+                            className="w-full sm:w-48 bg-white border border-gray-200 rounded-lg px-4 py-2 text-gray-700 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition duration-200 hover:border-blue-400 hover:shadow-md"
+                        />
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <label htmlFor="team-filter" className="text-sm font-medium text-gray-700">
+                            Đội bóng:
+                        </label>
+                        <select
+                            id="team-filter"
+                            value={selectedTeam}
+                            onChange={handleTeamChange}
+                            className="w-full sm:w-64 bg-white border border-gray-200 rounded-lg px-4 py-2 text-gray-700 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition duration-200 hover:border-blue-400 hover:shadow-md"
+                        >
+                            <option value="">Tất cả đội bóng</option>
+                            {teams.map(team => (
+                                <option key={team._id} value={team._id}>
+                                    {team.team_name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <label htmlFor="date-filter" className="text-sm font-medium text-gray-700">
-                        Ngày:
-                    </label>
-                    <input
-                        type="date"
-                        id="date-filter"
-                        value={selectedDate}
-                        onChange={handleDateChange}
-                        className="w-full sm:w-48 bg-white border border-gray-200 rounded-lg px-4 py-2 text-gray-700 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition duration-200 hover:border-blue-400 hover:shadow-md"
-                    />
-                </div>
-                <div className="flex items-center gap-3">
-                    <label htmlFor="team-filter" className="text-sm font-medium text-gray-700">
-                        Đội bóng:
-                    </label>
-                    <select
-                        id="team-filter"
-                        value={selectedTeam}
-                        onChange={handleTeamChange}
-                        className="w-full sm:w-64 bg-white border border-gray-200 rounded-lg px-4 py-2 text-gray-700 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition duration-200 hover:border-blue-400 hover:shadow-md"
-                    >
-                        <option value="">Tất cả đội bóng</option>
-                        {teams.map(team => (
-                            <option key={team._id} value={team._id}>
-                                {team.team_name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-            </div>
+            )}
 
             {/* Thông báo lỗi hoặc không có dữ liệu */}
             {(error || enrichedResults.length === 0) && (
@@ -400,9 +402,8 @@ const Rankings = ({ seasonId, token, seasons, formatDate, setSelectedSeasonId })
                         <button
                             onClick={handlePrevPage}
                             disabled={currentPage === 1}
-                            className={`px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium transition duration-200 ${
-                                currentPage === 1 ? 'bg-gray-100 cursor-not-allowed' : 'hover:bg-blue-100 hover:shadow-md'
-                            }`}
+                            className={`px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium transition duration-200 ${currentPage === 1 ? 'bg-gray-100 cursor-not-allowed' : 'hover:bg-blue-100 hover:shadow-md'
+                                }`}
                         >
                             Trang trước
                         </button>
@@ -412,9 +413,8 @@ const Rankings = ({ seasonId, token, seasons, formatDate, setSelectedSeasonId })
                         <button
                             onClick={handleNextPage}
                             disabled={currentPage >= totalPages}
-                            className={`px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium transition duration-200 ${
-                                currentPage >= totalPages ? 'bg-gray-100 cursor-not-allowed' : 'hover:bg-blue-100 hover:shadow-md'
-                            }`}
+                            className={`px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium transition duration-200 ${currentPage >= totalPages ? 'bg-gray-100 cursor-not-allowed' : 'hover:bg-blue-100 hover:shadow-md'
+                                }`}
                         >
                             Trang tiếp theo
                         </button>

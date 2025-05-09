@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { CalendarIcon, MapPinIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
-const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingMatch = () => { }, setShowForm = () => { }, type = 'all', onPastMatchesFetched = () => { }, token, seasonId, limit }) => {
+const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingMatch = () => { }, setShowForm = () => { }, type = 'all', onPastMatchesFetched = () => { }, token, seasonId, limit, hideDropdown = false }) => {
   const [localMatches, setLocalMatches] = useState([]);
   const [seasons, setSeasons] = useState([]);
   const [teams, setTeams] = useState([]);
@@ -286,7 +286,7 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
     );
   }
 
-  // Hiển thị lỗi và không hiển thị container "Lọc trận đấu"
+  // Hiển thị lỗi nếu có
   if (error) {
     return (
       <div className="container mx-auto p-6">
@@ -308,85 +308,88 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
   // Hiển thị giao diện chính khi không có lỗi
   return (
     <div className="container mx-auto p-6 bg-gray-50 min-h-screen flex">
-      <div className="w-64 pr-6">
-        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Lọc trận đấu</h2>
-          {matches.length === 0 ? (
-            <div className="text-gray-500">
-              <p>Không có trận đấu nào cho mùa giải này.</p>
-              <button
-                onClick={() => handleSeasonChange('')}
-                className="text-blue-600 hover:underline mt-2 inline-block"
-              >
-                Xem tất cả mùa giải
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <div>
-                <label htmlFor="season-select" className="block text-sm font-medium text-gray-700 mb-1">Mùa giải</label>
-                <select
-                  id="season-select"
-                  value={selectedSeasonId}
-                  onChange={(e) => handleSeasonChange(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+      {/* Phần lọc trận đấu - Ẩn nếu hideDropdown là true */}
+      {!hideDropdown && (
+        <div className="w-64 pr-6">
+          <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Lọc trận đấu</h2>
+            {matches.length === 0 ? (
+              <div className="text-gray-500">
+                <p>Không có trận đấu nào cho mùa giải này.</p>
+                <button
+                  onClick={() => handleSeasonChange('')}
+                  className="text-blue-600 hover:underline mt-2 inline-block"
                 >
-                  <option value="">Tất cả mùa giải</option>
-                  {seasons.map((season) => (
-                    <option key={season._id} value={season._id}>
-                      {season.season_name}
-                    </option>
-                  ))}
-                </select>
+                  Xem tất cả mùa giải
+                </button>
               </div>
-              {type === 'all' && (
-                <>
-                  <div>
-                    <label htmlFor="match-date" className="block text-sm font-medium text-gray-700 mb-1">Ngày thi đấu</label>
-                    <div className="relative">
-                      <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <input
-                        type="date"
-                        id="match-date"
-                        value={selectedDate}
-                        onChange={(e) => handleDateChange(e.target.value)}
-                        className="w-full pl-10 border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label htmlFor="team-select" className="block text-sm font-medium text-gray-700 mb-1">Đội bóng</label>
-                    <select
-                      id="team-select"
-                      value={selectedTeamId}
-                      onChange={(e) => handleTeamChange(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                    >
-                      <option value="">Tất cả đội bóng</option>
-                      {filteredTeams.map((team) => (
-                        <option key={team._id} value={team._id}>
-                          {team.team_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              )}
-              {type === 'all' && (selectedDate || selectedTeamId) && (
+            ) : (
+              <div className="flex flex-col gap-4">
                 <div>
-                  <button
-                    onClick={handleResetFilter}
-                    className="flex items-center gap-2 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors duration-200 w-full"
+                  <label htmlFor="season-select" className="block text-sm font-medium text-gray-700 mb-1">Mùa giải</label>
+                  <select
+                    id="season-select"
+                    value={selectedSeasonId}
+                    onChange={(e) => handleSeasonChange(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                   >
-                    <XCircleIcon className="w-5 h-5" />
-                    Xóa lọc
-                  </button>
+                    <option value="">Tất cả mùa giải</option>
+                    {seasons.map((season) => (
+                      <option key={season._id} value={season._id}>
+                        {season.season_name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              )}
-            </div>
-          )}
+                {type === 'all' && (
+                  <>
+                    <div>
+                      <label htmlFor="match-date" className="block text-sm font-medium text-gray-700 mb-1">Ngày thi đấu</label>
+                      <div className="relative">
+                        <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="date"
+                          id="match-date"
+                          value={selectedDate}
+                          onChange={(e) => handleDateChange(e.target.value)}
+                          className="w-full pl-10 border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="team-select" className="block text-sm font-medium text-gray-700 mb-1">Đội bóng</label>
+                      <select
+                        id="team-select"
+                        value={selectedTeamId}
+                        onChange={(e) => handleTeamChange(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                      >
+                        <option value="">Tất cả đội bóng</option>
+                        {filteredTeams.map((team) => (
+                          <option key={team._id} value={team._id}>
+                            {team.team_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
+                {type === 'all' && (selectedDate || selectedTeamId) && (
+                  <div>
+                    <button
+                      onClick={handleResetFilter}
+                      className="flex items-center gap-2 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors duration-200 w-full"
+                    >
+                      <XCircleIcon className="w-5 h-5" />
+                      Xóa lọc
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
       <div className="flex-1">
         <div className="bg-white rounded-xl shadow-md p-6">
           <div className="flex border-b border-gray-200 mb-6">
