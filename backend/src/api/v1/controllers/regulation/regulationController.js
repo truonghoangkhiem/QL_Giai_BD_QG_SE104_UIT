@@ -51,9 +51,6 @@ const validateRules = (regulation_name, rules) => {
         typeof rules.losePoints !== "number" ||
         rules.winPoints <= rules.drawPoints ||
         rules.drawPoints <= rules.losePoints ||
-        !rules.winPoints ||
-        !rules.drawPoints ||
-        !rules.losePoints ||
         !Array.isArray(rules.rankingCriteria)
       )
         return false;
