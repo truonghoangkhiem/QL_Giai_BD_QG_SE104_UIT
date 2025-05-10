@@ -1004,7 +1004,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/MatchesResponse"
 
-  /api/teamresults/:
+  /api/team_results/:
     post:
       tags:
         - team_results
