@@ -10,6 +10,7 @@ import PlayersPage from './pages/PlayersPage';
 import SeasonsPage from './pages/SeasonsPage';
 import RegulationsPage from './pages/RegulationsPage';
 import RankingsPage from './pages/RankingsPage';
+import PlayerRankingPage from './pages/PlayerRankingPage';
 
 const App = () => {
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -27,6 +28,7 @@ const App = () => {
         <Route path="/seasons" element={<SeasonsPage token={token} />} />
         <Route path="/regulations" element={<RegulationsPage token={token} />} />
         <Route path="/rankings" element={<RankingsPage token={token} />} />
+        <Route path="/player-rankings" element={<PlayerRankingPage token={token} />} />
       </Routes>
     </BrowserRouter>
   );
