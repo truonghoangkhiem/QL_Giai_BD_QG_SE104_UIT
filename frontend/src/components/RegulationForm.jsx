@@ -15,6 +15,7 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
             matchRounds: '',
             homeTeamRule: '',
             goalTypes: '',
+            includeOG: false, // Thêm trường để theo dõi checkbox OG
             goalTimeLimit: { minMinute: '', maxMinute: '' },
             winPoints: '',
             drawPoints: '',
@@ -79,7 +80,8 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                     maxForeignPlayers: rules.maxForeignPlayers?.toString() || '',
                     matchRounds: rules.matchRounds?.toString() || '',
                     homeTeamRule: rules.homeTeamRule || '',
-                    goalTypes: rules.goalTypes?.join(', ') || '',
+                    goalTypes: rules.goalTypes?.filter(type => type !== 'OG').join(', ') || '', // Loại bỏ OG khỏi input
+                    includeOG: rules.goalTypes?.includes('OG') || false, // Đặt checkbox dựa trên OG
                     goalTimeLimit: {
                         minMinute: rules.goalTimeLimit?.minMinute?.toString() || '',
                         maxMinute: rules.goalTimeLimit?.maxMinute?.toString() || '',
@@ -105,7 +107,7 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
     };
 
     const handleInputChange = (e, field, subField = null) => {
-        const value = e.target.value;
+        const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
         if (subField) {
             setFormData({
                 ...formData,
@@ -181,8 +183,17 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                     }
                     break;
                 case 'Goal Rules':
+                    let goalTypes = formData.rules.goalTypes
+                        .split(',')
+                        .map((item) => item.trim())
+                        .filter((item) => item);
+                    if (formData.rules.includeOG) {
+                        goalTypes = [...new Set([...goalTypes, 'OG'])]; // Thêm OG nếu checkbox được chọn
+                    } else {
+                        goalTypes = goalTypes.filter(type => type !== 'OG'); // Loại bỏ OG nếu checkbox không được chọn
+                    }
                     rules = {
-                        goalTypes: formData.rules.goalTypes.split(',').map((item) => item.trim()).filter((item) => item),
+                        goalTypes,
                         goalTimeLimit: {
                             minMinute: parseInt(formData.rules.goalTimeLimit.minMinute, 10),
                             maxMinute: parseInt(formData.rules.goalTimeLimit.maxMinute, 10),
@@ -434,6 +445,19 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                                 placeholder="Nhập các loại bàn thắng, cách nhau bởi dấu phẩy (ví dụ: normal, penalty)"
                                 required
                             />
+                        </div>
+                        <div>
+                            <label htmlFor="includeOG" className="block text-lg font-medium text-gray-700 mb-2">
+                                Bàn thắng phản lưới nhà (OG)
+                            </label>
+                            <input
+                                id="includeOG"
+                                type="checkbox"
+                                checked={formData.rules.includeOG}
+                                onChange={(e) => handleInputChange(e, 'includeOG')}
+                                className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <span className="ml-2 text-lg text-gray-700">Cho phép bàn thắng phản lưới nhà</span>
                         </div>
                         <div>
                             <label htmlFor="minMinute" className="block text-lg font-medium text-gray-700 mb-2">

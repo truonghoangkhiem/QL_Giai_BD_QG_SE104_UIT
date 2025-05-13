@@ -205,8 +205,10 @@ const updatePlayerResultsafterMatch = async (req, res, next) => {
 
       for (let player of players) {
         const PlayerID = player._id;
+        // Chỉ tính bàn thắng nếu goalType không phải "OG"
         const goalsScored = goalDetails.filter((goal) =>
-          new mongoose.Types.ObjectId(goal.player_id).equals(PlayerID)
+          new mongoose.Types.ObjectId(goal.player_id).equals(PlayerID) &&
+          goal.goalType !== 'OG'
         ).length;
 
         const existingResult = await PlayerResult.findOne({

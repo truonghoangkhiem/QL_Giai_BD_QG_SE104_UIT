@@ -145,10 +145,10 @@ const getMatchesBySeasonId = async (req, res, next) => {
       // Join với collection teams cho team1
       {
         $lookup: {
-          from: 'teams', // Tên collection teams trong MongoDB (thường là lowercase)
-          localField: 'team1', // Trường team1 trong matches (ObjectId)
-          foreignField: '_id', // Trường _id trong teams
-          as: 'team1_data', // Tên mảng chứa dữ liệu team1
+          from: 'teams',
+          localField: 'team1',
+          foreignField: '_id',
+          as: 'team1_data',
         },
       },
       // Join với collection teams cho team2
@@ -166,23 +166,26 @@ const getMatchesBySeasonId = async (req, res, next) => {
       // Định dạng dữ liệu trả về
       {
         $project: {
-          id: '$_id', // Đổi _id thành id để đồng bộ với frontend
+          id: '$_id',
           season_id: 1,
           team1: {
+            _id: '$team1_data._id', // Thêm _id của đội 1
             team_name: { $ifNull: ['$team1_data.team_name', 'N/A'] },
             logo: { $ifNull: ['$team1_data.logo', 'https://placehold.co/20x20?text=Team'] },
           },
           team2: {
+            _id: '$team2_data._id', // Thêm _id của đội 2
             team_name: { $ifNull: ['$team2_data.team_name', 'N/A'] },
             logo: { $ifNull: ['$team2_data.logo', 'https://placehold.co/20x20?text=Team'] },
           },
           date: 1,
           stadium: 1,
           score: 1,
-          _id: 0, // Loại bỏ trường _id gốc
+          goalDetails: 1,
+          _id: 0,
         },
       },
-      // Sắp xếp theo ngày tăng dần (tùy chọn, nếu bạn muốn làm ở backend)
+      // Sắp xếp theo ngày tăng dần
       { $sort: { date: 1 } },
     ]);
 
@@ -203,7 +206,6 @@ const getMatchesBySeasonId = async (req, res, next) => {
     return next(error);
   }
 };
-
 // UPDATE match
 const updateMatch = async (req, res, next) => {
   const parseResult = updateMatchSchema.safeParse(req.body);

@@ -7,16 +7,16 @@ const MatchesPage = ({ token }) => {
   const [editingMatch, setEditingMatch] = useState(null);
   const [matches, setMatches] = useState([]);
 
-  // Memoize setMatches
   const memoizedSetMatches = useCallback((newMatches) => {
+    console.log('New matches:', newMatches); // Debug giá trị matches
     setMatches(newMatches);
   }, []);
 
-  // Memoize onPastMatchesFetched
   const onPastMatchesFetched = useCallback((pastMatches) => {
-    // Xử lý pastMatches nếu cần
     console.log('Past matches fetched:', pastMatches);
   }, []);
+
+  console.log('Token in MatchesPage:', token); // Debug giá trị token
 
   return (
     <div className="container mx-auto p-4">

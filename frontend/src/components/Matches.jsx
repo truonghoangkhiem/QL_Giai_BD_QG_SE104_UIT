@@ -25,14 +25,12 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
     e.target.src = defaultLogoUrl;
   };
 
-  // Hàm kiểm tra định dạng ngày (YYYY-MM-DD hoặc ISO 8601 date-time)
   const isValidDateFormat = (dateString) => {
     if (!dateString) return false;
     const date = new Date(dateString);
     return date instanceof Date && !isNaN(date);
   };
 
-  // Hàm định dạng ngày sang DD/MM/YYYY
   const formatDateToDisplay = (dateString) => {
     if (!dateString || !isValidDateFormat(dateString)) return 'Chưa rõ ngày';
     const date = new Date(dateString);
@@ -43,7 +41,6 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
     });
   };
 
-  // Fetch seasons
   useEffect(() => {
     const fetchSeasons = async () => {
       try {
@@ -57,7 +54,6 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
     fetchSeasons();
   }, []);
 
-  // Fetch teams
   useEffect(() => {
     const fetchTeams = async () => {
       try {
@@ -72,7 +68,6 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
     fetchTeams();
   }, []);
 
-  // Filter teams by selected season
   useEffect(() => {
     if (selectedSeasonId) {
       const filtered = teams.filter((team) => team.season_id.toString() === selectedSeasonId);
@@ -83,14 +78,12 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
     }
   }, [selectedSeasonId, teams]);
 
-  // Set selectedSeasonId from prop
   useEffect(() => {
     if (seasonId) {
       setSelectedSeasonId(seasonId);
     }
   }, [seasonId]);
 
-  // Fetch matches
   useEffect(() => {
     const fetchMatches = async () => {
       setLoading(true);
@@ -107,8 +100,8 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
 
         const response = await axios.get(url);
         const matchesData = response.data.data || response.data || [];
+        console.log('Matches data:', matchesData); // Debug dữ liệu trả về
 
-        // Chỉ cập nhật nếu dữ liệu khác
         setMatches((prevMatches) => {
           if (JSON.stringify(prevMatches) !== JSON.stringify(matchesData)) {
             return matchesData;
@@ -139,9 +132,10 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
     };
 
     fetchMatches();
-  }, [selectedSeasonId, selectedDate, selectedTeamId, type]);
+  }, [selectedSeasonId, selectedDate, selectedTeamId, type, setMatches, onPastMatchesFetched]);
 
   const handleEdit = (match) => {
+    console.log('Match to edit:', match); // Debug giá trị match
     setEditingMatch(match);
     setShowForm(true);
   };
@@ -155,7 +149,7 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
       await axios.delete(`http://localhost:5000/api/matches/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setMatches((prevMatches) => prevMatches.filter((match) => match._id !== id));
+      setMatches((prevMatches) => prevMatches.filter((match) => match.id !== id));
     } catch (err) {
       setError('Không thể xóa trận đấu');
     }
@@ -190,7 +184,6 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
     setError('');
   }, []);
 
-  // Pagination logic
   const today = new Date();
   const pastMatches = matches
     .filter((match) => {
@@ -204,15 +197,13 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
       const matchDate = new Date(match.date);
       return matchDate instanceof Date && !isNaN(matchDate) && matchDate > today;
     })
-    .sort((a, b) => new Date(a.date) - new Date(a.date));
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-  // Calculate paginated matches
   const indexOfLastMatch = currentPage * matchesPerPage;
   const indexOfFirstMatch = indexOfLastMatch - matchesPerPage;
   const paginatedPastMatches = pastMatches.slice(indexOfFirstMatch, indexOfLastMatch);
   const paginatedUpcomingMatches = upcomingMatches.slice(indexOfFirstMatch, indexOfLastMatch);
 
-  // Calculate total pages
   const totalPastPages = Math.ceil(pastMatches.length / matchesPerPage) || 1;
   const totalUpcomingPages = Math.ceil(upcomingMatches.length / matchesPerPage) || 1;
 
@@ -232,7 +223,7 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
   const renderMatches = (list, isLive) => (
     list.length > 0 ? (
       list.map((match) => (
-        <div key={match._id} className="grid grid-cols-12 items-center py-4 border-b border-gray-200 w-full gap-4 px-4">
+        <div key={match.id} className="grid grid-cols-12 items-center py-4 border-b border-gray-200 w-full gap-4 px-4">
           <div className="col-span-5 flex items-center gap-3">
             <img
               src={match.team1?.logo || defaultLogoUrl}
@@ -268,6 +259,22 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
               onError={handleImageError}
             />
           </div>
+          {token && (
+            <div className="col-span-12 flex justify-end gap-2 mt-2">
+              <button
+                onClick={() => handleEdit(match)}
+                className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
+              >
+                Sửa
+              </button>
+              <button
+                onClick={() => handleDelete(match.id)}
+                className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition"
+              >
+                Xóa
+              </button>
+            </div>
+          )}
         </div>
       ))
     ) : (
@@ -277,7 +284,6 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
     )
   );
 
-  // Hiển thị loading
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -286,7 +292,6 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
     );
   }
 
-  // Hiển thị lỗi nếu có
   if (error) {
     return (
       <div className="container mx-auto p-6">
@@ -305,10 +310,8 @@ const Matches = ({ matches: propMatches, setMatches: setPropMatches, setEditingM
     );
   }
 
-  // Hiển thị giao diện chính khi không có lỗi
   return (
     <div className="container mx-auto p-6 bg-gray-50 min-h-screen flex">
-      {/* Phần lọc trận đấu - Ẩn nếu hideDropdown là true */}
       {!hideDropdown && (
         <div className="w-64 pr-6">
           <div className="bg-white rounded-xl shadow-md p-6 mb-8">

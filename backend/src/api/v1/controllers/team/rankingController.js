@@ -127,9 +127,9 @@ const updateRanking = async (req, res, next) => {
     rankingCriteria.forEach((field) => {
       const validFields = [
         "points",
-        "goalsDifference",
-        "headToHeadPoints",
-        "goalsForAway",
+        "goalDifference",
+        "headToHead",
+        "goalsFor",
       ];
       if (!validFields.includes(field)) {
         const error = new Error("Invalid ranking criteria");
