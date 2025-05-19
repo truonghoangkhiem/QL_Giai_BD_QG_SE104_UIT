@@ -4,15 +4,109 @@ import Match from "../../../../models/Match.js";
 import { successResponse } from "../../../../utils/responseFormat.js";
 import {
   CreatePlayerRankingSchema,
-  MatchIdSchema,
+  MatchIdSchema as PlayerRankingMatchIdSchema, // Alias để tránh xung đột nếu MatchIdSchema khác được import
   PlayerRankingIdSchema,
   GetPlayerRankingsBySeasonIdAndDateSchema,
 } from "../../../../schemas/playerRankingSchema.js";
 import mongoose from "mongoose";
 
-// Tạo bảng xếp hạng cầu thủ
+// --- HÀM HELPER NỘI BỘ ĐỂ TÍNH TOÁN VÀ LƯU BẢNG XẾP HẠNG ---
+// Hàm này sẽ chứa logic chính của updatePlayerRankingsafterMatch
+// và có thể được gọi từ nơi khác (ví dụ: sau khi xóa cầu thủ)
+const calculateAndSavePlayerRankings = async (seasonId, dateForRanking, session = null) => {
+  const player_results = await PlayerResult.aggregate([
+    {
+      $match: {
+        season_id: seasonId,
+        date: { $lte: dateForRanking },
+      },
+    },
+    {
+      $sort: { date: -1 },
+    },
+    {
+      $group: {
+        _id: "$player_id",
+        latestResult: { $first: "$$ROOT" },
+      },
+    },
+    {
+      $replaceRoot: { newRoot: "$latestResult" },
+    },
+  ]).session(session); // Sử dụng session nếu được cung cấp
+
+  if (!player_results.length) {
+    // Nếu không có PlayerResult nào, có thể xóa tất cả PlayerRanking cho ngày đó của mùa giải đó
+    await PlayerRanking.deleteMany({ season_id: seasonId, date: dateForRanking }).session(session);
+    console.log(`No player results found for season ${seasonId} on/before ${dateForRanking}. Cleared existing rankings for this date.`);
+    return; // Không có gì để xếp hạng
+  }
+
+  // Sắp xếp theo tổng số bàn thắng (hoặc tiêu chí khác nếu cần)
+  player_results.sort((a, b) => (b.totalGoals || 0) - (a.totalGoals || 0));
+
+  const existingRankings = await PlayerRanking.find({
+    season_id: seasonId,
+    date: dateForRanking,
+  }).session(session);
+
+  const rankingUpdates = [];
+  for (let i = 0; i < player_results.length; i++) {
+    const playerResult = player_results[i];
+    const existingRanking = existingRankings.find(
+      (r) => r.player_results_id.toString() === playerResult._id.toString()
+    );
+
+    const rank = i + 1;
+
+    if (existingRanking) {
+      if (existingRanking.rank !== rank || !existingRanking.player_id.equals(playerResult.player_id)) {
+        rankingUpdates.push({
+          updateOne: {
+            filter: { _id: existingRanking._id }, // Lọc theo _id của PlayerRanking
+            update: { $set: { rank: rank, player_id: playerResult.player_id } }, // Cập nhật player_id nếu cần
+          },
+        });
+      }
+    } else {
+      rankingUpdates.push({
+        insertOne: {
+          document: {
+            season_id: seasonId,
+            player_results_id: playerResult._id,
+            player_id: playerResult.player_id,
+            rank: rank,
+            date: dateForRanking,
+          },
+        },
+      });
+    }
+  }
+
+  // Xóa các PlayerRanking không còn PlayerResult tương ứng (ví dụ, khi cầu thủ bị xóa)
+  const currentPlayerResultIds = new Set(player_results.map(pr => pr._id.toString()));
+  const rankingsToDelete = existingRankings.filter(r => !currentPlayerResultIds.has(r.player_results_id.toString()));
+
+  for (const rankToDelete of rankingsToDelete) {
+    rankingUpdates.push({
+      deleteOne: {
+        filter: { _id: rankToDelete._id }
+      }
+    });
+  }
+  
+
+  if (rankingUpdates.length > 0) {
+    await PlayerRanking.bulkWrite(rankingUpdates, { session });
+  }
+  console.log(`Player rankings recalculated for season ${seasonId} on ${dateForRanking}. Updates: ${rankingUpdates.length}`);
+};
+// --- KẾT THÚC HÀM HELPER ---
+
+
+// Tạo bảng xếp hạng cầu thủ (Hàm này có thể không cần thiết nếu ranking được tạo tự động)
 const createPlayerRankings = async (req, res, next) => {
-  const { season_id, player_results_id } = req.body;
+  const { season_id, player_results_id } = req.body; // Sửa: player_results_id lấy từ body
   try {
     const { success, error } = CreatePlayerRankingSchema.safeParse({
       season_id,
@@ -36,29 +130,33 @@ const createPlayerRankings = async (req, res, next) => {
 
     const checkExist = await PlayerRanking.findOne({
       player_results_id: PlayerResultsID,
+      // Có thể cần thêm điều kiện date nếu muốn có ranking theo từng ngày cụ thể
     });
     if (checkExist) {
-      const error = new Error("Player Ranking already exists");
+      const error = new Error("Player Ranking for this result already exists");
       error.status = 400;
       return next(error);
     }
 
-    const date = new Date();
+    const date = new Date(player_results.date); // Sử dụng ngày của PlayerResult
     date.setUTCHours(0, 0, 0, 0);
 
     const newPlayerRanking = new PlayerRanking({
       season_id: SeasonID,
       player_results_id: PlayerResultsID,
       player_id: player_results.player_id,
-      rank: 0,
+      rank: 0, // Rank sẽ được cập nhật bởi hàm tính toán
       date,
     });
     await newPlayerRanking.save();
 
+    // Tính toán lại ranking cho ngày này
+    await calculateAndSavePlayerRankings(SeasonID, date);
+
     return successResponse(
       res,
-      null,
-      "Created player ranking successfully",
+      newPlayerRanking, // Trả về PlayerRanking mới tạo
+      "Created player ranking successfully and recalculated for the date",
       201
     );
   } catch (error) {
@@ -69,93 +167,37 @@ const createPlayerRankings = async (req, res, next) => {
 // Cập nhật bảng xếp hạng cầu thủ sau trận đấu
 const updatePlayerRankingsafterMatch = async (req, res, next) => {
   const { matchid } = req.params;
+  const session = await mongoose.startSession(); // Bắt đầu session
+  session.startTransaction();
   try {
-    const { success, error } = MatchIdSchema.safeParse({ matchid });
+    const { success, error } = PlayerRankingMatchIdSchema.safeParse({ matchid });
     if (!success) {
       const validationError = new Error(error.errors[0].message);
       validationError.status = 400;
-      return next(validationError);
+      throw validationError; // Ném lỗi để rollback transaction
     }
 
     const MatchID = new mongoose.Types.ObjectId(matchid);
-    const match = await Match.findById(MatchID);
+    const match = await Match.findById(MatchID).session(session); // Thêm session
     if (!match) {
       const error = new Error("Match not found");
       error.status = 404;
-      return next(error);
+      throw error;
+    }
+     if (match.score === null || !/^\d+-\d+$/.test(match.score)) {
+        await session.abortTransaction();
+        session.endSession();
+        return successResponse(res, { date: match.date }, "Match has no valid score, player rankings not updated.");
     }
 
     const matchDate = new Date(match.date);
     matchDate.setUTCHours(0, 0, 0, 0);
 
-    const player_results = await PlayerResult.aggregate([
-      {
-        $match: {
-          season_id: match.season_id,
-          date: { $lte: matchDate },
-        },
-      },
-      {
-        $sort: { date: -1 },
-      },
-      {
-        $group: {
-          _id: "$player_id",
-          latestResult: { $first: "$$ROOT" },
-        },
-      },
-      {
-        $replaceRoot: { newRoot: "$latestResult" },
-      },
-    ]);
-
-    if (!player_results.length) {
-      const error = new Error("Player Result not found");
-      error.status = 404;
-      return next(error);
-    }
-
-    player_results.sort((a, b) => b.totalGoals - a.totalGoals);
-
-    const existingRankings = await PlayerRanking.find({
-      season_id: match.season_id,
-      date: matchDate,
-    });
-
-    const rankingUpdates = [];
-    for (let i = 0; i < player_results.length; i++) {
-      const player = player_results[i];
-      const existingRanking = existingRankings.find(
-        (r) => r.player_results_id.toString() === player._id.toString()
-      );
-
-      if (existingRanking) {
-        if (existingRanking.rank !== i + 1) {
-          rankingUpdates.push({
-            updateOne: {
-              filter: { player_results_id: player._id, date: matchDate },
-              update: { $set: { rank: i + 1 } },
-            },
-          });
-        }
-      } else {
-        rankingUpdates.push({
-          insertOne: {
-            document: {
-              season_id: match.season_id,
-              player_results_id: player._id,
-              player_id: player.player_id,
-              rank: i + 1,
-              date: matchDate,
-            },
-          },
-        });
-      }
-    }
-
-    if (rankingUpdates.length > 0) {
-      await PlayerRanking.bulkWrite(rankingUpdates);
-    }
+    // Gọi hàm helper để tính toán và lưu
+    await calculateAndSavePlayerRankings(match.season_id, matchDate, session);
+    
+    await session.commitTransaction(); // Commit transaction
+    session.endSession();
 
     return successResponse(
       res,
@@ -163,6 +205,9 @@ const updatePlayerRankingsafterMatch = async (req, res, next) => {
       "Updated player rankings successfully"
     );
   } catch (error) {
+    await session.abortTransaction(); // Rollback transaction nếu có lỗi
+    session.endSession();
+    console.error("Error in updatePlayerRankingsafterMatch:", error);
     return next(error);
   }
 };
@@ -185,12 +230,21 @@ const deletePlayerRankings = async (req, res, next) => {
       error.status = 404;
       return next(error);
     }
+    
+    const seasonId = player_ranking.season_id;
+    const rankingDate = new Date(player_ranking.date);
+    rankingDate.setUTCHours(0,0,0,0);
 
     await PlayerRanking.deleteOne({ _id: PlayerRankingID });
+
+    // Tính toán lại bảng xếp hạng cho ngày và mùa giải đó
+    await calculateAndSavePlayerRankings(seasonId, rankingDate);
+
+
     return successResponse(
       res,
       null,
-      "Player Ranking deleted successfully",
+      "Player Ranking deleted successfully and rankings recalculated",
       200
     );
   } catch (error) {
@@ -201,7 +255,7 @@ const deletePlayerRankings = async (req, res, next) => {
 // Lấy bảng xếp hạng cầu thủ theo season_id và ngày
 const getPlayerRankingsbySeasonIdAndDate = async (req, res, next) => {
   const { seasonid } = req.params;
-  const { date } = req.body;
+  const { date } = req.body; // Lấy date từ body thay vì params
   try {
     const { success, error } =
       GetPlayerRankingsBySeasonIdAndDateSchema.safeParse({ seasonid, date });
@@ -215,33 +269,90 @@ const getPlayerRankingsbySeasonIdAndDate = async (req, res, next) => {
     const queryDate = new Date(date);
     queryDate.setUTCHours(0, 0, 0, 0);
 
+    // Trước tiên, đảm bảo rằng bảng xếp hạng cho ngày này là mới nhất.
+    // Không cần gọi calculateAndSavePlayerRankings ở đây nữa vì nó sẽ được gọi khi dữ liệu thay đổi.
+    // await calculateAndSavePlayerRankings(SeasonID, queryDate);
+
+
     const playerRankings = await PlayerRanking.aggregate([
       {
         $match: {
           season_id: SeasonID,
-          date: { $lte: queryDate },
+          date: { $lte: queryDate }, // Lấy tất cả ranking cho đến ngày truy vấn
         },
       },
       {
-        $sort: { date: -1 },
+        $sort: { date: -1, rank: 1 }, // Sắp xếp theo ngày mới nhất, rồi đến rank
       },
       {
         $group: {
-          _id: "$player_id",
-          latestRanking: { $first: "$$ROOT" },
+          _id: "$player_id", // Nhóm theo player_id
+          latestRankingDoc: { $first: "$$ROOT" }, // Lấy bản ghi ranking mới nhất cho mỗi cầu thủ
         },
       },
       {
-        $replaceRoot: { newRoot: "$latestRanking" },
+        $replaceRoot: { newRoot: "$latestRankingDoc" },
       },
+      {
+        $lookup: { // Join với PlayerResult để lấy thông tin chi tiết
+          from: "playerresults",
+          localField: "player_results_id",
+          foreignField: "_id",
+          as: "playerResultInfo"
+        }
+      },
+      {
+        $unwind: { path: "$playerResultInfo", preserveNullAndEmptyArrays: true }
+      },
+       {
+        $lookup: { // Join với Player để lấy tên cầu thủ
+          from: "players",
+          localField: "player_id",
+          foreignField: "_id",
+          as: "playerInfo"
+        }
+      },
+      {
+        $unwind: { path: "$playerInfo", preserveNullAndEmptyArrays: true }
+      },
+      {
+        $lookup: { // Join với Team để lấy tên đội
+          from: "teams",
+          localField: "playerResultInfo.team_id", // Giả sử PlayerResult có team_id
+          foreignField: "_id",
+          as: "teamInfo"
+        }
+      },
+      {
+        $unwind: { path: "$teamInfo", preserveNullAndEmptyArrays: true }
+      },
+      {
+        $project: {
+          _id: 1,
+          rank: 1,
+          date: 1,
+          season_id: 1,
+          player_id: 1,
+          player_results_id:1,
+          playerName: { $ifNull: ["$playerInfo.name", "N/A"] },
+          playerNumber: {$ifNull: ["$playerInfo.number", "N/A"]},
+          teamName: { $ifNull: ["$teamInfo.team_name", "N/A"] },
+          teamLogo: { $ifNull: ["$teamInfo.logo", "URL_LOGO_MAC_DINH"] },
+          matchesPlayed: { $ifNull: ["$playerResultInfo.matchesplayed", 0] },
+          goals: { $ifNull: ["$playerResultInfo.totalGoals", 0] },
+          assists: { $ifNull: ["$playerResultInfo.assists", 0] },
+          yellowCards: { $ifNull: ["$playerResultInfo.yellowCards", 0] },
+          redCards: { $ifNull: ["$playerResultInfo.redCards", 0] }
+        }
+      },
+      {
+        $sort: { rank: 1 } // Sắp xếp lại theo rank sau khi đã lấy document mới nhất
+      }
     ]);
+    
 
     if (!playerRankings.length) {
-      const error = new Error(
-        "No player rankings found for this season and date"
-      );
-      error.status = 404;
-      return next(error);
+       return successResponse(res, [], "No player rankings found for this season and date");
     }
 
     return successResponse(
@@ -250,6 +361,7 @@ const getPlayerRankingsbySeasonIdAndDate = async (req, res, next) => {
       "Latest player rankings retrieved successfully"
     );
   } catch (error) {
+    console.error("Error in getPlayerRankingsbySeasonIdAndDate:", error);
     return next(error);
   }
 };
@@ -259,4 +371,5 @@ export {
   updatePlayerRankingsafterMatch,
   deletePlayerRankings,
   getPlayerRankingsbySeasonIdAndDate,
+  calculateAndSavePlayerRankings, // Export hàm helper để playerController có thể sử dụng
 };
