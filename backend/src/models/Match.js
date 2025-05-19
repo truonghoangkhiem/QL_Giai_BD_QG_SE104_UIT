@@ -37,7 +37,18 @@ const matchSchema = new mongoose.Schema(
     },
     date: { type: Date, required: true },
     stadium: { type: String, required: true },
-    score: { type: String, required: true, default: "0-0" },
+    score: {
+      type: String,
+      required: false, // Không bắt buộc phải có score ngay khi tạo
+      default: null, // Giá trị mặc định là null
+      validate: {
+        validator: function (v) {
+          // Cho phép null, rỗng, hoặc định dạng "số-số"
+          return v === null || v === '' || /^\d+-\d+$/.test(v);
+        },
+        message: props => `${props.value} is not a valid score format (null, empty, or number-number)!`
+      }
+    },
     goalDetails: { type: [goalDetailSchema], default: [] },
   },
   { timestamps: true }

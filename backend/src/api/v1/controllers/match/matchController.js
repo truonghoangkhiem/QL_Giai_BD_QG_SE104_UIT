@@ -51,79 +51,161 @@ const createMatch = async (req, res, next) => {
 
   try {
     const season = await Season.findById(season_id);
-    if (!season)
+    if (!season) {
       return next(
         Object.assign(new Error("Season not found"), { status: 404 })
       );
+    }
 
-    const teams = await Team.find({ season_id });
-    if (teams.length < 2)
+    const teamsInSeason = await Team.find({ season_id });
+    if (teamsInSeason.length < 2) {
       return next(
-        Object.assign(new Error("Not enough teams for a match"), {
+        Object.assign(new Error("Not enough teams for a match schedule (minimum 2 teams required)."), {
           status: 400,
         })
       );
-
-    const schedule = [];
-    const matchPerDayTracker = {};
-    const teamsPlayedInDay = {};
-
-    const getNextAvailableDate = (currentDate, team1, team2) => {
-      let newDate = new Date(currentDate);
-      while (
-        matchPerDayTracker[newDate.toDateString()] >= matchperday ||
-        teamsPlayedInDay[newDate.toDateString()]?.has(team1._id.toString()) ||
-        teamsPlayedInDay[newDate.toDateString()]?.has(team2._id.toString())
-      ) {
-        newDate.setDate(newDate.getDate() + 1);
-        if (newDate > new Date(season.end_date)) return null;
-      }
-      return newDate;
-    };
-
-    for (let i = 0; i < teams.length; i++) {
-      for (let j = 0; j < teams.length; j++) {
-        if (i === j) continue;
-        const team1 = teams[i];
-        const team2 = teams[j];
-        const matchDate = getNextAvailableDate(
-          new Date(season.start_date),
-          team1,
-          team2
-        );
-        if (!matchDate)
-          return next(
-            Object.assign(new Error("Not enough time for match"), {
-              status: 400,
-            })
-          );
-
-        schedule.push({
-          season_id,
-          team1: team1._id,
-          team2: team2._id,
-          date: matchDate,
-          stadium: team1.stadium,
-          score: "0-0",
-          goalDetails: [],
-        });
-
-        if (!teamsPlayedInDay[matchDate.toDateString()])
-          teamsPlayedInDay[matchDate.toDateString()] = new Set();
-        teamsPlayedInDay[matchDate.toDateString()].add(team1._id.toString());
-        teamsPlayedInDay[matchDate.toDateString()].add(team2._id.toString());
-
-        matchPerDayTracker[matchDate.toDateString()] =
-          (matchPerDayTracker[matchDate.toDateString()] || 0) + 1;
-      }
     }
 
-    await Match.insertMany(schedule);
-    return successResponse(res, null, "Created match successfully", 201);
+    const matchRegulation = await Regulation.findOne({
+      season_id: season_id,
+      regulation_name: "Match Rules",
+    });
+
+    let actualMatchRounds = 2; // Default to 2 rounds (home and away)
+    if (matchRegulation && typeof matchRegulation.rules?.matchRounds === 'number' && matchRegulation.rules.matchRounds > 0) {
+      actualMatchRounds = matchRegulation.rules.matchRounds;
+    } else {
+      console.warn(`Match Rules regulation not found or 'matchRounds' not specified/invalid for season ${season_id}. Defaulting to ${actualMatchRounds} rounds.`);
+    }
+     if (actualMatchRounds <= 0) {
+        return next(Object.assign(new Error("Match rounds from regulation must be a positive number."), { status: 400 }));
+    }
+
+    const schedule = [];
+    const dailyMatchCount = {}; 
+    const teamPlayedOnDate = {}; 
+    
+    let scheduleStartDate = new Date(season.start_date);
+    scheduleStartDate.setUTCHours(0, 0, 0, 0);
+    const seasonEndDate = new Date(season.end_date);
+    seasonEndDate.setUTCHours(0, 0, 0, 0);
+
+    // Generate all possible pairings
+    const allPairings = [];
+    if (actualMatchRounds === 1) {
+        for (let i = 0; i < teamsInSeason.length; i++) {
+            for (let j = i + 1; j < teamsInSeason.length; j++) {
+                // For single round-robin, team with lower index can be home, or alternate
+                // Here, teamsInSeason[i] is home
+                allPairings.push({ homeTeam: teamsInSeason[i], awayTeam: teamsInSeason[j] });
+            }
+        }
+    } else { // Defaulting to double round-robin for actualMatchRounds >= 2
+        for (let i = 0; i < teamsInSeason.length; i++) {
+            for (let j = 0; j < teamsInSeason.length; j++) {
+                if (i === j) continue;
+                allPairings.push({ homeTeam: teamsInSeason[i], awayTeam: teamsInSeason[j] });
+            }
+        }
+        // If actualMatchRounds > 2, the current logic generates N*(N-1) pairings.
+        // To support more than 2 rounds correctly, this pairing generation would need to be more sophisticated
+        // or the interpretation of 'actualMatchRounds' would imply repeating this N*(N-1) set.
+        // For this fix, we assume actualMatchRounds=2 means standard home-and-away.
+        if (actualMatchRounds > 2) {
+            console.warn(`Current scheduling logic for actualMatchRounds > 2 (value: ${actualMatchRounds}) will effectively create a standard double round-robin schedule. For more complex multi-round schedules, the pairing generation needs to be enhanced.`);
+        }
+    }
+    
+    // Shuffle pairings for better distribution
+    for (let i = allPairings.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allPairings[i], allPairings[j]] = [allPairings[j], allPairings[i]];
+    }
+
+    let currentSchedulingDateAttempt = new Date(scheduleStartDate);
+
+    for (const pairing of allPairings) {
+        const homeTeam = pairing.homeTeam;
+        const awayTeam = pairing.awayTeam;
+        let scheduledMatchDate = null;
+        let searchDate = new Date(currentSchedulingDateAttempt); 
+
+        while (searchDate <= seasonEndDate) {
+            const dateString = searchDate.toISOString().split('T')[0];
+            const matchesTodayCount = dailyMatchCount[dateString] || 0;
+            const teamsPlayingToday = teamPlayedOnDate[dateString] || new Set();
+
+            if (matchesTodayCount < matchperday &&
+                !teamsPlayingToday.has(homeTeam._id.toString()) &&
+                !teamsPlayingToday.has(awayTeam._id.toString())) {
+                
+                scheduledMatchDate = new Date(searchDate);
+                
+                schedule.push({
+                    season_id,
+                    team1: homeTeam._id, 
+                    team2: awayTeam._id, 
+                    date: scheduledMatchDate,
+                    stadium: homeTeam.stadium, 
+                    score: null,
+                    goalDetails: [],
+                });
+
+                dailyMatchCount[dateString] = matchesTodayCount + 1;
+                if (!teamPlayedOnDate[dateString]) teamPlayedOnDate[dateString] = new Set();
+                teamPlayedOnDate[dateString].add(homeTeam._id.toString());
+                teamPlayedOnDate[dateString].add(awayTeam._id.toString());
+                
+                // Advance currentSchedulingDateAttempt intelligently
+                if ((dailyMatchCount[dateString] || 0) >= matchperday) {
+                     // If current day is full, next attempt starts from next day
+                     currentSchedulingDateAttempt = new Date(searchDate);
+                     currentSchedulingDateAttempt.setDate(currentSchedulingDateAttempt.getDate() + 1);
+                } else {
+                    // If current day still has slots, next attempt can start from the same day
+                    currentSchedulingDateAttempt = new Date(searchDate); 
+                }
+                break; 
+            }
+            searchDate.setDate(searchDate.getDate() + 1);
+        }
+
+        if (!scheduledMatchDate) {
+            console.warn(`Could not schedule match for ${homeTeam.team_name} (H) vs ${awayTeam.team_name} (A). Constraints (season end: ${seasonEndDate.toISOString().split('T')[0]}, matchperday: ${matchperday}, team availability on searchDate: ${searchDate.toISOString().split('T')[0]}) might be too tight or all slots filled.`);
+        }
+    }
+    
+    const expectedTotalMatches = actualMatchRounds === 1 
+                             ? teamsInSeason.length * (teamsInSeason.length - 1) / 2 
+                             : teamsInSeason.length * (teamsInSeason.length - 1);
+
+    if (schedule.length === 0 && teamsInSeason.length >=2 && allPairings.length > 0) {
+         return next(
+            Object.assign(new Error(`Failed to generate any matches. Expected ${expectedTotalMatches}. Please check season duration (ends ${seasonEndDate.toISOString().split('T')[0]}), matches per day (${matchperday}), and team availability.`), { status: 400 })
+        );
+    }
+    
+    let responseMessage = `Created ${schedule.length} matches successfully.`;
+    let responseData = { createdMatchesCount: schedule.length, schedule };
+
+    if (schedule.length < expectedTotalMatches) {
+         const warning = `Warning: Only ${schedule.length} out of ${expectedTotalMatches} expected matches could be scheduled. Constraints (season end: ${seasonEndDate.toISOString().split('T')[0]}, matchperday: ${matchperday}, team availability) might be too tight or all available slots have been filled.`;
+         console.warn(warning);
+         responseMessage = `Created ${schedule.length} matches with warnings. Expected ${expectedTotalMatches}.`;
+         responseData.warning = warning;
+    }
+
+    if (schedule.length > 0) {
+        await Match.insertMany(schedule);
+    }
+    return successResponse(res, responseData, responseMessage, 201);
+
   } catch (error) {
+    console.error("Error in createMatch:", error);
     return next(error);
   }
 };
+
 
 // GET matches by season
 const getMatchesBySeasonId = async (req, res, next) => {
@@ -138,74 +220,34 @@ const getMatchesBySeasonId = async (req, res, next) => {
   try {
     let SeasonId = new mongoose.Types.ObjectId(season_id);
 
-    // Sử dụng aggregate để join dữ liệu từ collection teams
     const matches = await Match.aggregate([
-      // Lọc các trận đấu theo season_id
       { $match: { season_id: SeasonId } },
-      // Join với collection teams cho team1
-      {
-        $lookup: {
-          from: 'teams',
-          localField: 'team1',
-          foreignField: '_id',
-          as: 'team1_data',
-        },
-      },
-      // Join với collection teams cho team2
-      {
-        $lookup: {
-          from: 'teams',
-          localField: 'team2',
-          foreignField: '_id',
-          as: 'team2_data',
-        },
-      },
-      // Unwind để biến mảng team1_data và team2_data thành object
+      { $lookup: { from: 'teams', localField: 'team1', foreignField: '_id', as: 'team1_data'} },
+      { $lookup: { from: 'teams', localField: 'team2', foreignField: '_id', as: 'team2_data'} },
       { $unwind: { path: '$team1_data', preserveNullAndEmptyArrays: true } },
       { $unwind: { path: '$team2_data', preserveNullAndEmptyArrays: true } },
-      // Định dạng dữ liệu trả về
       {
         $project: {
           id: '$_id',
           season_id: 1,
-          team1: {
-            _id: '$team1_data._id', // Thêm _id của đội 1
-            team_name: { $ifNull: ['$team1_data.team_name', 'N/A'] },
-            logo: { $ifNull: ['$team1_data.logo', 'https://placehold.co/20x20?text=Team'] },
-          },
-          team2: {
-            _id: '$team2_data._id', // Thêm _id của đội 2
-            team_name: { $ifNull: ['$team2_data.team_name', 'N/A'] },
-            logo: { $ifNull: ['$team2_data.logo', 'https://placehold.co/20x20?text=Team'] },
-          },
-          date: 1,
-          stadium: 1,
-          score: 1,
-          goalDetails: 1,
-          _id: 0,
+          team1: { _id: '$team1_data._id', team_name: { $ifNull: ['$team1_data.team_name', 'N/A'] }, logo: { $ifNull: ['$team1_data.logo', 'https://placehold.co/20x20?text=Team'] }},
+          team2: { _id: '$team2_data._id', team_name: { $ifNull: ['$team2_data.team_name', 'N/A'] }, logo: { $ifNull: ['$team2_data.logo', 'https://placehold.co/20x20?text=Team'] }},
+          date: 1, stadium: 1, score: 1, goalDetails: 1, _id: 0, 
         },
       },
-      // Sắp xếp theo ngày tăng dần
       { $sort: { date: 1 } },
     ]);
 
     if (!matches || matches.length === 0) {
-      return next(
-        Object.assign(new Error('No matches found for this season'), {
-          status: 404,
-        })
-      );
+      return successResponse(res, [], "No matches found for this season");
     }
 
-    return successResponse(
-      res,
-      matches,
-      'Fetched all matches by season ID successfully'
-    );
+    return successResponse(res, matches, 'Fetched all matches by season ID successfully');
   } catch (error) {
     return next(error);
   }
 };
+
 // UPDATE match
 const updateMatch = async (req, res, next) => {
   const parseResult = updateMatchSchema.safeParse(req.body);
@@ -224,7 +266,11 @@ const updateMatch = async (req, res, next) => {
 
     const updateFields = parseResult.data;
 
-    if (updateFields.goalDetails) {
+    if (updateFields.score === '' || updateFields.score === undefined) {
+        updateFields.score = null;
+    }
+
+    if (updateFields.goalDetails && updateFields.score && /^\d+-\d+$/.test(updateFields.score)) {
       const regulation = await Regulation.findOne({
         season_id: match.season_id,
         regulation_name: "Goal Rules",
@@ -233,23 +279,21 @@ const updateMatch = async (req, res, next) => {
       const allowedTypes = regulation?.rules?.goalTypes || [];
 
       for (const goal of updateFields.goalDetails) {
-        if (goal.minute > maxTime) {
-          return next(
-            Object.assign(new Error("Goal minute exceeds regulation limit"), {
-              status: 400,
-            })
-          );
+        if (maxTime !== undefined && goal.minute > maxTime) {
+          return next( Object.assign(new Error("Goal minute exceeds regulation limit"), { status: 400 }) );
         }
-        if (!allowedTypes.includes(goal.goalType)) {
-          return next(
-            Object.assign(new Error("Invalid goal type"), { status: 400 })
-          );
+        if (allowedTypes.length > 0 && !allowedTypes.includes(goal.goalType)) {
+          return next( Object.assign(new Error("Invalid goal type"), { status: 400 }) );
         }
       }
+    } else if (updateFields.score === null || updateFields.score === '') {
+        updateFields.goalDetails = [];
     }
 
     await Match.updateOne({ _id: req.params.id }, { $set: updateFields });
-    return successResponse(res, null, "Updated match successfully");
+    const updatedMatch = await Match.findById(req.params.id).populate("team1 team2 season_id");
+    return successResponse(res, updatedMatch, "Updated match successfully");
+
   } catch (error) {
     return next(error);
   }
@@ -271,7 +315,6 @@ const deleteMatch = async (req, res, next) => {
 
 const getMatchesByTeamId = async (req, res, next) => {
   const team_id = req.params.team_id;
-  console.log(team_id);
   const { success, error } = TeamIdSchema.safeParse({ id: team_id });
   if (!success) {
     return next(
@@ -283,8 +326,8 @@ const getMatchesByTeamId = async (req, res, next) => {
     const matches = await Match.find({
       $or: [{ team1: TeamId }, { team2: TeamId }],
     }).populate("team1 team2 season_id");
-    if (!matches) {
-      return next(Object.assign(new Error("Match not found"), { status: 404 }));
+    if (!matches || matches.length === 0) { 
+      return successResponse(res, [], "No matches found for this team");
     }
     return successResponse(res, matches, "Match found successfully");
   } catch (error) {
@@ -303,35 +346,27 @@ const getMatchesBySeasonIdAndDate = async (req, res, next) => {
   }
 
   try {
-    // Chuyển season_id thành ObjectId
     const SeasonId = new mongoose.Types.ObjectId(season_id);
+    const matchDate = new Date(date); 
 
-    // Chuyển date thành đối tượng Date
-    const matchDate = new Date(date); // Giả sử date là chuỗi kiểu 'YYYY-MM-DD'
-
-    // Kiểm tra nếu date không hợp lệ
     if (isNaN(matchDate.getTime())) {
       return next(
         Object.assign(new Error("Invalid date format"), { status: 400 })
       );
     }
 
-    // Lọc các trận đấu trong ngày
-    const startOfDay = new Date(matchDate.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(matchDate.setHours(23, 59, 59, 999));
+    const startOfDay = new Date(matchDate);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const endOfDay = new Date(matchDate);
+    endOfDay.setUTCHours(23, 59, 59, 999);
 
-    // Truy vấn tìm các trận đấu trong khoảng thời gian ngày đó
     const matches = await Match.find({
       season_id: SeasonId,
-      date: { $gte: startOfDay, $lte: endOfDay }, // Lọc theo ngày
+      date: { $gte: startOfDay, $lte: endOfDay }, 
     }).populate("team1 team2 season_id");
 
     if (!matches || matches.length === 0) {
-      return next(
-        Object.assign(new Error("No matches found for this season and date"), {
-          status: 404,
-        })
-      );
+      return successResponse(res, [], "No matches found for this season and date");
     }
 
     return successResponse(
