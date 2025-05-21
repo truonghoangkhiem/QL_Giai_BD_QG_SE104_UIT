@@ -5,7 +5,7 @@ const goalDetailSchema = z.object({
     message: "Invalid player ID format",
   }),
   team_id: z.string().refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
-    message: "Invalid team ID format",
+    message: "Invalid team ID format", // Đây là ID của đội được hưởng bàn thắng
   }),
   minute: z.number().int().min(0, "Minute cannot be negative"),
   goalType: z.string().min(1, "Goal type is required"),
@@ -19,12 +19,12 @@ export const createMatchSchema = z.object({
 });
 
 export const updateMatchSchema = z.object({
-  date: z.coerce.date().optional(), // coerce date string to Date object
+  date: z.coerce.date().optional(), 
   stadium: z.string().min(1, "Stadium is required").optional(),
   score: z.union([
     z.string().regex(/^\d+-\d+$/, "Score must be in format number-number (e.g., 2-1)").optional(),
-    z.literal('').optional(), // Cho phép chuỗi rỗng (frontend có thể gửi khi người dùng xóa)
-    z.null().optional()      // Cho phép giá trị null
+    z.literal('').optional(), 
+    z.null().optional()      
   ]).optional(),
   goalDetails: z.array(goalDetailSchema).optional(),
   participatingPlayersTeam1: z.array(z.string().refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {

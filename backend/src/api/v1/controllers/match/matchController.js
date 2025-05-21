@@ -109,7 +109,7 @@ const createMatch = async (req, res, next) => {
     if (nonCompliantTeams.length > 0) {
       throw Object.assign(
         new Error(
-          `Cannot create match schedule. The following teams do not meet the minimum player requirement of ${minPlayersRequired} players: ${nonCompliantTeams.join(", ")}.`
+          `Cannot create match schedule. The following teams do not meet the minimum player requirement of ${minPlayersRequired} player(s) as per Age Regulation: ${nonCompliantTeams.join(", ")}.`
         ),
         { status: 400 }
       );
@@ -190,8 +190,8 @@ const createMatch = async (req, res, next) => {
                     stadium: homeTeam.stadium,
                     score: null,
                     goalDetails: [],
-                    participatingPlayersTeam1: [], // Initialize as empty
-                    participatingPlayersTeam2: [], // Initialize as empty
+                    participatingPlayersTeam1: [],
+                    participatingPlayersTeam2: [],
                 });
 
                 dailyMatchCount[dateString] = matchesTodayCount + 1;
@@ -317,44 +317,138 @@ const updateMatch = async (req, res, next) => {
     }
     const matchId = new mongoose.Types.ObjectId(validationResult.data.id);
 
+    const match = await Match.findById(matchId)
+        .populate('team1')
+        .populate('team2')
+        .populate('participatingPlayersTeam1')
+        .populate('participatingPlayersTeam2')
+        .populate('season_id') // Populate season_id to get season details
+        .session(session);
 
-    const match = await Match.findById(matchId).session(session);
     if (!match) {
       throw Object.assign(new Error("Match not found"), { status: 404 });
     }
 
     const updateFields = parseResult.data;
 
+    // Fetch Age Regulation for minPlayersPerTeam
+    const ageRegulation = await Regulation.findOne({
+        season_id: match.season_id._id, // Use populated season_id
+        regulation_name: "Age Regulation",
+    }).session(session);
+
+    if (!ageRegulation || !ageRegulation.rules || typeof ageRegulation.rules.minPlayersPerTeam !== 'number') {
+        throw Object.assign(new Error("Age Regulation with minPlayersPerTeam not found or invalid for this season. Cannot update match."), {
+            status: 400,
+        });
+    }
+    const minPlayersPerTeamRequired = ageRegulation.rules.minPlayersPerTeam;
+
+    // Validate participating players count
+    if (updateFields.participatingPlayersTeam1 && updateFields.participatingPlayersTeam1.length < minPlayersPerTeamRequired) {
+        throw Object.assign(new Error(`Team 1 must have at least ${minPlayersPerTeamRequired} participating players as per Age Regulation.`), { status: 400 });
+    }
+    if (updateFields.participatingPlayersTeam2 && updateFields.participatingPlayersTeam2.length < minPlayersPerTeamRequired) {
+        throw Object.assign(new Error(`Team 2 must have at least ${minPlayersPerTeamRequired} participating players as per Age Regulation.`), { status: 400 });
+    }
+
+
     if (updateFields.score === '' || updateFields.score === undefined) {
         updateFields.score = null;
     }
-
+    
     if (updateFields.participatingPlayersTeam1) {
-        const team1Players = await Player.find({ _id: { $in: updateFields.participatingPlayersTeam1 }, team_id: match.team1 }).session(session);
-        if (team1Players.length !== updateFields.participatingPlayersTeam1.length) {
+        const team1PlayersValid = await Player.find({ 
+            _id: { $in: updateFields.participatingPlayersTeam1 }, 
+            team_id: match.team1._id 
+        }).session(session);
+        if (team1PlayersValid.length !== updateFields.participatingPlayersTeam1.length) {
             throw Object.assign(new Error("Invalid player ID or player not in team 1 for participatingPlayersTeam1."), { status: 400 });
         }
+        // Update the match object in memory to reflect new participating players for subsequent goal validation
+        match.participatingPlayersTeam1 = team1PlayersValid.map(p => p._id); // Store ObjectId array
     }
     if (updateFields.participatingPlayersTeam2) {
-        const team2Players = await Player.find({ _id: { $in: updateFields.participatingPlayersTeam2 }, team_id: match.team2 }).session(session);
-        if (team2Players.length !== updateFields.participatingPlayersTeam2.length) {
+        const team2PlayersValid = await Player.find({ 
+            _id: { $in: updateFields.participatingPlayersTeam2 }, 
+            team_id: match.team2._id 
+        }).session(session);
+        if (team2PlayersValid.length !== updateFields.participatingPlayersTeam2.length) {
             throw Object.assign(new Error("Invalid player ID or player not in team 2 for participatingPlayersTeam2."), { status: 400 });
         }
+        match.participatingPlayersTeam2 = team2PlayersValid.map(p => p._id); // Store ObjectId array
+    }
+    
+    // Re-populate match.participatingPlayersTeam1 and match.participatingPlayersTeam2 with full player objects if they were updated
+    // This is crucial for goal validation logic that accesses player properties like name or team_id from these arrays.
+    // If only IDs were updated, fetch the full player objects again.
+    if (updateFields.participatingPlayersTeam1) {
+        match.participatingPlayersTeam1 = await Player.find({_id: {$in: match.participatingPlayersTeam1}}).session(session);
+    }
+    if (updateFields.participatingPlayersTeam2) {
+        match.participatingPlayersTeam2 = await Player.find({_id: {$in: match.participatingPlayersTeam2}}).session(session);
     }
 
 
     if (updateFields.goalDetails && updateFields.score && /^\d+-\d+$/.test(updateFields.score)) {
-      const regulation = await Regulation.findOne({
-        season_id: match.season_id,
+      const goalRegulation = await Regulation.findOne({ // Renamed to avoid conflict with ageRegulation
+        season_id: match.season_id._id, // Use populated season_id
         regulation_name: "Goal Rules",
       }).session(session);
-      const maxTime = regulation?.rules?.goalTimeLimit?.maxMinute;
-      const allowedTypes = regulation?.rules?.goalTypes || [];
+      const maxTime = goalRegulation?.rules?.goalTimeLimit?.maxMinute;
+      const allowedTypes = goalRegulation?.rules?.goalTypes || [];
 
       for (const goal of updateFields.goalDetails) {
         if(!mongoose.Types.ObjectId.isValid(goal.player_id) || !mongoose.Types.ObjectId.isValid(goal.team_id)) {
             throw Object.assign(new Error("Invalid player_id or team_id in goalDetails"), { status: 400 });
         }
+        
+        const playerDoc = await Player.findById(goal.player_id).session(session);
+        if (!playerDoc) {
+            throw Object.assign(new Error(`Player with ID ${goal.player_id} not found for a goal.`), { status: 400 });
+        }
+
+        const actualPlayerTeamId = playerDoc.team_id;
+        const beneficiaryTeamIdForGoal = new mongoose.Types.ObjectId(goal.team_id);
+
+        const isPlayerInTeam1Participating = match.participatingPlayersTeam1.some(p => p._id.equals(playerDoc._id));
+        const isPlayerInTeam2Participating = match.participatingPlayersTeam2.some(p => p._id.equals(playerDoc._id));
+
+        if (!isPlayerInTeam1Participating && !isPlayerInTeam2Participating) {
+            throw Object.assign(new Error(`Goal scorer ${playerDoc.name} is not in the list of participating players for this match.`), { status: 400 });
+        }
+
+        if (goal.goalType === "OG") { 
+            if (beneficiaryTeamIdForGoal.equals(match.team1._id)) { 
+                if (!actualPlayerTeamId.equals(match.team2._id)) {
+                    throw Object.assign(new Error(`Own Goal for ${match.team1.team_name} invalid: Scorer ${playerDoc.name} must be from ${match.team2.team_name}.`), { status: 400 });
+                }
+                if (!isPlayerInTeam2Participating) { // Check if OG scorer (from team2) is participating in team2
+                     throw Object.assign(new Error(`Own Goal scorer ${playerDoc.name} (from ${match.team2.team_name}) is not listed as participating for ${match.team2.team_name}.`), { status: 400 });
+                }
+            } else if (beneficiaryTeamIdForGoal.equals(match.team2._id)) { 
+                if (!actualPlayerTeamId.equals(match.team1._id)) {
+                     throw Object.assign(new Error(`Own Goal for ${match.team2.team_name} invalid: Scorer ${playerDoc.name} must be from ${match.team1.team_name}.`), { status: 400 });
+                }
+                if (!isPlayerInTeam1Participating) { // Check if OG scorer (from team1) is participating in team1
+                    throw Object.assign(new Error(`Own Goal scorer ${playerDoc.name} (from ${match.team1.team_name}) is not listed as participating for ${match.team1.team_name}.`), { status: 400 });
+                }
+            } else {
+                throw Object.assign(new Error("Invalid beneficiary team for an Own Goal."), { status: 400 });
+            }
+        } else { 
+            if (!actualPlayerTeamId.equals(beneficiaryTeamIdForGoal)) {
+                throw Object.assign(new Error(`Normal Goal: Scorer ${playerDoc.name} (from team ID ${actualPlayerTeamId}) does not belong to the beneficiary team ID ${beneficiaryTeamIdForGoal}.`), { status: 400 });
+            }
+            // Check if scorer is participating in the beneficiary team
+            if (beneficiaryTeamIdForGoal.equals(match.team1._id) && !isPlayerInTeam1Participating) {
+                 throw Object.assign(new Error(`Goal scorer ${playerDoc.name} (for ${match.team1.team_name}) is not listed as participating for ${match.team1.team_name}.`), { status: 400 });
+            } else if (beneficiaryTeamIdForGoal.equals(match.team2._id) && !isPlayerInTeam2Participating) {
+                throw Object.assign(new Error(`Goal scorer ${playerDoc.name} (for ${match.team2.team_name}) is not listed as participating for ${match.team2.team_name}.`), { status: 400 });
+            }
+        }
+
+
         if (maxTime !== undefined && goal.minute > maxTime) {
           throw Object.assign(new Error("Goal minute exceeds regulation limit"), { status: 400 });
         }
@@ -368,21 +462,20 @@ const updateMatch = async (req, res, next) => {
 
     const oldScore = match.score;
     const hadScore = oldScore !== null && /^\d+-\d+$/.test(oldScore);
-    // FIX: Ensure match.participatingPlayersTeam1 and match.participatingPlayersTeam2 are arrays before calling .map
-    const oldParticipatingPlayersTeam1 = (match.participatingPlayersTeam1 || []).map(id => id.toString());
-    const oldParticipatingPlayersTeam2 = (match.participatingPlayersTeam2 || []).map(id => id.toString());
+    const oldParticipatingPlayersTeam1 = (match.participatingPlayersTeam1 || []).map(p => p._id.toString());
+    const oldParticipatingPlayersTeam2 = (match.participatingPlayersTeam2 || []).map(p => p._id.toString());
 
 
     await Match.updateOne({ _id: matchId }, { $set: updateFields }, { session });
-    const updatedMatch = await Match.findById(matchId)
+    
+    const updatedMatchFull = await Match.findById(matchId)
         .populate("team1 team2 season_id goalDetails.player_id goalDetails.team_id participatingPlayersTeam1 participatingPlayersTeam2")
         .session(session);
 
-    const newScore = updatedMatch.score;
+    const newScore = updatedMatchFull.score;
     const hasNewScore = newScore !== null && /^\d+-\d+$/.test(newScore);
-    // FIX: Ensure updatedMatch.participatingPlayersTeam1 and updatedMatch.participatingPlayersTeam2 are arrays
-    const newParticipatingPlayersTeam1 = (updatedMatch.participatingPlayersTeam1 || []).map(p => p._id.toString());
-    const newParticipatingPlayersTeam2 = (updatedMatch.participatingPlayersTeam2 || []).map(p => p._id.toString());
+    const newParticipatingPlayersTeam1 = (updatedMatchFull.participatingPlayersTeam1 || []).map(p => p._id.toString());
+    const newParticipatingPlayersTeam2 = (updatedMatchFull.participatingPlayersTeam2 || []).map(p => p._id.toString());
 
     const scoreChangedOrAddedOrRemoved = oldScore !== newScore || (hadScore && !hasNewScore) || (!hadScore && hasNewScore);
     const participatingPlayersChanged =
@@ -391,12 +484,12 @@ const updateMatch = async (req, res, next) => {
 
 
     if (scoreChangedOrAddedOrRemoved || (hasNewScore && participatingPlayersChanged)) {
-        const seasonId = updatedMatch.season_id._id;
-        const matchDate = new Date(updatedMatch.date);
+        const seasonId = updatedMatchFull.season_id._id;
+        const matchDate = new Date(updatedMatchFull.date);
         matchDate.setUTCHours(0, 0, 0, 0);
 
-        const team1Id = updatedMatch.team1._id;
-        const team2Id = updatedMatch.team2._id;
+        const team1Id = updatedMatchFull.team1._id;
+        const team2Id = updatedMatchFull.team2._id;
 
         const rankingRegulation = await Regulation.findOne({ season_id: seasonId, regulation_name: "Ranking Rules" }).session(session);
         if (!rankingRegulation || !rankingRegulation.rules) {
@@ -438,9 +531,9 @@ const updateMatch = async (req, res, next) => {
 
         for (const player of playersToUpdate) {
             let playerTeamContext = null;
-            if (updatedMatch.team1._id.equals(player.team_id)) playerTeamContext = updatedMatch.team1._id;
-            else if (updatedMatch.team2._id.equals(player.team_id)) playerTeamContext = updatedMatch.team2._id;
-
+            if (newParticipatingPlayersTeam1.includes(player._id.toString())) playerTeamContext = updatedMatchFull.team1._id;
+            else if (newParticipatingPlayersTeam2.includes(player._id.toString())) playerTeamContext = updatedMatchFull.team2._id;
+           
             if (playerTeamContext) {
                  await updatePlayerResultsForDateInternal(player._id, playerTeamContext, seasonId, matchDate, session);
             }
@@ -450,9 +543,9 @@ const updateMatch = async (req, res, next) => {
         for (const dateStrToRecalculate of subsequentPlayerResultDates.sort((a,b) => new Date(a) - new Date(b))) {
             for (const player of playersToUpdate) {
                  let playerTeamContextForSubsequent = null;
-                 const currentTeamForPlayer = await Player.findById(player._id).select('team_id').session(session);
-                 if (currentTeamForPlayer) {
-                    playerTeamContextForSubsequent = currentTeamForPlayer.team_id;
+                 const currentPlayerData = await Player.findById(player._id).select('team_id').session(session);
+                 if (currentPlayerData) {
+                    playerTeamContextForSubsequent = currentPlayerData.team_id;
                  }
 
                  if (playerTeamContextForSubsequent) {
@@ -461,16 +554,16 @@ const updateMatch = async (req, res, next) => {
             }
         }
 
-        await calculateAndSavePlayerRankings(seasonId, matchDate, session);
+        await calculateAndSavePlayerRankings(seasonId, matchDate, session); 
         const distinctPlayerRankingDatesAfter = await PlayerRanking.find({ season_id: seasonId, date: { $gt: matchDate } }, null, {session}).distinct('date');
         for (const dateStrToRecalculate of distinctPlayerRankingDatesAfter.sort((a,b) => new Date(a) - new Date(b))) {
-            await calculateAndSavePlayerRankings(seasonId, new Date(dateStrToRecalculate), session);
+            await calculateAndSavePlayerRankings(seasonId, new Date(dateStrToRecalculate), session); 
         }
     }
 
     await session.commitTransaction();
     session.endSession();
-    return successResponse(res, updatedMatch, "Updated match and recalculated related data successfully");
+    return successResponse(res, updatedMatchFull, "Updated match and recalculated related data successfully");
 
   } catch (error) {
     await session.abortTransaction();
@@ -492,15 +585,17 @@ const deleteMatch = async (req, res, next) => {
     }
     const matchId = new mongoose.Types.ObjectId(validationResult.data.id);
 
-    const matchToDelete = await Match.findById(matchId).session(session);
+    const matchToDelete = await Match.findById(matchId)
+        .populate('participatingPlayersTeam1 participatingPlayersTeam2')
+        .session(session);
     if (!matchToDelete) {
       throw Object.assign(new Error("Match not found"), { status: 404 });
     }
 
     const { season_id: seasonIdObj, team1: team1IdObj, team2: team2IdObj, date: matchDateRaw, score: deletedMatchScore, participatingPlayersTeam1, participatingPlayersTeam2 } = matchToDelete;
-    const seasonId = seasonIdObj._id;
-    const team1Id = team1IdObj._id;
-    const team2Id = team2IdObj._id;
+    const seasonId = seasonIdObj._id; 
+    const team1Id = team1IdObj._id;   
+    const team2Id = team2IdObj._id;   
     const matchDate = new Date(matchDateRaw);
     matchDate.setUTCHours(0, 0, 0, 0);
 
@@ -539,20 +634,20 @@ const deleteMatch = async (req, res, next) => {
             await calculateAndSaveTeamRankings(seasonId, new Date(dateStrToRecalculate), session);
         }
 
-        const allPlayersWhoParticipated = [
-            ...(participatingPlayersTeam1 || []),
-            ...(participatingPlayersTeam2 || [])
+        const allPlayersWhoParticipatedInDeletedMatch = [
+            ...(participatingPlayersTeam1 || []).map(p => p._id), 
+            ...(participatingPlayersTeam2 || []).map(p => p._id)
         ].map(id => new mongoose.Types.ObjectId(id));
 
 
-        if (allPlayersWhoParticipated.length > 0) {
-            const playersDocs = await Player.find({_id: {$in: allPlayersWhoParticipated}}).session(session);
+        if (allPlayersWhoParticipatedInDeletedMatch.length > 0) {
+            const playersDocs = await Player.find({_id: {$in: allPlayersWhoParticipatedInDeletedMatch}}).session(session);
 
             for (const player of playersDocs) {
                 let playerTeamContext = null;
-                if (participatingPlayersTeam1 && participatingPlayersTeam1.some(pId => pId.equals(player._id))) {
+                if (participatingPlayersTeam1 && participatingPlayersTeam1.some(pIdObj => pIdObj._id.equals(player._id))) {
                     playerTeamContext = team1Id;
-                } else if (participatingPlayersTeam2 && participatingPlayersTeam2.some(pId => pId.equals(player._id))) {
+                } else if (participatingPlayersTeam2 && participatingPlayersTeam2.some(pIdObj => pIdObj._id.equals(player._id))) {
                     playerTeamContext = team2Id;
                 }
                 if(playerTeamContext){
@@ -560,7 +655,7 @@ const deleteMatch = async (req, res, next) => {
                 }
             }
 
-            const subsequentPlayerResultDates = await PlayerResult.find({ player_id: { $in: allPlayersWhoParticipated }, season_id: seasonId, date: { $gt: matchDate }}, null, {session}).distinct('date');
+            const subsequentPlayerResultDates = await PlayerResult.find({ player_id: { $in: allPlayersWhoParticipatedInDeletedMatch }, season_id: seasonId, date: { $gt: matchDate }}, null, {session}).distinct('date');
             for (const dateStrToRecalculate of subsequentPlayerResultDates.sort((a,b) => new Date(a) - new Date(b))) {
                 for (const player of playersDocs) {
                      await updatePlayerResultsForDateInternal(player._id, player.team_id, seasonId, new Date(dateStrToRecalculate), session);
