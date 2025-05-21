@@ -1,15 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, token }) => {
-  const [formData, setFormData] = useState({
+  const initialFormData = {
     date: '',
-    time: '15:00', // Mặc định một giờ phổ biến, ví dụ 15:00
+    time: '15:00',
     stadium: '',
     score: '',
-    team1Name: '', 
-    team2Name: '', 
-  });
+    team1Name: '',
+    team2Name: '',
+    participatingPlayersTeam1: [],
+    participatingPlayersTeam2: [],
+  };
+
+  const [formData, setFormData] = useState(initialFormData);
   const [goalDetails, setGoalDetails] = useState([]);
   const [team1Players, setTeam1Players] = useState([]);
   const [team2Players, setTeam2Players] = useState([]);
@@ -17,18 +21,18 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingPlayers, setLoadingPlayers] = useState(false);
+
 
   useEffect(() => {
     if (editingMatch && editingMatch.team1 && editingMatch.team2) {
       const matchDateObj = editingMatch.date ? new Date(editingMatch.date) : null;
-      
-      let initialTime = '15:00'; // Giờ mặc định
+      let initialTime = '15:00';
       if (matchDateObj) {
         const hours = String(matchDateObj.getHours()).padStart(2, '0');
         const minutes = String(matchDateObj.getMinutes()).padStart(2, '0');
-        // Chỉ gán nếu giờ và phút hợp lệ từ đối tượng Date
-        if (hours !== "NaN" && minutes !== "NaN" && !isNaN(parseInt(hours)) && !isNaN(parseInt(minutes)) ) {
-             initialTime = `${hours}:${minutes}`;
+        if (hours !== "NaN" && minutes !== "NaN" && !isNaN(parseInt(hours)) && !isNaN(parseInt(minutes))) {
+          initialTime = `${hours}:${minutes}`;
         }
       }
 
@@ -39,26 +43,35 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
         score: editingMatch.score === null ? '' : (editingMatch.score || ''),
         team1Name: editingMatch.team1?.team_name || '',
         team2Name: editingMatch.team2?.team_name || '',
+        participatingPlayersTeam1: editingMatch.participatingPlayersTeam1?.map(p => typeof p === 'string' ? p : p._id) || [],
+        participatingPlayersTeam2: editingMatch.participatingPlayersTeam2?.map(p => typeof p === 'string' ? p : p._id) || [],
       });
 
       setGoalDetails(editingMatch.goalDetails?.map(goal => ({
-        playerId: goal.player_id,
+        playerId: typeof goal.player_id === 'string' ? goal.player_id : goal.player_id?._id,
         minute: goal.minute,
         goalType: goal.goalType || 'normal',
-        teamId: goal.team_id,
+        teamId: typeof goal.team_id === 'string' ? goal.team_id : goal.team_id?._id,
       })) || []);
 
-      const fetchPlayers = async (teamId, setPlayersFn, teamName) => {
+      const fetchPlayers = async (teamId, setPlayersFn, teamNameForError) => {
         if (teamId && typeof teamId === 'string') {
+          setLoadingPlayers(true);
           try {
             const response = await axios.get(`http://localhost:5000/api/players/team/${teamId}`);
             setPlayersFn(response.data.data || []);
           } catch (err) {
-            console.error(`Lỗi lấy cầu thủ đội ${teamName} (ID: ${teamId}):`, err.response?.data || err.message);
+            console.error(`Lỗi lấy cầu thủ đội ${teamNameForError} (ID: ${teamId}):`, err.response?.data || err.message);
+            setError(`Không thể tải cầu thủ cho đội ${teamNameForError}.`);
+            setPlayersFn([]);
+          } finally {
+            setLoadingPlayers(false);
           }
+        } else {
+           setPlayersFn([]); // Reset if no teamId
         }
       };
-      
+
       fetchPlayers(editingMatch.team1?._id, setTeam1Players, editingMatch.team1?.team_name);
       fetchPlayers(editingMatch.team2?._id, setTeam2Players, editingMatch.team2?.team_name);
 
@@ -86,6 +99,12 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
         }
       };
       fetchRegulation();
+    } else {
+        setFormData(initialFormData);
+        setGoalDetails([]);
+        setTeam1Players([]);
+        setTeam2Players([]);
+        setRegulation(null);
     }
   }, [editingMatch]);
 
@@ -103,7 +122,7 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
     const [team1Goals, team2Goals] = currentScore.split('-').map(Number);
     const totalGoalsInScore = team1Goals + team2Goals;
     if (currentGoalDetails.length !== totalGoalsInScore) return `Tổng số bàn thắng trong chi tiết (${currentGoalDetails.length}) không khớp với tỉ số (${totalGoalsInScore}).`;
-    
+
     let team1ScorersCount = 0;
     let team2ScorersCount = 0;
     for (const goal of currentGoalDetails) {
@@ -111,25 +130,23 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
       const playerInTeam1 = team1Players.some((player) => player._id === playerId);
       const playerInTeam2 = team2Players.some((player) => player._id === playerId);
       if (!playerInTeam1 && !playerInTeam2) return `Cầu thủ ID ${playerId} không thuộc hai đội.`;
-      
-      // Xác định đội của cầu thủ ghi bàn để cộng bàn thắng cho đúng đội
+
       const goalScoringTeamId = playerInTeam1 ? editingMatch.team1._id : (playerInTeam2 ? editingMatch.team2._id : null);
       if (!goalScoringTeamId) return `Không xác định được đội cho cầu thủ ID ${playerId}.`;
 
       if (goalScoringTeamId === editingMatch.team1._id) team1ScorersCount++;
       else if (goalScoringTeamId === editingMatch.team2._id) team2ScorersCount++;
 
-
       if (regulation && regulation.rules?.goalTimeLimit) {
         const minMinute = regulation.rules.goalTimeLimit.minMinute || 0;
-        const maxMinute = regulation.rules.goalTimeLimit.maxMinute || 120; 
+        const maxMinute = regulation.rules.goalTimeLimit.maxMinute || 120;
         if (goal.minute < minMinute || goal.minute > maxMinute) return `Phút ghi bàn '${goal.minute}' phải từ ${minMinute} đến ${maxMinute}.`;
       }
       if (regulation && regulation.rules?.goalTypes && !regulation.rules.goalTypes.includes(goal.goalType)) {
         return `Loại bàn thắng '${goal.goalType}' không được phép.`;
       }
     }
-    
+
     if (team1ScorersCount !== team1Goals) return `Số bàn thắng của ${formData.team1Name} trong chi tiết (${team1ScorersCount}) không khớp với tỉ số (${team1Goals}).`;
     if (team2ScorersCount !== team2Goals) return `Số bàn thắng của ${formData.team2Name} trong chi tiết (${team2ScorersCount}) không khớp với tỉ số (${team2Goals}).`;
 
@@ -150,6 +167,10 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
     setGoalDetails(goalDetails.filter((_, i) => i !== index));
   };
 
+  const handleParticipatingPlayersChange = (teamKey, selectedPlayerIds) => {
+    setFormData(prev => ({ ...prev, [teamKey]: selectedPlayerIds }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -166,14 +187,14 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
       setLoading(false);
       return;
     }
-    
+
     const currentScore = formData.score.trim();
     if (!validateScore(currentScore)) {
       setError('Tỉ số phải dạng số-số (vd: 2-1) hoặc để trống.');
       setLoading(false);
       return;
     }
-    
+
     if (currentScore && /^\d+-\d+$/.test(currentScore)) {
         const goalValidation = validateGoalDetails(currentScore, goalDetails);
         if (goalValidation !== true) {
@@ -206,53 +227,51 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
         return;
       }
 
-      // Kết hợp ngày và giờ. Tạo đối tượng Date từ ngày và giờ đã nhập.
-      // formData.date là "YYYY-MM-DD", formData.time là "HH:mm"
       const [hours, minutes] = formData.time.split(':').map(Number);
       const matchDateTime = new Date(formData.date);
-      matchDateTime.setHours(hours, minutes, 0, 0); // Đặt giờ và phút theo client timezone
+      matchDateTime.setHours(hours, minutes, 0, 0);
 
       const matchPayload = {
-        date: matchDateTime.toISOString(), // Gửi lên server dưới dạng ISO string (UTC)
+        date: matchDateTime.toISOString(),
         stadium: formData.stadium,
-        score: currentScore === '' ? null : currentScore, 
+        score: currentScore === '' ? null : currentScore,
         goalDetails: (currentScore === '' || currentScore === null) ? [] : goalDetails.map(goal => {
           const playerId = goal.playerId || goal.player_id;
           const playerInTeam1 = team1Players.find((player) => player._id === playerId);
-          // Mặc định là bàn thắng cho team1 nếu không xác định được, hoặc cần logic chọn đội rõ ràng hơn khi nhập
-          const teamIdForGoal = playerInTeam1 ? editingMatch.team1._id : editingMatch.team2._id; 
-          if (!teamIdForGoal) { // Kiểm tra nếu không tìm thấy teamId cho cầu thủ
+          const teamIdForGoal = playerInTeam1 ? editingMatch.team1._id : editingMatch.team2._id;
+          if (!teamIdForGoal) {
              throw new Error(`Không thể xác định đội cho cầu thủ ID: ${playerId}. Vui lòng chọn cầu thủ thuộc một trong hai đội.`);
           }
           return {
             player_id: playerId,
-            team_id: teamIdForGoal, 
+            team_id: teamIdForGoal,
             minute: parseInt(goal.minute, 10),
             goalType: goal.goalType,
           };
         }),
+        participatingPlayersTeam1: formData.participatingPlayersTeam1,
+        participatingPlayersTeam2: formData.participatingPlayersTeam2,
       };
 
       const matchUpdateResponse = await axios.put(`http://localhost:5000/api/matches/${matchId}`, matchPayload, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      
-      // Cập nhật lại state matches ở trang danh sách
+
       setMatches((prevMatches) =>
         prevMatches.map((m) =>
           (m.id === matchId || m._id === matchId)
-            ? { ...m, ...matchUpdateResponse.data.data } // Cập nhật toàn bộ thông tin trận đấu từ response
+            ? { ...m, ...matchUpdateResponse.data.data }
             : m
         )
       );
-      
+
       if (matchPayload.score !== null && /^\d+-\d+$/.test(matchPayload.score)) {
         await axios.put(`http://localhost:5000/api/team_results/${matchId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
         await axios.put(`http://localhost:5000/api/player_results/match/${matchId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
-        
+
         const seasonIdToUpdateRanking = editingMatch.season_id?._id || editingMatch.season_id;
-        await axios.put(`http://localhost:5000/api/rankings/${seasonIdToUpdateRanking}`, 
-          { match_date: matchDateTime.toISOString().split('T')[0] }, // Chỉ cần ngày cho API ranking
+        await axios.put(`http://localhost:5000/api/rankings/${seasonIdToUpdateRanking}`,
+          { match_date: matchDateTime.toISOString().split('T')[0] },
           { headers: { Authorization: `Bearer ${token}` } }
         );
         await axios.put(`http://localhost:5000/api/player_rankings/match/${matchId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
@@ -287,11 +306,9 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Đội 1: {formData.team1Name}</label>
-             {/* Tên đội không cho sửa trực tiếp ở form này */}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Đội 2: {formData.team2Name}</label>
-             {/* Tên đội không cho sửa trực tiếp ở form này */}
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -343,6 +360,57 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
                 />
             </div>
         </div>
+
+        {/* Participating Players Selection */}
+        {editingMatch && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="participatingPlayersTeam1" className="block text-sm font-medium text-gray-700 mb-1">
+                  Cầu thủ ra sân ({formData.team1Name || 'Đội 1'}):
+                </label>
+                {loadingPlayers ? <p>Đang tải cầu thủ...</p> : team1Players.length > 0 ? (
+                  <select
+                    id="participatingPlayersTeam1"
+                    multiple
+                    value={formData.participatingPlayersTeam1}
+                    onChange={(e) => handleParticipatingPlayersChange('participatingPlayersTeam1', Array.from(e.target.selectedOptions, option => option.value))}
+                    className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm h-32"
+                  >
+                    {team1Players.map(player => (
+                      <option key={player._id} value={player._id}>
+                        {player.name} (#{player.number})
+                      </option>
+                    ))}
+                  </select>
+                ) : <p className="text-sm text-gray-500">Không có cầu thủ cho {formData.team1Name || 'Đội 1'}.</p>}
+                 <p className="text-xs text-gray-500 mt-1">Giữ Ctrl (hoặc Cmd trên Mac) để chọn nhiều cầu thủ.</p>
+              </div>
+              <div>
+                <label htmlFor="participatingPlayersTeam2" className="block text-sm font-medium text-gray-700 mb-1">
+                  Cầu thủ ra sân ({formData.team2Name || 'Đội 2'}):
+                </label>
+                 {loadingPlayers ? <p>Đang tải cầu thủ...</p> : team2Players.length > 0 ? (
+                  <select
+                    id="participatingPlayersTeam2"
+                    multiple
+                    value={formData.participatingPlayersTeam2}
+                    onChange={(e) => handleParticipatingPlayersChange('participatingPlayersTeam2', Array.from(e.target.selectedOptions, option => option.value))}
+                    className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm h-32"
+                  >
+                    {team2Players.map(player => (
+                      <option key={player._id} value={player._id}>
+                        {player.name} (#{player.number})
+                      </option>
+                    ))}
+                  </select>
+                ) : <p className="text-sm text-gray-500">Không có cầu thủ cho {formData.team2Name || 'Đội 2'}.</p>}
+                 <p className="text-xs text-gray-500 mt-1">Giữ Ctrl (hoặc Cmd trên Mac) để chọn nhiều cầu thủ.</p>
+              </div>
+            </div>
+          </>
+        )}
+
 
         {(formData.score && /^\d+-\d+$/.test(formData.score)) && (
             <div>
@@ -418,20 +486,20 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
           <button
             type="submit"
             className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition disabled:bg-blue-300 shadow-md"
-            disabled={loading}
+            disabled={loading || loadingPlayers}
           >
-            {loading ? 'Đang Lưu...' : (editingMatch ? 'Lưu Thay Đổi' : 'Thêm Trận')}
+            {loading || loadingPlayers ? 'Đang xử lý...' : (editingMatch ? 'Lưu Thay Đổi' : 'Thêm Trận')}
           </button>
           <button
             type="button"
             onClick={() => {
               setShowForm(false);
-              setEditingMatch(null); 
-              setError(''); 
-              setSuccess(''); 
+              setEditingMatch(null);
+              setError('');
+              setSuccess('');
             }}
             className="bg-gray-500 text-white px-6 py-2.5 rounded-lg hover:bg-gray-600 transition disabled:bg-gray-300 shadow-md"
-            disabled={loading}
+            disabled={loading || loadingPlayers}
           >
             Hủy
           </button>

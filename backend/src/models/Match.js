@@ -50,6 +50,14 @@ const matchSchema = new mongoose.Schema(
       }
     },
     goalDetails: { type: [goalDetailSchema], default: [] },
+    participatingPlayersTeam1: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Player'
+    }],
+    participatingPlayersTeam2: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Player'
+    }],
   },
   { timestamps: true }
 );

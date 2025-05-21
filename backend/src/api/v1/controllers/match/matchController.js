@@ -1,8 +1,8 @@
 import Match from "../../../../models/Match.js";
 import Season from "../../../../models/Season.js";
 import Team from "../../../../models/Team.js";
-import Player from "../../../../models/Player.js"; // Đã import
-import Regulation from "../../../../models/Regulation.js"; // Đã import
+import Player from "../../../../models/Player.js";
+import Regulation from "../../../../models/Regulation.js";
 import TeamResult from "../../../../models/TeamResult.js";
 import Ranking from "../../../../models/Ranking.js";
 import PlayerResult from "../../../../models/PlayerResult.js";
@@ -28,7 +28,7 @@ import { calculateAndSavePlayerRankings } from "../player/player_rankingsControl
 // GET all matches
 const getMatches = async (req, res, next) => {
   try {
-    const matches = await Match.find().populate("team1 team2 season_id");
+    const matches = await Match.find().populate("team1 team2 season_id participatingPlayersTeam1 participatingPlayersTeam2");
     return successResponse(res, matches, "Fetched all matches successfully");
   } catch (error) {
     return next(error);
@@ -47,7 +47,7 @@ const getMatchesById = async (req, res, next) => {
     const matchId = new mongoose.Types.ObjectId(validationResult.data.id);
 
     const match = await Match.findById(matchId).populate(
-      "team1 team2 season_id goalDetails.player_id goalDetails.team_id"
+      "team1 team2 season_id goalDetails.player_id goalDetails.team_id participatingPlayersTeam1 participatingPlayersTeam2"
     );
     if (!match) {
       return next(Object.assign(new Error("Match not found"), { status: 404 }));
@@ -86,7 +86,6 @@ const createMatch = async (req, res, next) => {
       });
     }
 
-    // Kiểm tra số lượng cầu thủ tối thiểu cho mỗi đội
     const ageRegulation = await Regulation.findOne({
       season_id: season_id,
       regulation_name: "Age Regulation",
@@ -115,7 +114,6 @@ const createMatch = async (req, res, next) => {
         { status: 400 }
       );
     }
-    // Kết thúc kiểm tra số lượng cầu thủ
 
     const matchRegulation = await Regulation.findOne({
       season_id: season_id,
@@ -192,6 +190,8 @@ const createMatch = async (req, res, next) => {
                     stadium: homeTeam.stadium,
                     score: null,
                     goalDetails: [],
+                    participatingPlayersTeam1: [], // Initialize as empty
+                    participatingPlayersTeam2: [], // Initialize as empty
                 });
 
                 dailyMatchCount[dateString] = matchesTodayCount + 1;
@@ -267,6 +267,8 @@ const getMatchesBySeasonId = async (req, res, next) => {
       { $match: { season_id: SeasonId } },
       { $lookup: { from: 'teams', localField: 'team1', foreignField: '_id', as: 'team1_data'} },
       { $lookup: { from: 'teams', localField: 'team2', foreignField: '_id', as: 'team2_data'} },
+      { $lookup: { from: 'players', localField: 'participatingPlayersTeam1', foreignField: '_id', as: 'participatingPlayersTeam1_data'} },
+      { $lookup: { from: 'players', localField: 'participatingPlayersTeam2', foreignField: '_id', as: 'participatingPlayersTeam2_data'} },
       { $unwind: { path: '$team1_data', preserveNullAndEmptyArrays: true } },
       { $unwind: { path: '$team2_data', preserveNullAndEmptyArrays: true } },
       {
@@ -275,7 +277,10 @@ const getMatchesBySeasonId = async (req, res, next) => {
           season_id: 1,
           team1: { _id: '$team1_data._id', team_name: { $ifNull: ['$team1_data.team_name', 'N/A'] }, logo: { $ifNull: ['$team1_data.logo', 'https://placehold.co/20x20?text=Team'] }},
           team2: { _id: '$team2_data._id', team_name: { $ifNull: ['$team2_data.team_name', 'N/A'] }, logo: { $ifNull: ['$team2_data.logo', 'https://placehold.co/20x20?text=Team'] }},
-          date: 1, stadium: 1, score: 1, goalDetails: 1, _id: 0,
+          date: 1, stadium: 1, score: 1, goalDetails: 1,
+          participatingPlayersTeam1: '$participatingPlayersTeam1_data',
+          participatingPlayersTeam2: '$participatingPlayersTeam2_data',
+           _id: 0,
         },
       },
       { $sort: { date: 1 } },
@@ -324,6 +329,20 @@ const updateMatch = async (req, res, next) => {
         updateFields.score = null;
     }
 
+    if (updateFields.participatingPlayersTeam1) {
+        const team1Players = await Player.find({ _id: { $in: updateFields.participatingPlayersTeam1 }, team_id: match.team1 }).session(session);
+        if (team1Players.length !== updateFields.participatingPlayersTeam1.length) {
+            throw Object.assign(new Error("Invalid player ID or player not in team 1 for participatingPlayersTeam1."), { status: 400 });
+        }
+    }
+    if (updateFields.participatingPlayersTeam2) {
+        const team2Players = await Player.find({ _id: { $in: updateFields.participatingPlayersTeam2 }, team_id: match.team2 }).session(session);
+        if (team2Players.length !== updateFields.participatingPlayersTeam2.length) {
+            throw Object.assign(new Error("Invalid player ID or player not in team 2 for participatingPlayersTeam2."), { status: 400 });
+        }
+    }
+
+
     if (updateFields.goalDetails && updateFields.score && /^\d+-\d+$/.test(updateFields.score)) {
       const regulation = await Regulation.findOne({
         season_id: match.season_id,
@@ -349,16 +368,29 @@ const updateMatch = async (req, res, next) => {
 
     const oldScore = match.score;
     const hadScore = oldScore !== null && /^\d+-\d+$/.test(oldScore);
+    // FIX: Ensure match.participatingPlayersTeam1 and match.participatingPlayersTeam2 are arrays before calling .map
+    const oldParticipatingPlayersTeam1 = (match.participatingPlayersTeam1 || []).map(id => id.toString());
+    const oldParticipatingPlayersTeam2 = (match.participatingPlayersTeam2 || []).map(id => id.toString());
+
 
     await Match.updateOne({ _id: matchId }, { $set: updateFields }, { session });
-    const updatedMatch = await Match.findById(matchId).populate("team1 team2 season_id goalDetails.player_id goalDetails.team_id").session(session);
+    const updatedMatch = await Match.findById(matchId)
+        .populate("team1 team2 season_id goalDetails.player_id goalDetails.team_id participatingPlayersTeam1 participatingPlayersTeam2")
+        .session(session);
 
     const newScore = updatedMatch.score;
     const hasNewScore = newScore !== null && /^\d+-\d+$/.test(newScore);
+    // FIX: Ensure updatedMatch.participatingPlayersTeam1 and updatedMatch.participatingPlayersTeam2 are arrays
+    const newParticipatingPlayersTeam1 = (updatedMatch.participatingPlayersTeam1 || []).map(p => p._id.toString());
+    const newParticipatingPlayersTeam2 = (updatedMatch.participatingPlayersTeam2 || []).map(p => p._id.toString());
+
     const scoreChangedOrAddedOrRemoved = oldScore !== newScore || (hadScore && !hasNewScore) || (!hadScore && hasNewScore);
+    const participatingPlayersChanged =
+        JSON.stringify(oldParticipatingPlayersTeam1.sort()) !== JSON.stringify(newParticipatingPlayersTeam1.sort()) ||
+        JSON.stringify(oldParticipatingPlayersTeam2.sort()) !== JSON.stringify(newParticipatingPlayersTeam2.sort());
 
 
-    if (scoreChangedOrAddedOrRemoved) {
+    if (scoreChangedOrAddedOrRemoved || (hasNewScore && participatingPlayersChanged)) {
         const seasonId = updatedMatch.season_id._id;
         const matchDate = new Date(updatedMatch.date);
         matchDate.setUTCHours(0, 0, 0, 0);
@@ -395,18 +427,37 @@ const updateMatch = async (req, res, next) => {
             await calculateAndSaveTeamRankings(seasonId, new Date(dateStrToRecalculate), session);
         }
 
-        const playersTeam1 = await Player.find({ team_id: team1Id }).session(session);
-        const playersTeam2 = await Player.find({ team_id: team2Id }).session(session);
-        const allPlayersInMatch = [...playersTeam1, ...playersTeam2];
-        const allAffectedPlayerIds = allPlayersInMatch.map(p => p._id);
+        const affectedPlayerIds = new Set([
+            ...oldParticipatingPlayersTeam1, ...oldParticipatingPlayersTeam2,
+            ...newParticipatingPlayersTeam1, ...newParticipatingPlayersTeam2
+        ].map(id => new mongoose.Types.ObjectId(id).toString()));
 
-        for (const player of allPlayersInMatch) {
-            await updatePlayerResultsForDateInternal(player._id, player.team_id, seasonId, matchDate, session);
+
+        const playersToUpdate = await Player.find({ _id: { $in: Array.from(affectedPlayerIds).map(id => new mongoose.Types.ObjectId(id)) } }).session(session);
+
+
+        for (const player of playersToUpdate) {
+            let playerTeamContext = null;
+            if (updatedMatch.team1._id.equals(player.team_id)) playerTeamContext = updatedMatch.team1._id;
+            else if (updatedMatch.team2._id.equals(player.team_id)) playerTeamContext = updatedMatch.team2._id;
+
+            if (playerTeamContext) {
+                 await updatePlayerResultsForDateInternal(player._id, playerTeamContext, seasonId, matchDate, session);
+            }
         }
-        const subsequentPlayerResultDates = await PlayerResult.find({ player_id: { $in: allAffectedPlayerIds }, season_id: seasonId, date: { $gt: matchDate }}, null, {session}).distinct('date');
+
+        const subsequentPlayerResultDates = await PlayerResult.find({ player_id: { $in: playersToUpdate.map(p => p._id) }, season_id: seasonId, date: { $gt: matchDate }}, null, {session}).distinct('date');
         for (const dateStrToRecalculate of subsequentPlayerResultDates.sort((a,b) => new Date(a) - new Date(b))) {
-            for (const player of allPlayersInMatch) {
-                 await updatePlayerResultsForDateInternal(player._id, player.team_id, seasonId, new Date(dateStrToRecalculate), session);
+            for (const player of playersToUpdate) {
+                 let playerTeamContextForSubsequent = null;
+                 const currentTeamForPlayer = await Player.findById(player._id).select('team_id').session(session);
+                 if (currentTeamForPlayer) {
+                    playerTeamContextForSubsequent = currentTeamForPlayer.team_id;
+                 }
+
+                 if (playerTeamContextForSubsequent) {
+                    await updatePlayerResultsForDateInternal(player._id, playerTeamContextForSubsequent, seasonId, new Date(dateStrToRecalculate), session);
+                 }
             }
         }
 
@@ -446,7 +497,7 @@ const deleteMatch = async (req, res, next) => {
       throw Object.assign(new Error("Match not found"), { status: 404 });
     }
 
-    const { season_id: seasonIdObj, team1: team1IdObj, team2: team2IdObj, date: matchDateRaw, score: deletedMatchScore } = matchToDelete;
+    const { season_id: seasonIdObj, team1: team1IdObj, team2: team2IdObj, date: matchDateRaw, score: deletedMatchScore, participatingPlayersTeam1, participatingPlayersTeam2 } = matchToDelete;
     const seasonId = seasonIdObj._id;
     const team1Id = team1IdObj._id;
     const team2Id = team2IdObj._id;
@@ -458,7 +509,7 @@ const deleteMatch = async (req, res, next) => {
     await Match.deleteOne({ _id: matchId }, { session });
 
     if (wasScoredMatch) {
-        console.log(`Match ${matchId} was scored. Recalculating data...`);
+        console.log(`Match ${matchId} was scored. Recalculating data after deletion...`);
         const rankingRegulation = await Regulation.findOne({ season_id: seasonId, regulation_name: "Ranking Rules" }).session(session);
         if (!rankingRegulation || !rankingRegulation.rules) {
             throw Object.assign(new Error("Ranking Regulation not found for the season."), { status: 500 });
@@ -488,28 +539,42 @@ const deleteMatch = async (req, res, next) => {
             await calculateAndSaveTeamRankings(seasonId, new Date(dateStrToRecalculate), session);
         }
 
-        const playersTeam1 = await Player.find({ team_id: team1Id }).session(session);
-        const playersTeam2 = await Player.find({ team_id: team2Id }).session(session);
-        const allPlayersInMatch = [...playersTeam1, ...playersTeam2];
-        const allAffectedPlayerIds = allPlayersInMatch.map(p => p._id);
+        const allPlayersWhoParticipated = [
+            ...(participatingPlayersTeam1 || []),
+            ...(participatingPlayersTeam2 || [])
+        ].map(id => new mongoose.Types.ObjectId(id));
 
-        for (const player of allPlayersInMatch) {
-            await updatePlayerResultsForDateInternal(player._id, player.team_id, seasonId, matchDate, session);
-        }
-        const subsequentPlayerResultDates = await PlayerResult.find({ player_id: { $in: allAffectedPlayerIds }, season_id: seasonId, date: { $gt: matchDate }}, null, {session}).distinct('date');
-        for (const dateStrToRecalculate of subsequentPlayerResultDates.sort((a,b) => new Date(a) - new Date(b))) {
-            for (const player of allPlayersInMatch) {
-                 await updatePlayerResultsForDateInternal(player._id, player.team_id, seasonId, new Date(dateStrToRecalculate), session);
+
+        if (allPlayersWhoParticipated.length > 0) {
+            const playersDocs = await Player.find({_id: {$in: allPlayersWhoParticipated}}).session(session);
+
+            for (const player of playersDocs) {
+                let playerTeamContext = null;
+                if (participatingPlayersTeam1 && participatingPlayersTeam1.some(pId => pId.equals(player._id))) {
+                    playerTeamContext = team1Id;
+                } else if (participatingPlayersTeam2 && participatingPlayersTeam2.some(pId => pId.equals(player._id))) {
+                    playerTeamContext = team2Id;
+                }
+                if(playerTeamContext){
+                    await updatePlayerResultsForDateInternal(player._id, playerTeamContext, seasonId, matchDate, session);
+                }
+            }
+
+            const subsequentPlayerResultDates = await PlayerResult.find({ player_id: { $in: allPlayersWhoParticipated }, season_id: seasonId, date: { $gt: matchDate }}, null, {session}).distinct('date');
+            for (const dateStrToRecalculate of subsequentPlayerResultDates.sort((a,b) => new Date(a) - new Date(b))) {
+                for (const player of playersDocs) {
+                     await updatePlayerResultsForDateInternal(player._id, player.team_id, seasonId, new Date(dateStrToRecalculate), session);
+                }
+            }
+
+            await calculateAndSavePlayerRankings(seasonId, matchDate, session);
+            const distinctPlayerRankingDatesAfter = await PlayerRanking.find({ season_id: seasonId, date: { $gt: matchDate } }, null, {session}).distinct('date');
+            for (const dateStrToRecalculate of distinctPlayerRankingDatesAfter.sort((a,b) => new Date(a) - new Date(b))) {
+                await calculateAndSavePlayerRankings(seasonId, new Date(dateStrToRecalculate), session);
             }
         }
-
-        await calculateAndSavePlayerRankings(seasonId, matchDate, session);
-        const distinctPlayerRankingDatesAfter = await PlayerRanking.find({ season_id: seasonId, date: { $gt: matchDate } }, null, {session}).distinct('date');
-        for (const dateStrToRecalculate of distinctPlayerRankingDatesAfter.sort((a,b) => new Date(a) - new Date(b))) {
-            await calculateAndSavePlayerRankings(seasonId, new Date(dateStrToRecalculate), session);
-        }
     } else {
-         console.log(`Match ${matchId} was not scored. No recalculation needed.`);
+         console.log(`Match ${matchId} was not scored. No recalculation needed for player/team stats.`);
     }
 
 
@@ -536,7 +601,7 @@ const getMatchesByTeamId = async (req, res, next) => {
     const TeamId = new mongoose.Types.ObjectId(team_id_param);
     const matches = await Match.find({
       $or: [{ team1: TeamId }, { team2: TeamId }],
-    }).populate("team1 team2 season_id goalDetails.player_id goalDetails.team_id");
+    }).populate("team1 team2 season_id goalDetails.player_id goalDetails.team_id participatingPlayersTeam1 participatingPlayersTeam2");
     if (!matches || matches.length === 0) {
       return successResponse(res, [], "No matches found for this team");
     }
@@ -574,7 +639,7 @@ const getMatchesBySeasonIdAndDate = async (req, res, next) => {
     const matches = await Match.find({
       season_id: SeasonId,
       date: { $gte: startOfDay, $lte: endOfDay },
-    }).populate("team1 team2 season_id goalDetails.player_id goalDetails.team_id");
+    }).populate("team1 team2 season_id goalDetails.player_id goalDetails.team_id participatingPlayersTeam1 participatingPlayersTeam2");
 
     if (!matches || matches.length === 0) {
       return successResponse(res, [], "No matches found for this season and date");

@@ -27,6 +27,12 @@ export const updateMatchSchema = z.object({
     z.null().optional()      // Cho phép giá trị null
   ]).optional(),
   goalDetails: z.array(goalDetailSchema).optional(),
+  participatingPlayersTeam1: z.array(z.string().refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
+    message: "Invalid player ID format in participatingPlayersTeam1",
+  })).optional(),
+  participatingPlayersTeam2: z.array(z.string().refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
+    message: "Invalid player ID format in participatingPlayersTeam2",
+  })).optional(),
 });
 
 export const MatchIdSchema = z.object({
