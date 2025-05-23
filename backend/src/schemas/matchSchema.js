@@ -19,20 +19,15 @@ export const createMatchSchema = z.object({
 });
 
 export const updateMatchSchema = z.object({
-  date: z.coerce.date().optional(), 
+  date: z.coerce.date().optional(),
   stadium: z.string().min(1, "Stadium is required").optional(),
   score: z.union([
     z.string().regex(/^\d+-\d+$/, "Score must be in format number-number (e.g., 2-1)").optional(),
-    z.literal('').optional(), 
-    z.null().optional()      
+    z.literal('').optional(),
+    z.null().optional()
   ]).optional(),
   goalDetails: z.array(goalDetailSchema).optional(),
-  participatingPlayersTeam1: z.array(z.string().refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
-    message: "Invalid player ID format in participatingPlayersTeam1",
-  })).optional(),
-  participatingPlayersTeam2: z.array(z.string().refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
-    message: "Invalid player ID format in participatingPlayersTeam2",
-  })).optional(),
+  // participatingPlayersTeam1 and participatingPlayersTeam2 are removed
 });
 
 export const MatchIdSchema = z.object({

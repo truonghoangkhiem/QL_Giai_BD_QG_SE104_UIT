@@ -2,20 +2,21 @@ import PlayerResult from "../../../../models/PlayerResult.js";
 import Player from "../../../../models/Player.js";
 import Season from "../../../../models/Season.js";
 import Match from "../../../../models/Match.js";
+import MatchLineup from "../../../../models/MatchLineup.js"; // Added
 import { successResponse } from "../../../../utils/responseFormat.js";
 import {
   CreatePlayerResultSchema,
   GetPlayerResultBySeasonIdAndDateSchema,
   PlayerIdSchema,
-  MatchIdSchema as PlayerResultMatchIdSchema, // Alias
+  MatchIdSchema as PlayerResultMatchIdSchema,
   UpdatePlayerResultSchema,
   PlayerResultIdSchema,
 } from "../../../../schemas/playerResultSchema.js";
 import mongoose from "mongoose";
 
-export const updatePlayerResultsForDateInternal = async (playerId, teamId, seasonId, dateToUpdate, session = null) => {
+export const updatePlayerResultsForDateInternal = async (playerId, teamIdForContext, seasonId, dateToUpdate, session = null) => {
   const Check_player_id = new mongoose.Types.ObjectId(playerId);
-  const Check_team_id = new mongoose.Types.ObjectId(teamId);
+  const Check_team_id_context = new mongoose.Types.ObjectId(teamIdForContext); // Team context for this update
   const Check_season_id = new mongoose.Types.ObjectId(seasonId);
   const targetDate = new Date(dateToUpdate);
   targetDate.setUTCHours(0, 0, 0, 0);
@@ -25,7 +26,7 @@ export const updatePlayerResultsForDateInternal = async (playerId, teamId, seaso
   const latestPlayerResultBeforeDate = await PlayerResult.findOne({
     player_id: Check_player_id,
     season_id: Check_season_id,
-    team_id: Check_team_id,
+    team_id: Check_team_id_context, // Use the provided team context
     date: { $lt: targetDate },
   }, null, queryOptions).sort({ date: -1 });
 
@@ -38,35 +39,36 @@ export const updatePlayerResultsForDateInternal = async (playerId, teamId, seaso
   const endOfDay = new Date(targetDate);
   endOfDay.setUTCHours(23,59,59,999);
 
+  // Find matches on the targetDate where the player's team (teamIdForContext) played
   const matchesOnTargetDate = await Match.find({
     season_id: Check_season_id,
     date: { $gte: startOfDay, $lte: endOfDay },
-    $or: [{ team1: Check_team_id }, { team2: Check_team_id }],
-    score: { $ne: null, $regex: /^\d+-\d+$/ }
-  }, null, queryOptions).populate('goalDetails.player_id participatingPlayersTeam1 participatingPlayersTeam2');
+    $or: [{ team1: Check_team_id_context }, { team2: Check_team_id_context }],
+    score: { $ne: null, $regex: /^\d+-\d+$/ } // Only scored matches
+  }, '_id team1 team2 goalDetails', queryOptions).populate('goalDetails.player_id');
 
 
   let dailyMatchesPlayed = 0;
   let dailyGoals = 0;
-  let dailyAssists = 0;
-  let dailyYellowCards = 0;
-  let dailyRedCards = 0;
+  let dailyAssists = 0; // Placeholder, add logic if you track assists in Match model
+  let dailyYellowCards = 0; // Placeholder
+  let dailyRedCards = 0;  // Placeholder
 
   for (const m of matchesOnTargetDate) {
-    let playerParticipated = false;
-    if (m.team1.equals(Check_team_id)) {
-      playerParticipated = m.participatingPlayersTeam1?.some(pId => pId.equals(Check_player_id));
-    } else if (m.team2.equals(Check_team_id)) {
-      playerParticipated = m.participatingPlayersTeam2?.some(pId => pId.equals(Check_player_id));
-    }
+    // Check if the player was in the lineup for this specific match and team
+    const lineup = await MatchLineup.findOne({
+        match_id: m._id,
+        team_id: Check_team_id_context, // Player must be in the lineup of their team context
+        'players.player_id': Check_player_id
+    }, null, queryOptions);
 
-    if(playerParticipated){
+    if(lineup){ // Player participated if found in lineup
         dailyMatchesPlayed += 1;
         const playerGoalsInMatch = m.goalDetails.filter(
-            (goal) => goal.player_id.equals(Check_player_id) && goal.goalType !== 'OG'
+            (goal) => goal.player_id._id.equals(Check_player_id) && goal.goalType !== 'OG'
         ).length;
         dailyGoals += playerGoalsInMatch;
-        // Add logic for assists, yellowCards, redCards if available in match details
+        // Add logic for assists, yellowCards, redCards if these are added to MatchLineup or GoalDetail
     }
   }
 
@@ -78,16 +80,16 @@ export const updatePlayerResultsForDateInternal = async (playerId, teamId, seaso
     redCards: (baseResult.redCards || 0) + dailyRedCards,
     date: targetDate,
     player_id: Check_player_id,
-    team_id: Check_team_id,
+    team_id: Check_team_id_context, // Store with the team context of this calculation
     season_id: Check_season_id,
   };
 
   await PlayerResult.findOneAndUpdate(
-    { player_id: Check_player_id, season_id: Check_season_id, team_id: Check_team_id, date: targetDate },
+    { player_id: Check_player_id, season_id: Check_season_id, team_id: Check_team_id_context, date: targetDate },
     { $set: finalStats },
     { upsert: true, new: true, setDefaultsOnInsert: true, session }
   );
-  console.log(`PlayerResult for player ${playerId} on ${targetDate.toISOString().split("T")[0]} updated/created. Matches Played Today: ${dailyMatchesPlayed}`);
+  console.log(`PlayerResult for player ${playerId} (team ${teamIdForContext}) on ${targetDate.toISOString().split("T")[0]} updated/created. Matches Played Today: ${dailyMatchesPlayed}`);
 };
 
 
@@ -105,7 +107,6 @@ const updatePlayerResultsafterMatch = async (req, res, next) => {
 
     const MatchID = new mongoose.Types.ObjectId(matchid);
     const match = await Match.findById(MatchID)
-        .populate('participatingPlayersTeam1 participatingPlayersTeam2') // Populate participating players
         .session(session);
     if (!match) {
       const error = new Error("Match not found");
@@ -129,33 +130,37 @@ const updatePlayerResultsafterMatch = async (req, res, next) => {
     const normalizedMatchDate = new Date(matchDate);
     normalizedMatchDate.setUTCHours(0, 0, 0, 0);
 
-    // Get all players who *actually participated* in the match based on the new fields
-    const participatingPlayerIdsTeam1 = match.participatingPlayersTeam1.map(p => p._id);
-    const participatingPlayerIdsTeam2 = match.participatingPlayersTeam2.map(p => p._id);
-    const allParticipatingPlayerIds = [...participatingPlayerIdsTeam1, ...participatingPlayerIdsTeam2];
+    // Get lineups for the match
+    const lineups = await MatchLineup.find({ match_id: MatchID }).populate('players.player_id').session(session);
+    if (lineups.length === 0) {
+        console.warn(`No lineups found for match ${MatchID}. Player results cannot be updated based on participation.`);
+        await session.abortTransaction();
+        session.endSession();
+        return successResponse(res, null, "No lineups found for the match. Player results not updated.");
+    }
 
-    // Fetch player documents for team context
-    const playersInMatch = await Player.find({ _id: { $in: allParticipatingPlayerIds } }).session(session);
+    const allParticipatingPlayerIds = new Set();
+    const playerTeamMap = new Map(); // Stores player_id -> team_id for this match context
+
+    for (const lineup of lineups) {
+        lineup.players.forEach(p => {
+            allParticipatingPlayerIds.add(p.player_id._id.toString());
+            playerTeamMap.set(p.player_id._id.toString(), lineup.team_id.toString());
+        });
+    }
+    
+    const uniquePlayerIds = Array.from(allParticipatingPlayerIds).map(id => new mongoose.Types.ObjectId(id));
 
 
-    for (const player of playersInMatch) {
-      // Determine which team the player belongs to for this match's context
-      let playerTeamIdInMatchContext = null;
-      if (participatingPlayerIdsTeam1.some(pId => pId.equals(player._id))) {
-          playerTeamIdInMatchContext = team1Id;
-      } else if (participatingPlayerIdsTeam2.some(pId => pId.equals(player._id))) {
-          playerTeamIdInMatchContext = team2Id;
-      }
-
-      if (playerTeamIdInMatchContext) {
-          await updatePlayerResultsForDateInternal(player._id, playerTeamIdInMatchContext, season_id, normalizedMatchDate, session);
-      } else {
-          console.warn(`Could not determine team context for player ${player._id} in match ${match._id}`);
+    for (const playerId of uniquePlayerIds) {
+      const playerTeamIdForMatch = playerTeamMap.get(playerId.toString());
+      if (playerTeamIdForMatch) {
+          await updatePlayerResultsForDateInternal(playerId, new mongoose.Types.ObjectId(playerTeamIdForMatch), season_id, normalizedMatchDate, session);
       }
     }
 
     const subsequentPlayerResultDates = await PlayerResult.find({
-      player_id: { $in: allParticipatingPlayerIds.map(id => new mongoose.Types.ObjectId(id)) },
+      player_id: { $in: uniquePlayerIds },
       season_id: new mongoose.Types.ObjectId(season_id),
       date: { $gt: normalizedMatchDate },
     }, null, { session }).distinct('date');
@@ -167,20 +172,18 @@ const updatePlayerResultsafterMatch = async (req, res, next) => {
         const dateToRecalculate = new Date(dateStrToRecalculate);
         dateToRecalculate.setUTCHours(0,0,0,0);
 
-      for (const playerIdToRecalculate of allParticipatingPlayerIds) {
-        const playerDoc = playersInMatch.find(p => p._id.equals(playerIdToRecalculate));
-        if (playerDoc) {
-            const playerHasResultOnThisDate = await PlayerResult.findOne({
-                player_id: new mongoose.Types.ObjectId(playerIdToRecalculate),
+      for (const playerIdToRecalculate of uniquePlayerIds) {
+        const playerTeamIdForContext = playerTeamMap.get(playerIdToRecalculate.toString()); // Team context from the original match
+        if (playerTeamIdForContext) {
+             const playerHasResultOnThisDate = await PlayerResult.findOne({
+                player_id: playerIdToRecalculate,
                 season_id: new mongoose.Types.ObjectId(season_id),
+                team_id: new mongoose.Types.ObjectId(playerTeamIdForContext), // Check with correct team context
                 date: dateToRecalculate
             }, null, { session });
 
             if(playerHasResultOnThisDate){
-                 // Determine player's team for the context of this date/match.
-                 // This logic might need refinement if players can switch teams mid-season and we are recalculating for old matches.
-                 // For now, assume current team_id from playerDoc is sufficient for subsequent date recalculations.
-                 await updatePlayerResultsForDateInternal(playerIdToRecalculate, playerDoc.team_id, season_id, dateToRecalculate, session);
+                 await updatePlayerResultsForDateInternal(playerIdToRecalculate, new mongoose.Types.ObjectId(playerTeamIdForContext), season_id, dateToRecalculate, session);
             }
         }
       }
@@ -188,7 +191,7 @@ const updatePlayerResultsafterMatch = async (req, res, next) => {
 
     await session.commitTransaction();
     session.endSession();
-    return successResponse(res, null, "Player results updated successfully based on participating players, including subsequent dates.");
+    return successResponse(res, null, "Player results updated successfully based on match lineups, including subsequent dates.");
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
@@ -196,6 +199,10 @@ const updatePlayerResultsafterMatch = async (req, res, next) => {
     return next(error);
   }
 };
+
+// Remaining functions (createPlayerResults, getPlayerResultbySeasonIdAndDate, etc.) are largely unchanged
+// but their utility might diminish if PlayerResults are primarily managed via updatePlayerResultsafterMatch.
+// createPlayerResults is still useful for initializing a player's record at the start of a season.
 
 const createPlayerResults = async (req, res, next) => {
   const { player_id, season_id, team_id } = req.body;
@@ -300,11 +307,11 @@ const getPlayerResultbySeasonIdAndDate = async (req, res, next) => {
         },
       },
       {
-        $sort: { date: -1, totalGoals: -1 },
+        $sort: { date: -1, totalGoals: -1 }, // Ensure correct latest result per player-team combo
       },
       {
         $group: {
-          _id: { player_id: "$player_id", team_id: "$team_id" },
+          _id: { player_id: "$player_id", team_id: "$team_id" }, // Group by player and their team context
           latestResult: { $first: "$$ROOT" },
         },
       },
@@ -323,7 +330,7 @@ const getPlayerResultbySeasonIdAndDate = async (req, res, next) => {
       {
         $lookup: {
           from: "teams",
-          localField: "team_id",
+          localField: "team_id", // team_id from PlayerResult
           foreignField: "_id",
           as: "teamInfo"
         }
@@ -343,7 +350,7 @@ const getPlayerResultbySeasonIdAndDate = async (req, res, next) => {
               date: 1,
               playerName: { $ifNull: ["$playerInfo.name", "N/A"] },
               playerNumber: { $ifNull: ["$playerInfo.number", "N/A"] },
-              teamName: { $ifNull: ["$teamInfo.team_name", "N/A"] }
+              teamName: { $ifNull: ["$teamInfo.team_name", "N/A"] } // team name from PlayerResult's team_id
           }
       }
     ]);
@@ -374,14 +381,15 @@ const getPlayerResultsById = async (req, res, next) => {
     }
 
     const Check_player_id = new mongoose.Types.ObjectId(playerid);
+    // This might need refinement if a player can be in multiple teams in a season.
+    // For now, it gets the absolute latest result for the player, regardless of team context.
     const playerResult = await PlayerResult.findOne({
       player_id: Check_player_id,
     }).sort({date: -1});
 
     if (!playerResult) {
-      const error = new Error("Player result not found");
-      error.status = 404;
-      return next(error);
+      // Return empty or specific message instead of 404 if it's a valid scenario
+      return successResponse(res, null, "Player result not found");
     }
 
     return successResponse(
@@ -396,13 +404,8 @@ const getPlayerResultsById = async (req, res, next) => {
 
 const updatePlayerResults = async (req, res, next) => {
   const { id } = req.params;
-  const {
-    matchesplayed,
-    totalGoals,
-    assists,
-    yellowCards,
-    redCards,
-  } = req.body;
+  const updateData = req.body;
+
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
@@ -414,15 +417,9 @@ const updatePlayerResults = async (req, res, next) => {
       throw validationError;
     }
 
-    const { success, error } = UpdatePlayerResultSchema.partial().safeParse({
-      matchesplayed,
-      totalGoals,
-      assists,
-      yellowCards,
-      redCards,
-    });
-    if (!success) {
-      const validationError = new Error(error.errors[0].message);
+    const { success: dataSuccess, error: dataError } = UpdatePlayerResultSchema.partial().safeParse(updateData);
+    if (!dataSuccess) {
+      const validationError = new Error(dataError.errors[0].message);
       validationError.status = 400;
       throw validationError;
     }
@@ -435,17 +432,26 @@ const updatePlayerResults = async (req, res, next) => {
         error.status = 404;
         throw error;
     }
+    
+    // Prevent manual update of date, player_id, team_id, season_id if not allowed
+    const forbiddenUpdates = ['date', 'player_id', 'team_id', 'season_id'];
+    for (const field of forbiddenUpdates) {
+        if (updateData.hasOwnProperty(field) && updateData[field] !== playerResultToUpdate[field]?.toString()) {
+            // Allow updating date if it's part of schema and explicitly sent
+            if (field === 'date' && updateData.date) {
+                 const newDate = new Date(updateData.date);
+                 newDate.setUTCHours(0,0,0,0);
+                 updateData.date = newDate; // Normalize
+            } else if (field !== 'date') {
+                throw Object.assign(new Error(`Manual update of '${field}' is not allowed.`), { status: 400 });
+            }
+        }
+    }
 
-    const updatePlayerResultData = {};
-    if (matchesplayed !== undefined) updatePlayerResultData.matchesplayed = matchesplayed;
-    if (totalGoals !== undefined) updatePlayerResultData.totalGoals = totalGoals;
-    if (assists !== undefined) updatePlayerResultData.assists = assists;
-    if (yellowCards !== undefined) updatePlayerResultData.yellowCards = yellowCards;
-    if (redCards !== undefined) updatePlayerResultData.redCards = redCards;
 
     const result = await PlayerResult.updateOne(
       { _id: PlayerResultID },
-      { $set: updatePlayerResultData },
+      { $set: updateData },
       { session }
     );
 
@@ -458,13 +464,15 @@ const updatePlayerResults = async (req, res, next) => {
     const affectedPlayerId = playerResultToUpdate.player_id;
     const affectedTeamId = playerResultToUpdate.team_id;
     const affectedSeasonId = playerResultToUpdate.season_id;
-    const dateOfManuallyUpdatedResult = new Date(playerResultToUpdate.date);
+    // Use the date from the updated record or the original if not changed
+    const dateOfManuallyUpdatedResult = updateData.date ? new Date(updateData.date) : new Date(playerResultToUpdate.date);
     dateOfManuallyUpdatedResult.setUTCHours(0,0,0,0);
+
 
     const subsequentResultsToRecalculate = await PlayerResult.find({
         player_id: affectedPlayerId,
         season_id: affectedSeasonId,
-        team_id: affectedTeamId,
+        team_id: affectedTeamId, // Recalculate for the same team context
         date: { $gt: dateOfManuallyUpdatedResult }
     }, null, { session }).distinct('date');
 
@@ -519,30 +527,19 @@ const deletePlayerResults = async (req, res, next) => {
         player_id: affectedPlayerId,
         season_id: affectedSeasonId,
         team_id: affectedTeamId,
-        date: { $gte: deletedDate }
+        date: { $gte: deletedDate } // Start from the deleted date itself
     }, null, { session }).distinct('date');
 
     const sortedSubsequentDatesForPlayer = subsequentResultsToRecalculate.sort((a,b) => new Date(a) - new Date(b));
-
-    // If the deleted date itself is present, it should be the first to recalculate (to potentially reset to previous day's stats)
-    if (!sortedSubsequentDatesForPlayer.some(d => new Date(d).getTime() === deletedDate.getTime())) {
-        // Check if there was any match for this player on the deleted date
-        const matchesOnDeletedDate = await Match.find({
-            season_id: affectedSeasonId,
-            date: { $gte: deletedDate, $lt: new Date(deletedDate.getTime() + 24 * 60 * 60 * 1000) },
-            $or: [{ team1: affectedTeamId, participatingPlayersTeam1: affectedPlayerId }, { team2: affectedTeamId, participatingPlayersTeam2: affectedPlayerId }],
-            score: { $ne: null, $regex: /^\d+-\d+$/ }
-        }, null, {session});
-
-        if (matchesOnDeletedDate.length === 0) { // Only recalculate for this date if no matches were played by this player
-            await updatePlayerResultsForDateInternal(affectedPlayerId, affectedTeamId, affectedSeasonId, deletedDate, session);
-        }
-    }
+    
+    // Ensure the deletedDate is processed first if it's not already in subsequentResultsToRecalculate
+    // or if it's the only date (i.e., subsequentResultsToRecalculate is empty after deletion of the last record)
+    const datesToProcess = [...new Set([deletedDate.toISOString().split('T')[0], ...sortedSubsequentDatesForPlayer.map(d => new Date(d).toISOString().split('T')[0])])]
+                            .map(dstr => new Date(dstr))
+                            .sort((a,b) => a - b);
 
 
-    for(const dateStrToRecalc of sortedSubsequentDatesForPlayer){
-        const dateToRecalc = new Date(dateStrToRecalc);
-        dateToRecalc.setUTCHours(0,0,0,0);
+    for(const dateToRecalc of datesToProcess){
         await updatePlayerResultsForDateInternal(affectedPlayerId, affectedTeamId, affectedSeasonId, dateToRecalc, session);
     }
 

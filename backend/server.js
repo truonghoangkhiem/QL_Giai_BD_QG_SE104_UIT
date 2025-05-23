@@ -5,7 +5,7 @@ import cors from "cors";
 import fs from "fs";
 import YAML from "yaml";
 import { connectDB } from "./src/api/config/db.js";
-import authRoutes from "./src/api/v1/routes/auth/authRoutes.js"; // Import routes
+import authRoutes from "./src/api/v1/routes/auth/authRoutes.js";
 import teamRoutes from "./src/api/v1/routes/team/teamRoutes.js";
 import seasonRoutes from "./src/api/v1/routes/season/seasonRoutes.js";
 import matchRoutes from "./src/api/v1/routes/match/matchRoutes.js";
@@ -15,6 +15,7 @@ import team_resultsRoutes from "./src/api/v1/routes/team/team_resultsRoutes.js";
 import rankingRoutes from "./src/api/v1/routes/team/rankingRoutes.js";
 import player_resultsRoutes from "./src/api/v1/routes/player/player_resultsRoutes.js";
 import player_rankingsRoutes from "./src/api/v1/routes/player/player_rankingsRoutes.js";
+import matchLineupRoutes from "./src/api/v1/routes/match/matchLineupRoutes.js"; // Added
 import { errorMiddleware } from "./src/api/v1/middleware/errorMiddleware.js";
 import swaggerUi from "swagger-ui-express";
 
@@ -33,6 +34,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/teams", teamRoutes);
 app.use("/api/seasons", seasonRoutes);
 app.use("/api/matches", matchRoutes);
+app.use("/api/matchlineups", matchLineupRoutes); // Added
 app.use("/api/players", playerRoutes);
 app.use("/api/regulations", regulationRoutes);
 app.use("/api/team_results", team_resultsRoutes);
@@ -58,4 +60,5 @@ connectDB()
   })
   .catch((err) => {
     console.error("❌ Database connection failed:", err);
+    process.exit(1); // Exit if DB connection fails
   });

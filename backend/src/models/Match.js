@@ -7,13 +7,13 @@ const goalDetailSchema = new mongoose.Schema(
       ref: "Player",
       required: true,
     },
-    team_id: {
+    team_id: { // This is the team that is credited with the goal
       type: mongoose.Schema.Types.ObjectId,
       ref: "Team",
       required: true,
     },
     minute: { type: Number, required: true },
-    goalType: { type: String, required: true },
+    goalType: { type: String, required: true }, // e.g., "normal", "penalty", "OG" (Own Goal)
   },
   { _id: false }
 );
@@ -39,25 +39,17 @@ const matchSchema = new mongoose.Schema(
     stadium: { type: String, required: true },
     score: {
       type: String,
-      required: false, // Không bắt buộc phải có score ngay khi tạo
-      default: null, // Giá trị mặc định là null
+      required: false,
+      default: null,
       validate: {
         validator: function (v) {
-          // Cho phép null, rỗng, hoặc định dạng "số-số"
           return v === null || v === '' || /^\d+-\d+$/.test(v);
         },
         message: props => `${props.value} is not a valid score format (null, empty, or number-number)!`
       }
     },
     goalDetails: { type: [goalDetailSchema], default: [] },
-    participatingPlayersTeam1: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Player'
-    }],
-    participatingPlayersTeam2: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Player'
-    }],
+    // participatingPlayersTeam1 and participatingPlayersTeam2 are removed
   },
   { timestamps: true }
 );

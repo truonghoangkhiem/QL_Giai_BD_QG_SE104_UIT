@@ -7,6 +7,7 @@ import TeamResult from "../../../../models/TeamResult.js";
 import Ranking from "../../../../models/Ranking.js";
 import PlayerResult from "../../../../models/PlayerResult.js";
 import PlayerRanking from "../../../../models/PlayerRanking.js";
+import MatchLineup from "../../../../models/MatchLineup.js"; // Added
 
 import {
   createMatchSchema,
@@ -25,17 +26,18 @@ import { updatePlayerResultsForDateInternal } from "../player/player_resultsCont
 import { calculateAndSavePlayerRankings } from "../player/player_rankingsController.js";
 
 
-// GET all matches
+// GET all matches (Adjust population as needed, lineups are fetched separately)
 const getMatches = async (req, res, next) => {
   try {
-    const matches = await Match.find().populate("team1 team2 season_id participatingPlayersTeam1 participatingPlayersTeam2");
+    const matches = await Match.find().populate("team1 team2 season_id");
+    // Lineups will be fetched via /api/matchlineups/match/:match_id
     return successResponse(res, matches, "Fetched all matches successfully");
   } catch (error) {
     return next(error);
   }
 };
 
-// GET match by ID
+// GET match by ID (Adjust population, lineups fetched separately)
 const getMatchesById = async (req, res, next) => {
   try {
     const validationResult = MatchIdSchema.safeParse({ id: req.params.id });
@@ -47,11 +49,12 @@ const getMatchesById = async (req, res, next) => {
     const matchId = new mongoose.Types.ObjectId(validationResult.data.id);
 
     const match = await Match.findById(matchId).populate(
-      "team1 team2 season_id goalDetails.player_id goalDetails.team_id participatingPlayersTeam1 participatingPlayersTeam2"
+      "team1 team2 season_id goalDetails.player_id goalDetails.team_id"
     );
     if (!match) {
       return next(Object.assign(new Error("Match not found"), { status: 404 }));
     }
+    // Frontend will call /api/matchlineups/match/:match_id to get lineups
     return successResponse(res, match, "Match found successfully");
   } catch (error) {
     return next(error);
@@ -91,17 +94,19 @@ const createMatch = async (req, res, next) => {
       regulation_name: "Age Regulation",
     }).session(session);
 
+    // This validation now applies to team registration, not directly to match creation's lineup phase
+    // Lineup creation itself will validate against minPlayersPerTeam from MatchLineup controller
     if (!ageRegulation || !ageRegulation.rules || typeof ageRegulation.rules.minPlayersPerTeam !== 'number') {
-      throw Object.assign(new Error("Age Regulation with minPlayersPerTeam not found or invalid for this season."), {
+      throw Object.assign(new Error("Age Regulation with minPlayersPerTeam not found or invalid for this season. This is needed for team registration rules."), {
         status: 400,
       });
     }
-    const minPlayersRequired = ageRegulation.rules.minPlayersPerTeam;
+    const minPlayersRequiredForTeam = ageRegulation.rules.minPlayersPerTeam;
 
     const nonCompliantTeams = [];
     for (const team of teamsInSeason) {
       const playerCount = await Player.countDocuments({ team_id: team._id }).session(session);
-      if (playerCount < minPlayersRequired) {
+      if (playerCount < minPlayersRequiredForTeam) {
         nonCompliantTeams.push(team.team_name);
       }
     }
@@ -109,7 +114,7 @@ const createMatch = async (req, res, next) => {
     if (nonCompliantTeams.length > 0) {
       throw Object.assign(
         new Error(
-          `Cannot create match schedule. The following teams do not meet the minimum player requirement of ${minPlayersRequired} player(s) as per Age Regulation: ${nonCompliantTeams.join(", ")}.`
+          `Cannot create match schedule. The following teams do not meet the minimum player registration requirement of ${minPlayersRequiredForTeam} player(s) as per Age Regulation: ${nonCompliantTeams.join(", ")}.`
         ),
         { status: 400 }
       );
@@ -188,10 +193,9 @@ const createMatch = async (req, res, next) => {
                     team2: awayTeam._id,
                     date: scheduledMatchDate,
                     stadium: homeTeam.stadium,
-                    score: null,
+                    score: null, // Score is null initially
                     goalDetails: [],
-                    participatingPlayersTeam1: [],
-                    participatingPlayersTeam2: [],
+                    // participatingPlayersTeam1 and participatingPlayersTeam2 are removed
                 });
 
                 dailyMatchCount[dateString] = matchesTodayCount + 1;
@@ -267,20 +271,18 @@ const getMatchesBySeasonId = async (req, res, next) => {
       { $match: { season_id: SeasonId } },
       { $lookup: { from: 'teams', localField: 'team1', foreignField: '_id', as: 'team1_data'} },
       { $lookup: { from: 'teams', localField: 'team2', foreignField: '_id', as: 'team2_data'} },
-      { $lookup: { from: 'players', localField: 'participatingPlayersTeam1', foreignField: '_id', as: 'participatingPlayersTeam1_data'} },
-      { $lookup: { from: 'players', localField: 'participatingPlayersTeam2', foreignField: '_id', as: 'participatingPlayersTeam2_data'} },
+      // Removed lookups for participatingPlayersTeam1_data and participatingPlayersTeam2_data
       { $unwind: { path: '$team1_data', preserveNullAndEmptyArrays: true } },
       { $unwind: { path: '$team2_data', preserveNullAndEmptyArrays: true } },
       {
         $project: {
-          id: '$_id',
+          id: '$_id', // Use id for frontend consistency if needed
           season_id: 1,
           team1: { _id: '$team1_data._id', team_name: { $ifNull: ['$team1_data.team_name', 'N/A'] }, logo: { $ifNull: ['$team1_data.logo', 'https://placehold.co/20x20?text=Team'] }},
           team2: { _id: '$team2_data._id', team_name: { $ifNull: ['$team2_data.team_name', 'N/A'] }, logo: { $ifNull: ['$team2_data.logo', 'https://placehold.co/20x20?text=Team'] }},
           date: 1, stadium: 1, score: 1, goalDetails: 1,
-          participatingPlayersTeam1: '$participatingPlayersTeam1_data',
-          participatingPlayersTeam2: '$participatingPlayersTeam2_data',
-           _id: 0,
+           _id: 0, // Remove default _id if 'id' is preferred
+          // participatingPlayers fields removed
         },
       },
       { $sort: { date: 1 } },
@@ -320,9 +322,7 @@ const updateMatch = async (req, res, next) => {
     const match = await Match.findById(matchId)
         .populate('team1')
         .populate('team2')
-        .populate('participatingPlayersTeam1')
-        .populate('participatingPlayersTeam2')
-        .populate('season_id') // Populate season_id to get season details
+        .populate('season_id')
         .session(session);
 
     if (!match) {
@@ -330,69 +330,29 @@ const updateMatch = async (req, res, next) => {
     }
 
     const updateFields = parseResult.data;
+    const oldScore = match.score; // Store old score for comparison
 
-    // Fetch Age Regulation for minPlayersPerTeam
-    const ageRegulation = await Regulation.findOne({
-        season_id: match.season_id._id, // Use populated season_id
-        regulation_name: "Age Regulation",
-    }).session(session);
+    // Fetch lineups for both teams
+    const lineupTeam1 = await MatchLineup.findOne({ match_id: matchId, team_id: match.team1._id }).populate('players.player_id').session(session);
+    const lineupTeam2 = await MatchLineup.findOne({ match_id: matchId, team_id: match.team2._id }).populate('players.player_id').session(session);
 
-    if (!ageRegulation || !ageRegulation.rules || typeof ageRegulation.rules.minPlayersPerTeam !== 'number') {
-        throw Object.assign(new Error("Age Regulation with minPlayersPerTeam not found or invalid for this season. Cannot update match."), {
-            status: 400,
-        });
-    }
-    const minPlayersPerTeamRequired = ageRegulation.rules.minPlayersPerTeam;
+    const participatingPlayerIdsTeam1 = lineupTeam1 ? lineupTeam1.players.map(p => p.player_id._id.toString()) : [];
+    const participatingPlayerIdsTeam2 = lineupTeam2 ? lineupTeam2.players.map(p => p.player_id._id.toString()) : [];
 
-    // Validate participating players count
-    if (updateFields.participatingPlayersTeam1 && updateFields.participatingPlayersTeam1.length < minPlayersPerTeamRequired) {
-        throw Object.assign(new Error(`Team 1 must have at least ${minPlayersPerTeamRequired} participating players as per Age Regulation.`), { status: 400 });
-    }
-    if (updateFields.participatingPlayersTeam2 && updateFields.participatingPlayersTeam2.length < minPlayersPerTeamRequired) {
-        throw Object.assign(new Error(`Team 2 must have at least ${minPlayersPerTeamRequired} participating players as per Age Regulation.`), { status: 400 });
-    }
 
+    // Validate participating players count from MatchLineup (if lineups exist)
+    // This validation should ideally be in the MatchLineup controller when creating/updating lineup.
+    // For updateMatch, we assume lineups are already set correctly or will be set via MatchLineup API.
+    // However, for goal validation, we need these lineups.
 
     if (updateFields.score === '' || updateFields.score === undefined) {
         updateFields.score = null;
     }
     
-    if (updateFields.participatingPlayersTeam1) {
-        const team1PlayersValid = await Player.find({ 
-            _id: { $in: updateFields.participatingPlayersTeam1 }, 
-            team_id: match.team1._id 
-        }).session(session);
-        if (team1PlayersValid.length !== updateFields.participatingPlayersTeam1.length) {
-            throw Object.assign(new Error("Invalid player ID or player not in team 1 for participatingPlayersTeam1."), { status: 400 });
-        }
-        // Update the match object in memory to reflect new participating players for subsequent goal validation
-        match.participatingPlayersTeam1 = team1PlayersValid.map(p => p._id); // Store ObjectId array
-    }
-    if (updateFields.participatingPlayersTeam2) {
-        const team2PlayersValid = await Player.find({ 
-            _id: { $in: updateFields.participatingPlayersTeam2 }, 
-            team_id: match.team2._id 
-        }).session(session);
-        if (team2PlayersValid.length !== updateFields.participatingPlayersTeam2.length) {
-            throw Object.assign(new Error("Invalid player ID or player not in team 2 for participatingPlayersTeam2."), { status: 400 });
-        }
-        match.participatingPlayersTeam2 = team2PlayersValid.map(p => p._id); // Store ObjectId array
-    }
-    
-    // Re-populate match.participatingPlayersTeam1 and match.participatingPlayersTeam2 with full player objects if they were updated
-    // This is crucial for goal validation logic that accesses player properties like name or team_id from these arrays.
-    // If only IDs were updated, fetch the full player objects again.
-    if (updateFields.participatingPlayersTeam1) {
-        match.participatingPlayersTeam1 = await Player.find({_id: {$in: match.participatingPlayersTeam1}}).session(session);
-    }
-    if (updateFields.participatingPlayersTeam2) {
-        match.participatingPlayersTeam2 = await Player.find({_id: {$in: match.participatingPlayersTeam2}}).session(session);
-    }
-
-
+    // Goal validation using MatchLineup
     if (updateFields.goalDetails && updateFields.score && /^\d+-\d+$/.test(updateFields.score)) {
-      const goalRegulation = await Regulation.findOne({ // Renamed to avoid conflict with ageRegulation
-        season_id: match.season_id._id, // Use populated season_id
+      const goalRegulation = await Regulation.findOne({
+        season_id: match.season_id._id,
         regulation_name: "Goal Rules",
       }).session(session);
       const maxTime = goalRegulation?.rules?.goalTimeLimit?.maxMinute;
@@ -411,43 +371,42 @@ const updateMatch = async (req, res, next) => {
         const actualPlayerTeamId = playerDoc.team_id;
         const beneficiaryTeamIdForGoal = new mongoose.Types.ObjectId(goal.team_id);
 
-        const isPlayerInTeam1Participating = match.participatingPlayersTeam1.some(p => p._id.equals(playerDoc._id));
-        const isPlayerInTeam2Participating = match.participatingPlayersTeam2.some(p => p._id.equals(playerDoc._id));
+        const isPlayerInTeam1Participating = participatingPlayerIdsTeam1.includes(playerDoc._id.toString());
+        const isPlayerInTeam2Participating = participatingPlayerIdsTeam2.includes(playerDoc._id.toString());
+
 
         if (!isPlayerInTeam1Participating && !isPlayerInTeam2Participating) {
-            throw Object.assign(new Error(`Goal scorer ${playerDoc.name} is not in the list of participating players for this match.`), { status: 400 });
+            throw Object.assign(new Error(`Goal scorer ${playerDoc.name} is not in the lineup for this match.`), { status: 400 });
         }
 
-        if (goal.goalType === "OG") { 
-            if (beneficiaryTeamIdForGoal.equals(match.team1._id)) { 
-                if (!actualPlayerTeamId.equals(match.team2._id)) {
+        if (goal.goalType === "OG") {
+            if (beneficiaryTeamIdForGoal.equals(match.team1._id)) { // OG benefits team1
+                if (!actualPlayerTeamId.equals(match.team2._id)) { // Scorer must be from team2
                     throw Object.assign(new Error(`Own Goal for ${match.team1.team_name} invalid: Scorer ${playerDoc.name} must be from ${match.team2.team_name}.`), { status: 400 });
                 }
-                if (!isPlayerInTeam2Participating) { // Check if OG scorer (from team2) is participating in team2
+                if (!isPlayerInTeam2Participating) {
                      throw Object.assign(new Error(`Own Goal scorer ${playerDoc.name} (from ${match.team2.team_name}) is not listed as participating for ${match.team2.team_name}.`), { status: 400 });
                 }
-            } else if (beneficiaryTeamIdForGoal.equals(match.team2._id)) { 
-                if (!actualPlayerTeamId.equals(match.team1._id)) {
+            } else if (beneficiaryTeamIdForGoal.equals(match.team2._id)) { // OG benefits team2
+                if (!actualPlayerTeamId.equals(match.team1._id)) { // Scorer must be from team1
                      throw Object.assign(new Error(`Own Goal for ${match.team2.team_name} invalid: Scorer ${playerDoc.name} must be from ${match.team1.team_name}.`), { status: 400 });
                 }
-                if (!isPlayerInTeam1Participating) { // Check if OG scorer (from team1) is participating in team1
+                if (!isPlayerInTeam1Participating) {
                     throw Object.assign(new Error(`Own Goal scorer ${playerDoc.name} (from ${match.team1.team_name}) is not listed as participating for ${match.team1.team_name}.`), { status: 400 });
                 }
             } else {
                 throw Object.assign(new Error("Invalid beneficiary team for an Own Goal."), { status: 400 });
             }
-        } else { 
+        } else { // Normal goal
             if (!actualPlayerTeamId.equals(beneficiaryTeamIdForGoal)) {
                 throw Object.assign(new Error(`Normal Goal: Scorer ${playerDoc.name} (from team ID ${actualPlayerTeamId}) does not belong to the beneficiary team ID ${beneficiaryTeamIdForGoal}.`), { status: 400 });
             }
-            // Check if scorer is participating in the beneficiary team
             if (beneficiaryTeamIdForGoal.equals(match.team1._id) && !isPlayerInTeam1Participating) {
                  throw Object.assign(new Error(`Goal scorer ${playerDoc.name} (for ${match.team1.team_name}) is not listed as participating for ${match.team1.team_name}.`), { status: 400 });
             } else if (beneficiaryTeamIdForGoal.equals(match.team2._id) && !isPlayerInTeam2Participating) {
                 throw Object.assign(new Error(`Goal scorer ${playerDoc.name} (for ${match.team2.team_name}) is not listed as participating for ${match.team2.team_name}.`), { status: 400 });
             }
         }
-
 
         if (maxTime !== undefined && goal.minute > maxTime) {
           throw Object.assign(new Error("Goal minute exceeds regulation limit"), { status: 400 });
@@ -457,33 +416,23 @@ const updateMatch = async (req, res, next) => {
         }
       }
     } else if (updateFields.score === null || updateFields.score === '') {
-        updateFields.goalDetails = [];
+        updateFields.goalDetails = []; // Clear goal details if score is cleared
     }
-
-    const oldScore = match.score;
-    const hadScore = oldScore !== null && /^\d+-\d+$/.test(oldScore);
-    const oldParticipatingPlayersTeam1 = (match.participatingPlayersTeam1 || []).map(p => p._id.toString());
-    const oldParticipatingPlayersTeam2 = (match.participatingPlayersTeam2 || []).map(p => p._id.toString());
-
 
     await Match.updateOne({ _id: matchId }, { $set: updateFields }, { session });
     
     const updatedMatchFull = await Match.findById(matchId)
-        .populate("team1 team2 season_id goalDetails.player_id goalDetails.team_id participatingPlayersTeam1 participatingPlayersTeam2")
+        .populate("team1 team2 season_id goalDetails.player_id goalDetails.team_id")
         .session(session);
 
     const newScore = updatedMatchFull.score;
-    const hasNewScore = newScore !== null && /^\d+-\d+$/.test(newScore);
-    const newParticipatingPlayersTeam1 = (updatedMatchFull.participatingPlayersTeam1 || []).map(p => p._id.toString());
-    const newParticipatingPlayersTeam2 = (updatedMatchFull.participatingPlayersTeam2 || []).map(p => p._id.toString());
+    const hadScorePreviously = oldScore !== null && /^\d+-\d+$/.test(oldScore);
+    const hasNewScoreNow = newScore !== null && /^\d+-\d+$/.test(newScore);
+    
+    // Check if score changed, or was added/removed
+    const scoreChangedOrAddedOrRemoved = oldScore !== newScore || (hadScorePreviously && !hasNewScoreNow) || (!hadScorePreviously && hasNewScoreNow);
 
-    const scoreChangedOrAddedOrRemoved = oldScore !== newScore || (hadScore && !hasNewScore) || (!hadScore && hasNewScore);
-    const participatingPlayersChanged =
-        JSON.stringify(oldParticipatingPlayersTeam1.sort()) !== JSON.stringify(newParticipatingPlayersTeam1.sort()) ||
-        JSON.stringify(oldParticipatingPlayersTeam2.sort()) !== JSON.stringify(newParticipatingPlayersTeam2.sort());
-
-
-    if (scoreChangedOrAddedOrRemoved || (hasNewScore && participatingPlayersChanged)) {
+    if (scoreChangedOrAddedOrRemoved) { // Only recalculate if score actually changed or was set/cleared
         const seasonId = updatedMatchFull.season_id._id;
         const matchDate = new Date(updatedMatchFull.date);
         matchDate.setUTCHours(0, 0, 0, 0);
@@ -519,26 +468,20 @@ const updateMatch = async (req, res, next) => {
         for (const dateStrToRecalculate of distinctRankingDatesAfter.sort((a,b) => new Date(a) - new Date(b))) {
             await calculateAndSaveTeamRankings(seasonId, new Date(dateStrToRecalculate), session);
         }
-
-        const affectedPlayerIds = new Set([
-            ...oldParticipatingPlayersTeam1, ...oldParticipatingPlayersTeam2,
-            ...newParticipatingPlayersTeam1, ...newParticipatingPlayersTeam2
-        ].map(id => new mongoose.Types.ObjectId(id).toString()));
-
-
-        const playersToUpdate = await Player.find({ _id: { $in: Array.from(affectedPlayerIds).map(id => new mongoose.Types.ObjectId(id)) } }).session(session);
-
+        
+        // Recalculate Player Results
+        const allPlayerIdsInLineups = [...new Set([...participatingPlayerIdsTeam1, ...participatingPlayerIdsTeam2])];
+        const playersToUpdate = await Player.find({ _id: { $in: allPlayerIdsInLineups.map(id => new mongoose.Types.ObjectId(id)) } }).session(session);
 
         for (const player of playersToUpdate) {
             let playerTeamContext = null;
-            if (newParticipatingPlayersTeam1.includes(player._id.toString())) playerTeamContext = updatedMatchFull.team1._id;
-            else if (newParticipatingPlayersTeam2.includes(player._id.toString())) playerTeamContext = updatedMatchFull.team2._id;
+            if (participatingPlayerIdsTeam1.includes(player._id.toString())) playerTeamContext = updatedMatchFull.team1._id;
+            else if (participatingPlayerIdsTeam2.includes(player._id.toString())) playerTeamContext = updatedMatchFull.team2._id;
            
             if (playerTeamContext) {
                  await updatePlayerResultsForDateInternal(player._id, playerTeamContext, seasonId, matchDate, session);
             }
         }
-
         const subsequentPlayerResultDates = await PlayerResult.find({ player_id: { $in: playersToUpdate.map(p => p._id) }, season_id: seasonId, date: { $gt: matchDate }}, null, {session}).distinct('date');
         for (const dateStrToRecalculate of subsequentPlayerResultDates.sort((a,b) => new Date(a) - new Date(b))) {
             for (const player of playersToUpdate) {
@@ -553,7 +496,6 @@ const updateMatch = async (req, res, next) => {
                  }
             }
         }
-
         await calculateAndSavePlayerRankings(seasonId, matchDate, session); 
         const distinctPlayerRankingDatesAfter = await PlayerRanking.find({ season_id: seasonId, date: { $gt: matchDate } }, null, {session}).distinct('date');
         for (const dateStrToRecalculate of distinctPlayerRankingDatesAfter.sort((a,b) => new Date(a) - new Date(b))) {
@@ -585,14 +527,12 @@ const deleteMatch = async (req, res, next) => {
     }
     const matchId = new mongoose.Types.ObjectId(validationResult.data.id);
 
-    const matchToDelete = await Match.findById(matchId)
-        .populate('participatingPlayersTeam1 participatingPlayersTeam2')
-        .session(session);
+    const matchToDelete = await Match.findById(matchId).session(session);
     if (!matchToDelete) {
       throw Object.assign(new Error("Match not found"), { status: 404 });
     }
 
-    const { season_id: seasonIdObj, team1: team1IdObj, team2: team2IdObj, date: matchDateRaw, score: deletedMatchScore, participatingPlayersTeam1, participatingPlayersTeam2 } = matchToDelete;
+    const { season_id: seasonIdObj, team1: team1IdObj, team2: team2IdObj, date: matchDateRaw, score: deletedMatchScore } = matchToDelete;
     const seasonId = seasonIdObj._id; 
     const team1Id = team1IdObj._id;   
     const team2Id = team2IdObj._id;   
@@ -601,6 +541,8 @@ const deleteMatch = async (req, res, next) => {
 
     const wasScoredMatch = deletedMatchScore !== null && /^\d+-\d+$/.test(deletedMatchScore);
 
+    // Delete associated MatchLineups
+    await MatchLineup.deleteMany({ match_id: matchId }, { session });
     await Match.deleteOne({ _id: matchId }, { session });
 
     if (wasScoredMatch) {
@@ -634,30 +576,25 @@ const deleteMatch = async (req, res, next) => {
             await calculateAndSaveTeamRankings(seasonId, new Date(dateStrToRecalculate), session);
         }
 
-        const allPlayersWhoParticipatedInDeletedMatch = [
-            ...(participatingPlayersTeam1 || []).map(p => p._id), 
-            ...(participatingPlayersTeam2 || []).map(p => p._id)
-        ].map(id => new mongoose.Types.ObjectId(id));
+        // For Player Results, we need the players who *were* in the lineup
+        // This part is tricky as lineups were deleted. If an audit log or snapshot existed, it would be used.
+        // For simplicity, we'll assume that player stats recalculation for this date will effectively "undo" this match's contribution.
+        // A more robust solution might involve snapshotting player IDs from lineups before deletion.
+        // For now, we'll fetch all players from the two teams and recalculate their results for the matchDate and subsequent dates.
+
+        const playersOfTeam1 = await Player.find({team_id: team1Id}).session(session);
+        const playersOfTeam2 = await Player.find({team_id: team2Id}).session(session);
+        const allPotentiallyAffectedPlayers = [...playersOfTeam1, ...playersOfTeam2];
 
 
-        if (allPlayersWhoParticipatedInDeletedMatch.length > 0) {
-            const playersDocs = await Player.find({_id: {$in: allPlayersWhoParticipatedInDeletedMatch}}).session(session);
-
-            for (const player of playersDocs) {
-                let playerTeamContext = null;
-                if (participatingPlayersTeam1 && participatingPlayersTeam1.some(pIdObj => pIdObj._id.equals(player._id))) {
-                    playerTeamContext = team1Id;
-                } else if (participatingPlayersTeam2 && participatingPlayersTeam2.some(pIdObj => pIdObj._id.equals(player._id))) {
-                    playerTeamContext = team2Id;
-                }
-                if(playerTeamContext){
-                    await updatePlayerResultsForDateInternal(player._id, playerTeamContext, seasonId, matchDate, session);
-                }
+        if (allPotentiallyAffectedPlayers.length > 0) {
+            for (const player of allPotentiallyAffectedPlayers) {
+                await updatePlayerResultsForDateInternal(player._id, player.team_id, seasonId, matchDate, session);
             }
 
-            const subsequentPlayerResultDates = await PlayerResult.find({ player_id: { $in: allPlayersWhoParticipatedInDeletedMatch }, season_id: seasonId, date: { $gt: matchDate }}, null, {session}).distinct('date');
+            const subsequentPlayerResultDates = await PlayerResult.find({ player_id: { $in: allPotentiallyAffectedPlayers.map(p => p._id) }, season_id: seasonId, date: { $gt: matchDate }}, null, {session}).distinct('date');
             for (const dateStrToRecalculate of subsequentPlayerResultDates.sort((a,b) => new Date(a) - new Date(b))) {
-                for (const player of playersDocs) {
+                for (const player of allPotentiallyAffectedPlayers) {
                      await updatePlayerResultsForDateInternal(player._id, player.team_id, seasonId, new Date(dateStrToRecalculate), session);
                 }
             }
@@ -669,7 +606,7 @@ const deleteMatch = async (req, res, next) => {
             }
         }
     } else {
-         console.log(`Match ${matchId} was not scored. No recalculation needed for player/team stats.`);
+         console.log(`Match ${matchId} was not scored. No recalculation needed for player/team stats upon deletion of an unscored match.`);
     }
 
 
@@ -696,7 +633,7 @@ const getMatchesByTeamId = async (req, res, next) => {
     const TeamId = new mongoose.Types.ObjectId(team_id_param);
     const matches = await Match.find({
       $or: [{ team1: TeamId }, { team2: TeamId }],
-    }).populate("team1 team2 season_id goalDetails.player_id goalDetails.team_id participatingPlayersTeam1 participatingPlayersTeam2");
+    }).populate("team1 team2 season_id goalDetails.player_id goalDetails.team_id");
     if (!matches || matches.length === 0) {
       return successResponse(res, [], "No matches found for this team");
     }
@@ -734,7 +671,7 @@ const getMatchesBySeasonIdAndDate = async (req, res, next) => {
     const matches = await Match.find({
       season_id: SeasonId,
       date: { $gte: startOfDay, $lte: endOfDay },
-    }).populate("team1 team2 season_id goalDetails.player_id goalDetails.team_id participatingPlayersTeam1 participatingPlayersTeam2");
+    }).populate("team1 team2 season_id goalDetails.player_id goalDetails.team_id");
 
     if (!matches || matches.length === 0) {
       return successResponse(res, [], "No matches found for this season and date");
