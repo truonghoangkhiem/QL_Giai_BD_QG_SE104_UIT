@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
-import { CalendarIcon, MapPinIcon, XCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, MapPinIcon, XCircleIcon, ClockIcon, ChevronDownIcon, ChevronUpIcon, UsersIcon } from '@heroicons/react/24/outline';
 
 const Matches = ({
   matches: propMatches,
@@ -27,6 +27,13 @@ const Matches = ({
   const [currentPage, setCurrentPage] = useState(1);
   const matchesPerPage = 7;
 
+  // States for lineup display
+  const [expandedMatchId, setExpandedMatchId] = useState(null);
+  const [matchLineups, setMatchLineups] = useState({ team1: null, team2: null });
+  const [lineupLoading, setLineupLoading] = useState(false);
+  const [lineupError, setLineupError] = useState('');
+
+
   const matchesToDisplayState = propMatches !== undefined ? propMatches : localMatches;
   const setMatchesState = setPropMatches || setLocalMatches;
 
@@ -51,14 +58,12 @@ const Matches = ({
   const formatTimeToDisplay = (dateString) => {
     if (!isValidDateString(dateString)) return 'N/A';
     const date = new Date(dateString);
-    // Kiểm tra xem có thông tin giờ phút hợp lệ không
     if (date.getUTCHours() === 0 && date.getUTCMinutes() === 0 && date.getUTCSeconds() === 0 && date.getUTCMilliseconds() === 0 && !dateString.includes('T') && !dateString.includes(':')) {
-        return "N/A"; // Chỉ có ngày, không có giờ
+        return "N/A"; 
     }
     return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
   };
 
-  // Fetch seasons (only if dropdown is visible)
   useEffect(() => {
     if (hideDropdown) return;
     const fetchSeasons = async () => {
@@ -80,7 +85,6 @@ const Matches = ({
     fetchSeasons();
   }, [hideDropdown, initialSeasonId]);
 
-  // Fetch all teams (only if dropdown is visible, for team filter)
   useEffect(() => {
     if (hideDropdown) return;
     const fetchTeams = async () => {
@@ -94,11 +98,10 @@ const Matches = ({
     fetchTeams();
   }, [hideDropdown]);
 
-  // Filter teams for dropdown when selectedSeasonId changes
   useEffect(() => {
     if (hideDropdown) return;
     if (selectedSeasonId) {
-      const filtered = teams.filter((team) => team.season_id && team.season_id.toString() === selectedSeasonId);
+      const filtered = teams.filter((team) => team.season_id && (team.season_id._id || team.season_id).toString() === selectedSeasonId);
       setFilteredTeamsForDropdown(filtered);
       if (selectedTeamId && !filtered.some(t => t._id === selectedTeamId)) {
         setSelectedTeamId('');
@@ -109,21 +112,17 @@ const Matches = ({
   }, [selectedSeasonId, teams, hideDropdown, selectedTeamId]);
 
 
-  // Fetch matches based on filters or initial props
   useEffect(() => {
     const fetchMatches = async () => {
       const seasonToFetch = selectedSeasonId || initialSeasonId;
-
       if (!seasonToFetch && !selectedTeamId && !selectedDate && !hideDropdown) {
          setMatchesState([]);
          setLoading(false);
          if (!hideDropdown) setError("Vui lòng chọn một mùa giải.");
          return;
       }
-      
       setLoading(true);
       setError('');
-      
       let url;
       if (selectedTeamId && seasonToFetch) {
         url = `http://localhost:5000/api/matches/teams/${selectedTeamId}`; 
@@ -136,24 +135,26 @@ const Matches = ({
         setLoading(false);
         setError("Vui lòng chọn một mùa giải hoặc bộ lọc khác.");
         return;
-      } else {
-        setMatchesState([]);
-        setLoading(false);
-        return;
+      } else { // hideDropdown is true, means it's for home page, needs initialSeasonId
+        if (!initialSeasonId) {
+            setMatchesState([]);
+            setLoading(false);
+            return;
+        }
+        // If hideDropdown is true, it implies it's on a page (like Home) where matches are fetched by a pre-set initialSeasonId.
+        // The URL logic above should correctly use initialSeasonId if selectedSeasonId is not set.
+        // This block might be redundant if the URL logic handles initialSeasonId correctly.
       }
 
       try {
         const response = await axios.get(url);
         let matchesData = response.data.data || [];
-
         if (selectedTeamId && seasonToFetch && url.includes(`/teams/${selectedTeamId}`)) {
             matchesData = matchesData.filter(match => match.season_id && (match.season_id._id || match.season_id).toString() === seasonToFetch);
         }
-        
         setMatchesState(matchesData);
-
         if (type === 'home' && typeof onPastMatchesFetched === 'function') {
-            const now = new Date(); // So sánh với ngày giờ hiện tại
+            const now = new Date();
             const pastAndPlayed = matchesData
               .filter((match) => {
                 const matchDateTime = new Date(match.date);
@@ -163,7 +164,6 @@ const Matches = ({
               .slice(0, limit || 5);
             onPastMatchesFetched(pastAndPlayed);
         }
-
       } catch (err) {
         console.error('Lỗi lấy trận đấu:', err.response?.data || err.message);
         setMatchesState([]); 
@@ -177,25 +177,22 @@ const Matches = ({
       }
     };
     
-    // Chỉ fetch nếu có seasonId (cho cả home và matches page) hoặc không ẩn dropdown và có filter khác
     if ((selectedSeasonId || initialSeasonId) || (!hideDropdown && (selectedDate || selectedTeamId))) {
         fetchMatches();
     } else if (!hideDropdown && seasons.length > 0 && !selectedSeasonId && !initialSeasonId) {
-        //setSelectedSeasonId(seasons[0]._id); // Consider if auto-selection is desired
         setLoading(false);
         setMatchesState([]);
     } else if (!hideDropdown && seasons.length === 0 && !initialSeasonId) {
         setLoading(false);
         setMatchesState([]);
     }
-
-
   }, [selectedSeasonId, selectedDate, selectedTeamId, initialSeasonId, hideDropdown, type, limit, onPastMatchesFetched, setMatchesState, seasons]);
 
 
   const handleEdit = (match) => {
     setEditingMatch(match);
     setShowForm(true);
+    setExpandedMatchId(null); // Close lineup when editing
   };
 
   const handleDelete = async (id) => {
@@ -203,7 +200,7 @@ const Matches = ({
       setError('Vui lòng đăng nhập để xóa trận đấu');
       return;
     }
-    if(window.confirm('Bạn có chắc chắn muốn xóa trận đấu này?')) {
+    if(window.confirm('Bạn có chắc chắn muốn xóa trận đấu này? Điều này sẽ xóa luôn đội hình và ảnh hưởng kết quả, xếp hạng liên quan.')) {
         try {
         await axios.delete(`http://localhost:5000/api/matches/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
@@ -211,21 +208,56 @@ const Matches = ({
          setMatchesState((prevMatches) => prevMatches.filter((match) => (match.id || match._id) !== id));
       } catch (err) {
         console.error("Delete error:", err.response?.data || err.message);
-        setError('Không thể xóa trận đấu. Có thể có dữ liệu liên quan (kết quả, xếp hạng).');
+        setError(err.response?.data?.message || 'Không thể xóa trận đấu.');
       }
     }
   };
+
+  const handleToggleLineups = async (match) => {
+    const matchId = match.id || match._id;
+    if (expandedMatchId === matchId) {
+      setExpandedMatchId(null);
+      setMatchLineups({ team1: null, team2: null });
+    } else {
+      setExpandedMatchId(matchId);
+      setLineupLoading(true);
+      setLineupError('');
+      try {
+        const [lineup1Res, lineup2Res] = await Promise.all([
+          axios.get(`http://localhost:5000/api/matchlineups/match/${matchId}/team/${match.team1._id}`),
+          axios.get(`http://localhost:5000/api/matchlineups/match/${matchId}/team/${match.team2._id}`)
+        ]);
+        setMatchLineups({
+          team1: lineup1Res.data.data,
+          team2: lineup2Res.data.data
+        });
+      } catch (err) {
+        console.error("Lỗi lấy đội hình:", err.response?.data || err.message);
+        if (err.response?.status === 404) {
+            setLineupError('Không tìm thấy đội hình cho trận đấu này.');
+        } else {
+            setLineupError('Không thể tải đội hình.');
+        }
+        setMatchLineups({ team1: null, team2: null });
+      } finally {
+        setLineupLoading(false);
+      }
+    }
+  };
+
 
   const handleDateChange = useCallback((value) => {
     setSelectedDate(value); 
     setCurrentPage(1);
     setError(''); 
+    setExpandedMatchId(null);
   }, []);
 
   const handleTeamChange = useCallback((value) => {
     setSelectedTeamId(value);
     setCurrentPage(1);
     setError('');
+    setExpandedMatchId(null);
   }, []);
 
   const handleSeasonChange = useCallback((value) => {
@@ -234,6 +266,7 @@ const Matches = ({
     setSelectedTeamId('');
     setCurrentPage(1);
     setError('');
+    setExpandedMatchId(null);
   }, []);
 
   const handleResetFilter = useCallback(() => {
@@ -241,18 +274,18 @@ const Matches = ({
     setSelectedTeamId('');
     setCurrentPage(1);
     setError('');
+    setExpandedMatchId(null);
   }, []);
 
-  const now = new Date(); // Ngày giờ hiện tại
+  const now = new Date();
 
   const pastMatches = matchesToDisplayState
-    .filter((match) => new Date(match.date) <= now) // So sánh với ngày giờ hiện tại
+    .filter((match) => new Date(match.date) <= now)
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const upcomingMatches = matchesToDisplayState
-    .filter((match) => new Date(match.date) > now) // So sánh với ngày giờ hiện tại
+    .filter((match) => new Date(match.date) > now)
     .sort((a, b) => new Date(a.date) - new Date(b.date));
-
 
   const indexOfLastMatch = currentPage * matchesPerPage;
   const indexOfFirstMatch = indexOfLastMatch - matchesPerPage;
@@ -264,7 +297,6 @@ const Matches = ({
   const totalPages = activeTab === 'upcoming' 
     ? Math.ceil(upcomingMatches.length / matchesPerPage) || 1
     : Math.ceil(pastMatches.length / matchesPerPage) || 1;
-
 
   const handleNextPage = useCallback(() => {
     if (currentPage < totalPages) {
@@ -280,70 +312,111 @@ const Matches = ({
 
   const renderMatchScore = (score, matchDateStr) => {
     const matchDateTime = new Date(matchDateStr);
-
     if (score !== null && score !== "" && /^\d+-\d+$/.test(score)) {
       return <span className="text-lg font-bold text-gray-700">{score}</span>;
-    } else if (matchDateTime <= now) { // Nếu ngày giờ trận đấu đã qua (hoặc đang diễn ra)
+    } else if (matchDateTime <= now) {
       return <span className="text-sm text-gray-500 italic">Chưa có tỉ số</span>;
-    } else { // Các trận đấu trong tương lai
+    } else {
       return <span className="text-gray-500 font-semibold">VS</span>;
     }
+  };
+
+  const renderLineupSection = (teamLineup, teamName) => {
+    if (!teamLineup || !teamLineup.players || teamLineup.players.length === 0) {
+      return <p className="text-sm text-gray-500 italic">Đội hình của {teamName} chưa được cập nhật.</p>;
+    }
+    return (
+      <div className="w-full md:w-1/2 p-2">
+        <h4 className="text-md font-semibold text-gray-700 mb-1">{teamName}</h4>
+        <ul className="list-disc list-inside pl-2 space-y-0.5 text-sm text-gray-600 max-h-48 overflow-y-auto">
+          {teamLineup.players.map((p) => (
+            <li key={p.player_id?._id || p.player_id}>
+              #{p.jersey_number} - {p.player_id?.name || 'Không rõ tên'} ({p.position})
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
   };
   
   const renderMatchesList = (list) => (
     list.length > 0 ? (
       list.map((match) => (
-        <div key={match.id || match._id} className="grid grid-cols-1 md:grid-cols-12 items-center py-4 border-b border-gray-200 w-full gap-4 px-2 md:px-4">
-          <div className="col-span-12 md:col-span-5 flex items-center gap-3">
-            <img
-              src={match.team1?.logo || defaultLogoUrl}
-              alt={`${match.team1?.team_name || 'Đội 1'} logo`}
-              className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover"
-              onError={handleImageError}
-            />
-            <span className="text-gray-800 font-medium truncate" title={match.team1?.team_name || 'Đội không xác định'}>
-              {match.team1?.team_name || 'Đội không xác định'}
-            </span>
-          </div>
-          <div className="col-span-12 md:col-span-2 flex flex-col items-center text-center my-2 md:my-0">
-            {renderMatchScore(match.score, match.date)}
-             <div className="text-xs md:text-sm text-gray-400">
-                <span>{formatDateToDisplay(match.date)}</span>
-                {formatTimeToDisplay(match.date) !== "N/A" && (
-                    <span className="ml-1 flex items-center"><ClockIcon className="inline h-3 w-3 mr-0.5" />{formatTimeToDisplay(match.date)}</span>
-                )}
+        <div key={match.id || match._id} className="border-b border-gray-200 w-full">
+            <div className="grid grid-cols-1 md:grid-cols-12 items-center py-4 gap-4 px-2 md:px-4">
+                <div className="col-span-12 md:col-span-5 flex items-center gap-3">
+                    <img
+                    src={match.team1?.logo || defaultLogoUrl}
+                    alt={`${match.team1?.team_name || 'Đội 1'} logo`}
+                    className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover"
+                    onError={handleImageError}
+                    />
+                    <span className="text-gray-800 font-medium truncate" title={match.team1?.team_name || 'Đội không xác định'}>
+                    {match.team1?.team_name || 'Đội không xác định'}
+                    </span>
+                </div>
+                <div className="col-span-12 md:col-span-2 flex flex-col items-center text-center my-2 md:my-0">
+                    {renderMatchScore(match.score, match.date)}
+                    <div className="text-xs md:text-sm text-gray-400">
+                        <span>{formatDateToDisplay(match.date)}</span>
+                        {formatTimeToDisplay(match.date) !== "N/A" && (
+                            <span className="ml-1 flex items-center"><ClockIcon className="inline h-3 w-3 mr-0.5" />{formatTimeToDisplay(match.date)}</span>
+                        )}
+                    </div>
+                    <span className="text-xs md:text-sm text-gray-400 truncate max-w-full px-1" title={match.stadium || 'Chưa rõ sân'}>
+                    <MapPinIcon className="inline h-3 w-3 mr-1" />{match.stadium || 'Chưa rõ sân'}
+                    </span>
+                </div>
+                <div className="col-span-12 md:col-span-5 flex items-center justify-start md:justify-end gap-3">
+                    <span className="text-gray-800 font-medium text-left md:text-right truncate order-2 md:order-1" title={match.team2?.team_name || 'Đội không xác định'}>
+                    {match.team2?.team_name || 'Đội không xác định'}
+                    </span>
+                    <img
+                    src={match.team2?.logo || defaultLogoUrl}
+                    alt={`${match.team2?.team_name || 'Đội 2'} logo`}
+                    className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover order-1 md:order-2"
+                    onError={handleImageError}
+                    />
+                </div>
+
+                <div className="col-span-12 flex justify-center items-center gap-2 mt-2">
+                    <button
+                        onClick={() => handleToggleLineups(match)}
+                        className="bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600 transition text-sm flex items-center"
+                    >
+                        <UsersIcon className="h-4 w-4 mr-1" />
+                        Đội Hình {expandedMatchId === (match.id || match._id) ? <ChevronUpIcon className="h-4 w-4 ml-1" /> : <ChevronDownIcon className="h-4 w-4 ml-1" />}
+                    </button>
+                    {token && !hideDropdown && ( 
+                        <>
+                            <button
+                                onClick={() => handleEdit(match)}
+                                className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition text-sm"
+                            >
+                                Sửa
+                            </button>
+                            <button
+                                onClick={() => handleDelete(match.id || match._id)}
+                                className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition text-sm"
+                            >
+                                Xóa
+                            </button>
+                        </>
+                    )}
+                </div>
             </div>
-            <span className="text-xs md:text-sm text-gray-400 truncate max-w-full px-1" title={match.stadium || 'Chưa rõ sân'}>
-              <MapPinIcon className="inline h-3 w-3 mr-1" />{match.stadium || 'Chưa rõ sân'}
-            </span>
-          </div>
-          <div className="col-span-12 md:col-span-5 flex items-center justify-start md:justify-end gap-3">
-            <span className="text-gray-800 font-medium text-left md:text-right truncate order-2 md:order-1" title={match.team2?.team_name || 'Đội không xác định'}>
-              {match.team2?.team_name || 'Đội không xác định'}
-            </span>
-            <img
-              src={match.team2?.logo || defaultLogoUrl}
-              alt={`${match.team2?.team_name || 'Đội 2'} logo`}
-              className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover order-1 md:order-2"
-              onError={handleImageError}
-            />
-          </div>
-          {token && !hideDropdown && ( 
-            <div className="col-span-12 flex justify-center md:justify-end gap-2 mt-2">
-              <button
-                onClick={() => handleEdit(match)}
-                className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition text-sm"
-              >
-                Sửa
-              </button>
-              <button
-                onClick={() => handleDelete(match.id || match._id)}
-                className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition text-sm"
-              >
-                Xóa
-              </button>
-            </div>
-          )}
+            {expandedMatchId === (match.id || match._id) && (
+                <div className="px-2 md:px-6 py-3 bg-gray-50 border-t border-gray-200">
+                    {lineupLoading && <p className="text-sm text-gray-500 text-center">Đang tải đội hình...</p>}
+                    {lineupError && <p className="text-sm text-red-500 text-center">{lineupError}</p>}
+                    {!lineupLoading && !lineupError && (
+                    <div className="flex flex-col md:flex-row justify-between gap-2">
+                        {renderLineupSection(matchLineups.team1, match.team1?.team_name || 'Đội 1')}
+                        {renderLineupSection(matchLineups.team2, match.team2?.team_name || 'Đội 2')}
+                    </div>
+                    )}
+                </div>
+            )}
         </div>
       ))
     ) : (
@@ -368,9 +441,9 @@ const Matches = ({
           <div className="bg-white rounded-xl shadow-md p-4 md:p-6">
             <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4">Lọc trận đấu</h2>
             {(seasons.length === 0 && !loading && !initialSeasonId) && <p className="text-gray-500 text-sm">Không có mùa giải nào để lọc.</p>}
-            { (seasons.length > 0 || initialSeasonId) && ( // Chỉ hiển thị bộ lọc nếu có seasons hoặc đang ở trang home
+            { (seasons.length > 0 || initialSeasonId) && (
               <div className="flex flex-col gap-4">
-                {!initialSeasonId && // Không hiển thị dropdown chọn mùa giải nếu đã có initialSeasonId (trang Home)
+                {!initialSeasonId && 
                 <div>
                   <label htmlFor="season-select" className="block text-sm font-medium text-gray-700 mb-1">Mùa giải</label>
                   <select
@@ -449,11 +522,11 @@ const Matches = ({
           <div className="flex border-b border-gray-200 mb-2 md:mb-6">
             <button
               className={`px-3 md:px-4 py-2 text-base md:text-lg font-semibold ${activeTab === 'upcoming' ? 'border-b-2 border-orange-500 text-orange-500' : 'text-gray-500 hover:text-orange-400'}`}
-              onClick={() => { setActiveTab('upcoming'); setCurrentPage(1); }}
+              onClick={() => { setActiveTab('upcoming'); setCurrentPage(1); setExpandedMatchId(null); }}
             > Sắp diễn ra ({upcomingMatches.length}) </button>
             <button
               className={`px-3 md:px-4 py-2 text-base md:text-lg font-semibold ${activeTab === 'past' ? 'border-b-2 border-orange-500 text-orange-500' : 'text-gray-500 hover:text-orange-400'}`}
-              onClick={() => { setActiveTab('past'); setCurrentPage(1); }}
+              onClick={() => { setActiveTab('past'); setCurrentPage(1); setExpandedMatchId(null);}}
             > Đã diễn ra ({pastMatches.length}) </button>
           </div>
           {(loading && (selectedSeasonId || initialSeasonId)) && ( 

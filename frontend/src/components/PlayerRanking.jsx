@@ -7,97 +7,120 @@ const PlayerRanking = ({ playerResults, teams, selectedDate, token }) => {
     const [error, setError] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const playersPerPage = 10;
-    const defaultAvatarUrl = 'https://via.placeholder.com/50';
+    const defaultAvatarUrl = 'https://ui-avatars.com/api/?name=Unknown&background=random&size=50'; // Generic avatar
 
     const API_URL = 'http://localhost:5000';
 
-    // Lấy thông tin cầu thủ và đội bóng
     useEffect(() => {
         const fetchPlayerDetails = async () => {
             setLoading(true);
             setError('');
 
+            if (!playerResults || playerResults.length === 0) {
+                setPlayers([]);
+                setLoading(false);
+                // setError('Không có kết quả cầu thủ để hiển thị xếp hạng.'); // Optionally set an error or let the table show "no data"
+                return;
+            }
+
             try {
-                const playerDetails = await Promise.all(
-                    playerResults.map(async (result) => {
-                        try {
-                            // Lấy thông tin cầu thủ
-                            const playerResponse = await axios.get(`${API_URL}/api/players/${result.player_id}`, {
-                                headers: { Authorization: `Bearer ${token}` },
-                            });
-                            const player = playerResponse.data.data || {};
+                const playerDetailsPromises = playerResults.map(async (result) => {
+                    try {
+                        const playerResponse = await axios.get(`${API_URL}/api/players/${result.player_id}`, {
+                            headers: { Authorization: `Bearer ${token}` },
+                        });
+                        const player = playerResponse.data.data || {};
+                        const team = teams.find((t) => t._id === result.team_id) || {
+                            team_name: 'Không xác định',
+                            logo: defaultAvatarUrl,
+                        };
 
-                            // Tìm đội bóng từ danh sách teams
-                            const team = teams.find((t) => t._id === result.team_id) || {
-                                team_name: 'Không xác định',
-                                logo: defaultAvatarUrl,
-                            };
+                        return {
+                            _id: result._id, // Or player._id if more appropriate for key
+                            player_id: result.player_id,
+                            team_id: result.team_id,
+                            playerName: player.name || 'Không xác định',
+                            playerNumber: player.number || 'N/A',
+                            teamName: team.team_name,
+                            teamLogo: team.logo || defaultAvatarUrl,
+                            matchesPlayed: Number(result.matchesPlayed || 0), // API sends matchesPlayed
+                            goals: Number(result.totalGoals || 0), // API sends totalGoals
+                            assists: Number(result.assists || 0),
+                            yellowCards: Number(result.yellowCards || 0),
+                            redCards: Number(result.redCards || 0),
+                            date: result.date,
+                        };
+                    } catch (err) {
+                        console.error(`Lỗi khi lấy thông tin cầu thủ ${result.player_id}:`, err.response?.data || err.message);
+                        // Return a partial object or null to indicate failure for this specific player
+                        return {
+                            _id: result._id || result.player_id,
+                            playerName: `Cầu thủ ID ${result.player_id} (Lỗi)`,
+                            playerNumber: 'N/A',
+                            teamName: 'N/A',
+                            teamLogo: defaultAvatarUrl,
+                            matchesPlayed: Number(result.matchesPlayed || 0),
+                            goals: Number(result.totalGoals || 0),
+                            assists: Number(result.assists || 0),
+                            yellowCards: Number(result.yellowCards || 0),
+                            redCards: Number(result.redCards || 0),
+                            error: true, // Flag to indicate an error for this player
+                        };
+                    }
+                });
 
-                            // Kiểm tra và ánh xạ các trường từ playerResult
-                            return {
-                                _id: result._id,
-                                player_id: result.player_id,
-                                team_id: result.team_id,
-                                playerName: player.name || 'Không xác định',
-                                playerNumber: player.number || 'N/A',
-                                teamName: team.team_name,
-                                teamLogo: team.logo || defaultAvatarUrl,
-                                matchesPlayed: Number(result.matchesPlayed || result.matchesplayed || 0),
-                                goals: Number(result.goals || result.totalGoals || 0),
-                                assists: Number(result.assists || 0),
-                                yellowCards: Number(result.yellowCards || 0),
-                                redCards: Number(result.redCards || 0),
-                                date: result.date,
-                            };
-                        } catch (err) {
-                            console.error(`Lỗi khi lấy thông tin cầu thủ ${result.player_id}:`, err);
-                            return null;
-                        }
-                    })
-                );
-
-                // Lọc bỏ các kết quả null và sắp xếp theo số bàn thắng
-                const validPlayers = playerDetails
-                    .filter((p) => p !== null)
-                    .sort((a, b) => b.goals - a.goals);
+                const resolvedPlayerDetails = await Promise.all(playerDetailsPromises);
+                const validPlayers = resolvedPlayerDetails
+                    .filter(p => p && !p.error) // Filter out nulls or errored entries
+                    .sort((a, b) => b.goals - a.goals || b.assists - a.assists || a.playerName.localeCompare(b.playerName) ); // Sort by goals, then assists, then name
 
                 setPlayers(validPlayers);
             } catch (err) {
-                setError('Không thể tải dữ liệu cầu thủ: ' + (err.message || 'Lỗi không xác định'));
+                setError('Không thể tải đầy đủ dữ liệu chi tiết cầu thủ: ' + (err.message || 'Lỗi không xác định'));
+                setPlayers([]); // Clear players on general error
             } finally {
                 setLoading(false);
             }
         };
 
-        if (playerResults.length && teams.length && token) {
+        if (playerResults && teams && token) { // Ensure all dependencies are present
             fetchPlayerDetails();
         } else {
-            setError('Không có dữ liệu cầu thủ hoặc đội bóng.');
+            setPlayers([]); // Clear if dependencies are missing
             setLoading(false);
         }
     }, [playerResults, teams, token]);
 
-    // Lọc theo ngày
-    const filteredPlayers = selectedDate
+
+    const filteredPlayersByDate = selectedDate
         ? players.filter((player) => {
             const playerDate = new Date(player.date);
             const filterDate = new Date(selectedDate);
-            return playerDate <= filterDate;
+            filterDate.setUTCHours(0,0,0,0); // Normalize filter date
+            playerDate.setUTCHours(0,0,0,0); // Normalize player record date
+            return playerDate <= filterDate; // Show stats up to and including the selected date
         })
         : players;
+    
+    // Re-sort after filtering by date, as the latest record for each player up to selectedDate matters.
+    // The actual ranking should come from player_rankings API if it's separate.
+    // This component currently sorts based on playerResults' stats.
+     const rankedAndSortedPlayers = filteredPlayersByDate.sort((a, b) => {
+        if (b.goals !== a.goals) return b.goals - a.goals;
+        if (b.assists !== a.assists) return b.assists - a.assists;
+        return a.playerName.localeCompare(b.playerName);
+    });
 
-    // Phân trang
+
     const indexOfLastPlayer = currentPage * playersPerPage;
     const indexOfFirstPlayer = indexOfLastPlayer - playersPerPage;
-    const paginatedPlayers = filteredPlayers.slice(indexOfFirstPlayer, indexOfLastPlayer);
-    const totalPages = Math.ceil(filteredPlayers.length / playersPerPage);
+    const paginatedPlayers = rankedAndSortedPlayers.slice(indexOfFirstPlayer, indexOfLastPlayer);
+    const totalPages = Math.ceil(rankedAndSortedPlayers.length / playersPerPage) || 1;
 
-    // Xử lý lỗi hình ảnh
     const handleImageError = (e) => {
         e.target.src = defaultAvatarUrl;
     };
 
-    // Điều hướng trang
     const handleNextPage = () => {
         if (currentPage < totalPages) {
             setCurrentPage((prev) => prev + 1);
@@ -120,9 +143,10 @@ const PlayerRanking = ({ playerResults, teams, selectedDate, token }) => {
 
     return (
         <div className="bg-white rounded-2xl shadow-lg p-8">
-            {error || filteredPlayers.length === 0 ? (
+            {error && <p className="text-red-500 text-center p-3 bg-red-100 rounded-md mb-4">{error}</p>}
+            {paginatedPlayers.length === 0 && !error && !loading ? (
                 <p className="text-center text-gray-500 py-4">
-                    {error || 'Không có thông tin xếp hạng cầu thủ.'}
+                    Không có thông tin xếp hạng cầu thủ cho lựa chọn hiện tại.
                 </p>
             ) : (
                 <>
@@ -143,7 +167,7 @@ const PlayerRanking = ({ playerResults, teams, selectedDate, token }) => {
                             <tbody>
                                 {paginatedPlayers.map((player, index) => (
                                     <tr
-                                        key={player._id}
+                                        key={player._id || player.player_id}
                                         className="border-b border-gray-100 hover:bg-blue-50 transition duration-150"
                                     >
                                         <td className="px-6 py-4 text-gray-700">
@@ -151,7 +175,7 @@ const PlayerRanking = ({ playerResults, teams, selectedDate, token }) => {
                                         </td>
                                         <td className="px-6 py-4 flex items-center gap-3">
                                             <img
-                                                src={defaultAvatarUrl}
+                                                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(player.playerName)}&background=random&size=50`}
                                                 alt={`${player.playerName} avatar`}
                                                 className="w-8 h-8 rounded-full object-cover shadow-sm"
                                                 onError={handleImageError}
@@ -171,27 +195,29 @@ const PlayerRanking = ({ playerResults, teams, selectedDate, token }) => {
                             </tbody>
                         </table>
                     </div>
-                    <div className="flex justify-between items-center mt-6">
-                        <button
-                            onClick={handlePrevPage}
-                            disabled={currentPage === 1}
-                            className={`px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium transition duration-200 ${currentPage === 1 ? 'bg-gray-100 cursor-not-allowed' : 'hover:bg-blue-100 hover:shadow-md'
-                                }`}
-                        >
-                            Trang trước
-                        </button>
-                        <span className="text-gray-600 font-medium">
-                            Trang {currentPage} / {totalPages}
-                        </span>
-                        <button
-                            onClick={handleNextPage}
-                            disabled={currentPage >= totalPages}
-                            className={`px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium transition duration-200 ${currentPage >= totalPages ? 'bg-gray-100 cursor-not-allowed' : 'hover:bg-blue-100 hover:shadow-md'
-                                }`}
-                        >
-                            Trang tiếp theo
-                        </button>
-                    </div>
+                    {totalPages > 1 && (
+                        <div className="flex justify-between items-center mt-6">
+                            <button
+                                onClick={handlePrevPage}
+                                disabled={currentPage === 1}
+                                className={`px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium transition duration-200 ${currentPage === 1 ? 'bg-gray-100 cursor-not-allowed' : 'hover:bg-blue-100 hover:shadow-md'
+                                    }`}
+                            >
+                                Trang trước
+                            </button>
+                            <span className="text-gray-600 font-medium">
+                                Trang {currentPage} / {totalPages}
+                            </span>
+                            <button
+                                onClick={handleNextPage}
+                                disabled={currentPage >= totalPages}
+                                className={`px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium transition duration-200 ${currentPage >= totalPages ? 'bg-gray-100 cursor-not-allowed' : 'hover:bg-blue-100 hover:shadow-md'
+                                    }`}
+                            >
+                                Trang tiếp theo
+                            </button>
+                        </div>
+                    )}
                 </>
             )}
         </div>
