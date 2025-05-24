@@ -53,7 +53,7 @@ const PlayerRankingPage = ({ token }) => {
 
                 setError(
                     err.response?.status === 401
-                        ? 'Không có quyền truy cập. Vui lòng đăng nhập lại.'
+                        ? 'Dữ liệu bị giới hạn do chưa đăng nhập. Vui lòng đăng nhập để xem đầy đủ.'
                         : err.response?.status === 404
                             ? 'Không tìm thấy API mùa giải.'
                             : err.response?.status === 500
@@ -65,12 +65,8 @@ const PlayerRankingPage = ({ token }) => {
             }
         };
 
-        if (token) {
-            fetchSeasons();
-        } else {
-            navigate('/login');
-        }
-    }, [token, navigate]);
+        fetchSeasons();
+    }, [token]);
 
     // Lấy danh sách đội bóng và kết quả cầu thủ
     useEffect(() => {
@@ -87,7 +83,7 @@ const PlayerRankingPage = ({ token }) => {
             setTeams([]);
 
             try {
-                const config = { headers: { Authorization: `Bearer ${token}` } };
+                const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
 
                 // Lấy danh sách đội bóng
                 const teamsResponse = await axios.get(`${API_URL}/api/teams/seasons/${selectedSeasonId}`, config);
@@ -111,13 +107,17 @@ const PlayerRankingPage = ({ token }) => {
                     status: err.response?.status,
                     data: err.response?.data,
                 });
-                setError('Không có thông tin xếp hạng cầu thủ.');
+                setError(
+                    err.response?.status === 401
+                        ? 'Dữ liệu bị giới hạn do chưa đăng nhập. Vui lòng đăng nhập để xem đầy đủ.'
+                        : 'Không có thông tin xếp hạng cầu thủ.'
+                );
             } finally {
                 setLoading(false);
             }
         };
 
-        if (selectedSeasonId && token) {
+        if (selectedSeasonId) {
             fetchData();
         }
     }, [selectedSeasonId, selectedDate, token]);

@@ -285,7 +285,7 @@ const Rankings = ({ seasonId, token, seasons, formatDate, setSelectedSeasonId, h
     };
 
     return (
-        <div className="bg-white rounded-2xl shadow-lg p-8">
+        <div className="bg-gradient-to-t from-white to-gray-400 rounded-2xl shadow-lg p-8">
             {/* Bộ lọc - Ẩn nếu hideDropdown là true */}
             {!hideDropdown && (
                 <div className="mb-8 flex flex-col sm:flex-row justify-center gap-4">
@@ -353,17 +353,17 @@ const Rankings = ({ seasonId, token, seasons, formatDate, setSelectedSeasonId, h
                     <div className="overflow-x-auto">
                         <table className="w-full table-auto border-collapse">
                             <thead>
-                                <tr className="bg-gray-400 ">
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Hạng</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Đội</th>
-                                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Trận</th>
-                                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Thắng</th>
-                                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Hòa</th>
-                                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Thua</th>
-                                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Bàn thắng</th>
-                                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Bàn thua</th>
-                                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Hiệu số</th>
-                                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Điểm</th>
+                                <tr className="bg-gray-900 text-white text-3xl font-bold py-3 px-6 rounded-none border-l-8 border-red-600 mb-6 text-center tracking-wide hover:brightness-110 transition-all duration-200 ">
+                                    <th className="px-6 py-4 text-left text-sm font-semibold ">Hạng</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold ">Đội</th>
+                                    <th className="px-6 py-4 text-center text-sm font-semibold ">Trận</th>
+                                    <th className="px-6 py-4 text-center text-sm font-semibold ">Thắng</th>
+                                    <th className="px-6 py-4 text-center text-sm font-semibold ">Hòa</th>
+                                    <th className="px-6 py-4 text-center text-sm font-semibold ">Thua</th>
+                                    <th className="px-6 py-4 text-center text-sm font-semibold ">Bàn thắng</th>
+                                    <th className="px-6 py-4 text-center text-sm font-semibold ">Bàn thua</th>
+                                    <th className="px-6 py-4 text-center text-sm font-semibold ">Hiệu số</th>
+                                    <th className="px-6 py-4 text-center text-sm font-semibold ">Điểm</th>
                                     {rankingCriteria.includes('goalsForAway') && (
                                         <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Bàn thắng sân khách</th>
                                     )}
@@ -371,7 +371,7 @@ const Rankings = ({ seasonId, token, seasons, formatDate, setSelectedSeasonId, h
                             </thead>
                             <tbody>
                                 {paginatedResults.map(team => (
-                                    <tr key={team.rank} className="border-b border-gray-100 hover:bg-blue-50 transition duration-150">
+                                    <tr key={team.rank} className="border-b border-black hover:bg-red-300 transition duration-150">
                                         <td className="px-6 py-4 text-gray-700">{team.rank}</td>
                                         <td className="px-6 py-4 flex items-center gap-3">
                                             <img

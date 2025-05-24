@@ -121,9 +121,9 @@ const Home = () => {
         <div className="min-h-screen bg-gray-100 flex flex-col items-center">
             {/* Div với background hình ảnh */}
             <div
-                className="relative w-full h-[60vh] bg-local bg-center bg-cover bg-no-repeat flex flex-col items-center justify-center"
+                className="relative w-full h-[60vh] bg-local bg-[center_20%] bg-cover bg-no-repeat flex flex-col items-center justify-center brightness-110"
                 style={{
-                    backgroundImage: 'url(https://cdn.bettingexpert.com/assets/football-banner.webp)',
+                    backgroundImage: 'url(https://videos.openai.com/vg-assets/assets%2Ftask_01jw0xhcg1ftfsq2bm76j9twg4%2F1748082751_img_0.webp?st=2025-05-24T08%3A37%3A55Z&se=2025-05-30T09%3A37%3A55Z&sks=b&skt=2025-05-24T08%3A37%3A55Z&ske=2025-05-30T09%3A37%3A55Z&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skoid=3d249c53-07fa-4ba4-9b65-0bf8eb4ea46a&skv=2019-02-02&sv=2018-11-09&sr=b&sp=r&spr=https%2Chttp&sig=el7suwlcLETQX8cw2yo2O79dWhBHJk6WhHvHRdtlyrQ%3D&az=oaivgprodscus)',
                 }}
             >
                 <div className="absolute inset-0 bg-black/40"></div>

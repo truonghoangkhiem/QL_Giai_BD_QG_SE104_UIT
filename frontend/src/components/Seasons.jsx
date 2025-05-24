@@ -40,7 +40,7 @@ const Seasons = ({ setEditingSeason, setShowForm, token }) => {
 
     return (
         <div className="container mx-auto p-6 bg-[#F9FAFB] min-h-screen">
-            <h2 className="text-4xl font-bold mb-6 text-center text-white bg-[#1E3A8A] py-4 px-6 rounded-lg shadow-md">Danh sách mùa giải</h2>
+            <h2 className="bg-gray-900 text-white text-3xl font-bold py-3 px-6 rounded-none border-l-8 border-red-600 mb-6 text-center tracking-wide hover:brightness-110 transition-all duration-200">Danh sách mùa giải</h2>
             <div className="overflow-x-auto bg-white rounded-lg shadow-md">
                 <table className="min-w-full border border-[#E5E7EB]">
                     <thead className="bg-[#F9FAFB]">
