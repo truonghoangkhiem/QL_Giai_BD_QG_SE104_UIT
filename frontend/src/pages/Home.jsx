@@ -1,35 +1,32 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom'; // Đảm bảo Link đã được import
 import Rankings from '../components/Rankings';
 import axios from 'axios';
 
 const Home = () => {
+    // ... (toàn bộ state và useEffects giữ nguyên như trước) ...
     const [upcomingMatches, setUpcomingMatches] = useState([]);
     const [pastMatches, setPastMatches] = useState([]);
-    const [leagueName, setLeagueName] = useState('Bảng xếp hạng'); // Thay đổi tiêu đề mặc định
+    const [leagueName, setLeagueName] = useState('Bảng xếp hạng');
     const [seasonId, setSeasonId] = useState(null);
     const [error, setError] = useState(null);
     const [currentSeasons, setCurrentSeasons] = useState([]);
-    const [pastSeasons, setPastSeasons] = useState([]); // State cho mùa giải đã diễn ra
-    const [upcomingSeasons, setUpcomingSeasons] = useState([]); // State cho mùa giải sắp diễn ra
+    const [pastSeasons, setPastSeasons] = useState([]);
+    const [upcomingSeasons, setUpcomingSeasons] = useState([]);
     const scrollContainerRef = useRef(null);
 
-    // Lấy danh sách các mùa giải
     useEffect(() => {
         const fetchSeasonsData = async () => {
             try {
                 const response = await axios.get('http://localhost:5000/api/seasons');
                 const allSeasons = response.data.data || [];
                 const currentDate = new Date();
-
                 const active = [];
                 const past = [];
                 const upcoming = [];
-
                 allSeasons.forEach((season) => {
                     const startDate = new Date(season.start_date);
                     const endDate = new Date(season.end_date);
-
                     if (startDate <= currentDate && endDate >= currentDate) {
                         active.push(season);
                     } else if (endDate < currentDate) {
@@ -38,32 +35,23 @@ const Home = () => {
                         upcoming.push(season);
                     }
                 });
-
-                // Sắp xếp: Mùa đang diễn ra (mới nhất lên đầu nếu có nhiều),
-                // Mùa đã qua (mới kết thúc nhất lên đầu),
-                // Mùa sắp tới (sắp bắt đầu sớm nhất lên đầu)
                 active.sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
                 past.sort((a, b) => new Date(b.end_date) - new Date(a.end_date));
                 upcoming.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
-
                 setCurrentSeasons(active);
                 setPastSeasons(past);
                 setUpcomingSeasons(upcoming);
-
                 if (active.length > 0) {
                     setSeasonId(active[0]._id);
                     setLeagueName(active[0].season_name || `Bảng xếp hạng ${active[0].season_name}`);
                 } else if (past.length > 0) {
-                    // Nếu không có mùa nào đang diễn ra, thử hiển thị mùa đã kết thúc gần nhất
                     setSeasonId(past[0]._id);
                     setLeagueName(past[0].season_name || `Bảng xếp hạng ${past[0].season_name}`);
                 } else if (upcoming.length > 0) {
-                    // Hoặc mùa sắp diễn ra sớm nhất
                     setSeasonId(upcoming[0]._id);
                     setLeagueName(upcoming[0].season_name || `Bảng xếp hạng ${upcoming[0].season_name}`);
-                }
-                else {
-                    setError('Không tìm thấy mùa giải nào.');
+                } else {
+                    // setError('Không tìm thấy mùa giải nào.'); // Có thể bỏ comment nếu muốn báo lỗi khi không có mùa nào
                     setLeagueName('Bảng xếp hạng');
                 }
             } catch (err) {
@@ -72,11 +60,9 @@ const Home = () => {
                 setLeagueName('Bảng xếp hạng');
             }
         };
-
         fetchSeasonsData();
     }, []);
 
-    // Lấy danh sách các trận đấu (giữ nguyên)
     useEffect(() => {
         const fetchMatches = async () => {
             if (!seasonId) {
@@ -88,13 +74,11 @@ const Home = () => {
                 const response = await axios.get(`http://localhost:5000/api/matches/seasons/${seasonId}`);
                 const matchesData = response.data.data || response.data || [];
                 const currentDate = new Date();
-
                 const upcoming = matchesData
                     .filter((match) => new Date(match.date) > currentDate)
                     .sort((a, b) => new Date(a.date) - new Date(b.date))
                     .slice(0, 5);
                 setUpcomingMatches(upcoming);
-
                 const past = matchesData
                     .filter((match) => new Date(match.date) <= currentDate)
                     .sort((a, b) => new Date(b.date) - new Date(a.date))
@@ -102,39 +86,31 @@ const Home = () => {
                 setPastMatches(past);
             } catch (err) {
                 console.error('Lỗi khi lấy danh sách trận đấu:', err);
-                // setError('Không thể tải danh sách trận đấu. Vui lòng thử lại sau.'); // Có thể bỏ comment nếu muốn hiển thị lỗi này
-                setUpcomingMatches([]); // Xóa trận đấu nếu có lỗi hoặc không có seasonId
+                setUpcomingMatches([]);
                 setPastMatches([]);
             }
         };
-
         fetchMatches();
     }, [seasonId]);
 
-    // Hàm xử lý khi người dùng chọn một mùa giải (giữ nguyên)
     const handleSeasonSelect = (season) => {
         setSeasonId(season._id);
         setLeagueName(season.season_name || `Bảng xếp hạng ${season.season_name}`);
         setUpcomingMatches([]);
         setPastMatches([]);
-        setError(null); // Xóa lỗi khi chọn mùa giải mới
+        setError(null);
     };
 
-    // Hàm định dạng ngày giờ (giữ nguyên)
     const formatMatchDate = (date) => {
         const matchDate = new Date(date);
         if (isNaN(matchDate)) return 'Chưa xác định';
         return `${matchDate.toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
+            day: '2-digit', month: '2-digit', year: 'numeric',
         })} ${matchDate.toLocaleTimeString('en-GB', {
-            hour: '2-digit',
-            minute: '2-digit',
+            hour: '2-digit', minute: '2-digit',
         })}`;
     };
 
-    // Hàm cuộn (giữ nguyên)
     const handleScrollLeft = () => {
         if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollBy({ left: -300, behavior: 'smooth' });
@@ -149,12 +125,11 @@ const Home = () => {
 
     const latestMatch = pastMatches[0];
 
-    // Helper function để render danh sách mùa giải
     const renderSeasonList = (seasons, title) => (
         <div className="mb-6">
             <h4 className="text-lg font-semibold text-gray-700 mb-3">{title}</h4>
             {seasons.length > 0 ? (
-                <div className="max-h-[200px] overflow-y-auto pr-2"> {/* pr-2 để scrollbar không đè nội dung */}
+                <div className="max-h-[200px] overflow-y-auto pr-2">
                     {seasons.map((season) => (
                         <button
                             key={season._id}
@@ -174,9 +149,10 @@ const Home = () => {
         </div>
     );
 
+
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center">
-            {/* Div với background hình ảnh (giữ nguyên) */}
+            {/* Div với background hình ảnh */}
             <div
                 className="relative w-full h-[60vh] bg-local bg-[center_20%] bg-cover bg-no-repeat flex flex-col items-center justify-center brightness-110"
                 style={{
@@ -188,9 +164,18 @@ const Home = () => {
                     <h1 className="text-4xl font-vietnam font-bold text-white drop-shadow-lg tracking-normal antialiased">
                         Chào mừng đến với Football League Management
                     </h1>
-                    <p className="text-xl text-white drop-shadow-md font-light">
+                    <p className="text-xl text-white drop-shadow-md font-light mt-2">
                         Quản lý đội bóng, trận đấu, cầu thủ, mùa giải, và hơn thế nữa!
                     </p>
+                    {/* NÚT ĐĂNG NHẬP ĐƯỢC THÊM Ở ĐÂY */}
+                    <div className="mt-8">
+                        <Link
+                            to="/login" // Thay đổi "/login" thành route đăng nhập của bạn
+                            className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-lg inline-block"
+                        >
+                            Đăng nhập
+                        </Link>
+                    </div>
                 </div>
             </div>
 
@@ -202,6 +187,10 @@ const Home = () => {
                     {renderSeasonList(upcomingSeasons, 'Mùa giải sắp diễn ra')}
                     {renderSeasonList(currentSeasons, 'Mùa giải đang diễn ra')}
                     {renderSeasonList(pastSeasons, 'Mùa giải đã kết thúc')}
+                    {/* Hiển thị lỗi nếu không có mùa giải nào để chọn */}
+                    {upcomingSeasons.length === 0 && currentSeasons.length === 0 && pastSeasons.length === 0 && !error && (
+                        <p className="text-gray-500 text-sm">Không có dữ liệu mùa giải nào.</p>
+                    )}
                 </div>
 
                 {/* Nội dung chính */}
@@ -292,16 +281,11 @@ const Home = () => {
                         </Link>
                         {seasonId && upcomingMatches.length > 0 ? (
                             <div className="relative flex items-center">
-                                {/* Nút điều hướng trái (giữ nguyên) */}
                                 <button
                                     onClick={handleScrollLeft}
-                                    className={`flex-shrink-0 w-6 h-full bg-gray-300 text-gray-700 hover:bg-gray-400 hover:scale-105 rounded-lg shadow-lg transition-all duration-200 z-10 flex items-center justify-center ${upcomingMatches.length <= 1 ? 'hidden' : ''
-                                        }`}
-                                >
+                                    className={`flex-shrink-0 w-6 h-full bg-gray-300 text-gray-700 hover:bg-gray-400 hover:scale-105 rounded-lg shadow-lg transition-all duration-200 z-10 flex items-center justify-center ${upcomingMatches.length <= 1 ? 'hidden' : ''}`} >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" > <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" ></path> </svg>
                                 </button>
-
-                                {/* Container cuộn (giữ nguyên) */}
                                 <div ref={scrollContainerRef} className="flex-1 flex gap-4 pb-4 overflow-x-hidden" style={{ scrollBehavior: 'smooth', scrollbarWidth: 'none', msOverflowStyle: 'none', }} >
                                     {upcomingMatches.slice(0, 5).map((match) => (
                                         <div key={match._id} className="flex-shrink-0 w-72 bg-gray-50 rounded-lg border border-gray-200 border-l-4 shadow-md p-4 transition-all duration-300 hover:shadow-lg hover:border-red-500" >
@@ -322,8 +306,6 @@ const Home = () => {
                                     ))}
                                 </div>
                                 <style> {` .overflow-x-hidden::-webkit-scrollbar { display: none; } `} </style>
-
-                                {/* Nút điều hướng phải (giữ nguyên) */}
                                 <button onClick={handleScrollRight} className={`flex-shrink-0 w-6 h-full bg-gray-300 text-gray-700 hover:bg-gray-400 hover:scale-105 rounded-lg shadow-lg transition-all duration-200 z-10 flex items-center justify-center ${upcomingMatches.length <= 1 ? 'hidden' : ''}`} >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" > <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" ></path> </svg>
                                 </button>
