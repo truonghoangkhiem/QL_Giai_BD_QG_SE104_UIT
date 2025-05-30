@@ -152,7 +152,7 @@ const PlayerRankingPage = ({ token }) => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8 pl-20">
+        <div className="min-h-screen  py-12 px-4 sm:px-6 lg:px-8 pl-20">
             <div className="max-w-7xl mx-auto">
                 {/* Tiêu đề */}
                 <h1 className="bg-gray-900 text-white text-3xl font-bold py-3 px-6 rounded-none border-l-8 border-red-600 mb-6 text-center tracking-wide hover:brightness-110 transition-all duration-200">

@@ -182,7 +182,7 @@ const Players = ({ setEditingPlayer, setShowForm, token, setPlayers, players }) 
     if (loading) return <p className="text-center text-gray-500">Đang tải...</p>;
 
     return (
-        <div className="container mx-auto px-4 py-6 bg-white min-h-screen text-gray-800">
+        <div className="container mx-auto px-4 py-6 bg-gradient-to-t from-white to-gray-400 min-h-screen text-gray-800">
             {success && <p className="text-center text-green-600 mb-4">{success}</p>}
             <h2 className="bg-gray-900 text-white text-3xl font-bold py-3 px-6 rounded-none border-l-8 border-red-600 mb-6 text-center tracking-wide hover:brightness-110 transition-all duration-200">
                 Danh sách cầu thủ

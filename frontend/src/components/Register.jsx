@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { Link, useNavigate } from 'react-router-dom'; // Import Link
+import { Link, useNavigate } from 'react-router-dom';
 
 const Register = () => {
     const [username, setUsername] = useState('');
@@ -22,9 +22,9 @@ const Register = () => {
     return (
         <div className="min-h-screen bg-[#F9FAFB] bg-cover bg-center flex items-center justify-center p-4"
             style={{ backgroundImage: "url('https://treobangron.com.vn/wp-content/uploads/2022/11/background-bong-da-39.jpg')" }}>
-            <div className="bg-white/80 rounded-lg shadow-lg p-8 max-w-md w-full">
-                <h2 className="text-4xl font-heading font-bold mb-6 text-center text-black py-3 rounded-md">Đăng ký</h2>
-                {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+            <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-xl p-8 max-w-md w-full"> {/* Tăng độ mờ và bóng */}
+                <h2 className="text-4xl font-heading font-bold mb-6 text-center text-gray-800 py-3">Đăng ký</h2> {/* Đổi màu text */}
+                {error && <p className="text-red-600 text-center mb-4 bg-red-100 p-3 rounded-md">{error}</p>}
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
                         <input
@@ -32,7 +32,7 @@ const Register = () => {
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             placeholder="Tên người dùng"
-                            className="w-full p-3 border border-[#E5E7EB] rounded-md focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] text-[#111827] placeholder-[#6B7280]"
+                            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-theme-red text-gray-700 placeholder-gray-400 shadow-sm" // Chuẩn hóa input
                             required
                         />
                     </div>
@@ -42,7 +42,7 @@ const Register = () => {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="Email"
-                            className="w-full p-3 border border-[#E5E7EB] rounded-md focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] text-[#111827] placeholder-[#6B7280]"
+                            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-theme-red text-gray-700 placeholder-gray-400 shadow-sm" // Chuẩn hóa input
                             required
                         />
                     </div>
@@ -52,20 +52,20 @@ const Register = () => {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="Mật khẩu"
-                            className="w-full p-3 border border-[#E5E7EB] rounded-md focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] text-[#111827] placeholder-[#6B7280]"
+                            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-theme-red text-gray-700 placeholder-gray-400 shadow-sm" // Chuẩn hóa input
                             required
                         />
                     </div>
                     <button
                         type="submit"
-                        className="w-full bg-[#1E3A8A] text-white p-3 rounded-md hover:bg-opacity-90 transition-colors duration-200"
+                        className="w-full bg-theme-red hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition-colors duration-200 text-lg" // Chuẩn hóa button
                     >
                         Đăng ký
                     </button>
                 </form>
-                <p className="text-center text-gray-700 mt-6">
+                <p className="text-center text-gray-600 mt-8"> {/* Đổi màu text */}
                     Đã có tài khoản?{' '}
-                    <Link to="/login" className="text-[#1E3A8A] hover:underline font-semibold">
+                    <Link to="/login" className="font-semibold text-theme-red hover:text-red-500 hover:underline">
                         Đăng nhập ngay
                     </Link>
                 </p>

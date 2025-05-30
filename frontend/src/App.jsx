@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Navbar from './components/Navbar';
+import Navbar from './components/Navbar'; // Đã có sẵn
 import Login from './components/Login';
 import Register from './components/Register';
 import Home from './pages/Home';
@@ -16,27 +16,35 @@ const App = () => {
   const [token, setToken] = useState(localStorage.getItem('token'));
 
   return (
-    // Áp dụng class Tailwind cho màu nền và chiều cao tối thiểu ở đây
-    // Bạn có thể thay 'bg-sky-100' bằng các gợi ý khác như:
-    // 'bg-gray-100', 'bg-emerald-50', 'bg-stone-100'
-    // hoặc gradient: 'bg-gradient-to-br from-sky-100 to-blue-200'
-    <div className="min-h-screen bg-sky-100"> {/* Đã thêm div này */}
+    // Bỏ class 'group' ở đây nếu không muốn dùng hiệu ứng group-hover cho main content
+    <div className="min-h-screen bg-gradient-to-t from-blue-950 to-gray-800 font-sans">
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Navbar token={token} setToken={setToken} />
-        {/* Thêm class 'ml-16 group-hover:ml-48' để nội dung không bị Navbar che khuất khi Navbar mở rộng */}
-        <div className="transition-all duration-300 ease-in-out ml-16 group-hover:ml-0 lg:group-hover:ml-48">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login setToken={setToken} />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/teams" element={<TeamsPage token={token} />} />
-            <Route path="/matches" element={<MatchesPage token={token} />} />
-            <Route path="/players" element={<PlayersPage token={token} />} />
-            <Route path="/seasons" element={<SeasonsPage token={token} />} />
-            <Route path="/regulations" element={<RegulationsPage token={token} />} />
-            <Route path="/rankings" element={<RankingsPage token={token} />} />
-            <Route path="/player-rankings" element={<PlayerRankingPage token={token} />} />
-          </Routes>
+
+        {/* Vùng nội dung chính */}
+        {/*
+          - ml-16: Margin trái cố định, tương ứng với chiều rộng w-16 của Navbar khi thu gọn.
+          - Navbar khi mở rộng (thành w-48) sẽ đè lên vùng nội dung này.
+          - Bỏ 'group-hover:ml-48' và 'transition-all duration-300 ease-in-out'
+            khỏi div này nếu bạn không muốn nó thay đổi margin nữa.
+            Tuy nhiên, 'transition-all' có thể vẫn hữu ích nếu có các hiệu ứng khác.
+            Ở đây, chúng ta chỉ cần margin cố định.
+        */}
+        <div className="ml-16"> {/* Chỉ giữ lại ml-16 */}
+          <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login setToken={setToken} />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/teams" element={<TeamsPage token={token} />} />
+              <Route path="/matches" element={<MatchesPage token={token} />} />
+              <Route path="/players" element={<PlayersPage token={token} />} />
+              <Route path="/seasons" element={<SeasonsPage token={token} />} />
+              <Route path="/regulations" element={<RegulationsPage token={token} />} />
+              <Route path="/rankings" element={<RankingsPage token={token} />} />
+              <Route path="/player-rankings" element={<PlayerRankingPage token={token} />} />
+            </Routes>
+          </main>
         </div>
       </BrowserRouter>
     </div>

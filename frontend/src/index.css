@@ -2,23 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-    font-family: Arial, sans-serif;
-}
+/* Đã xóa body { font-family: Arial, sans-serif; } từ đây */
+/* Tailwind sẽ áp dụng font-sans từ config cho body */
 
 .swiper-button-next,
 .swiper-button-prev {
     color: #f97316;
-    /* Màu cam giống text-orange-600 */
+    /* Giữ nguyên màu cam cho swiper hoặc đổi sang màu nhấn chính */
 }
 
 .swiper-pagination-bullet-active {
     background-color: #f97316;
+    /* Giữ nguyên hoặc đổi */
 }
 
 .swiper-slide {
     width: 320px !important;
-    /* Phù hợp với w-80 */
     margin-right: 16px;
 }
 
