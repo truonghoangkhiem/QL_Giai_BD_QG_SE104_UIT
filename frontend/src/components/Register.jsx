@@ -21,7 +21,7 @@ const Register = () => {
 
     return (
         <div className="min-h-screen bg-[#F9FAFB] bg-cover bg-center flex items-center justify-center p-4"
-            style={{ backgroundImage: "url('https://treobangron.com.vn/wp-content/uploads/2022/11/background-bong-da-39.jpg')" }}>
+            style={{ backgroundImage: "url('https://media.istockphoto.com/id/504637736/vi/anh/th%E1%BB%A7-m%C3%B4n-b%C3%B3ng-%C4%91%C3%A1-b%E1%BA%AFt-b%C3%B3ng.jpg?s=612x612&w=0&k=20&c=ltnY8LxWCiRp5nwYVpglNiHHe1SWCLS9isyOfQMvD2E=')" }}>
             <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-xl p-8 max-w-md w-full"> {/* Tăng độ mờ và bóng */}
                 <h2 className="text-4xl font-heading font-bold mb-6 text-center text-gray-800 py-3">Đăng ký</h2> {/* Đổi màu text */}
                 {error && <p className="text-red-600 text-center mb-4 bg-red-100 p-3 rounded-md">{error}</p>}

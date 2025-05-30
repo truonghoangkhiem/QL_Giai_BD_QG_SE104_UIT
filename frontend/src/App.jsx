@@ -17,7 +17,10 @@ const App = () => {
 
   return (
     // Bỏ class 'group' ở đây nếu không muốn dùng hiệu ứng group-hover cho main content
-    <div className="min-h-screen bg-gradient-to-t from-blue-950 to-gray-800 font-sans">
+    <div className="min-h-screen bg-gradient-to-t from-gray-800 to-blue-900 font-sans"
+      style={{
+        backgroundImage: 'url(https://i.pinimg.com/736x/bd/77/38/bd7738994332b34885361675350610cf.jpg)',
+      }}>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Navbar token={token} setToken={setToken} />
 

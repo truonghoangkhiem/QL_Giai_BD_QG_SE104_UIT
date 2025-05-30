@@ -14,7 +14,7 @@ const PlayersPage = ({ token }) => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 font-sans">
+        <div className="min-h-screen font-sans">
             <div className="container mx-auto p-4">
                 {success && <p className="text-green-500 text-center mb-4">{success}</p>}
                 {showForm ? (

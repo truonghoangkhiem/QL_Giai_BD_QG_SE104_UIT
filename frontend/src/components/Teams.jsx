@@ -50,7 +50,7 @@ const Teams = ({ setEditingTeam, setShowForm, token, selectedSeason }) => {
 
     return (
         // Changed background to white and removed container/mx-auto as parent handles it. Kept p-4 for internal padding.
-        <div className="bg-white p-4 rounded-lg shadow-md">
+        <div className="bg-white/50 p-4 rounded-lg shadow-md">
             {/* The H2 title has been moved to TeamsPage.jsx */}
 
             {error && teams.length > 0 && <p className="text-red-500 text-center mb-4">{error}</p>} {/* Show error above list if teams are also shown */}

@@ -28,15 +28,13 @@ const TeamsPage = ({ token }) => {
     }, []);
 
     return (
-        <div className="bg-white min-h-screen"> {/* Ensures the entire page has a white base if content is short */}
+        <div className="bg-gradient-to-t from-gray-300 to-gray-600 min-h-screen"> {/* Ensures the entire page has a white base if content is short */}
             <div className="container mx-auto p-4">
                 {showForm ? (
                     <TeamForm
                         editingTeam={editingTeam}
                         setEditingTeam={setEditingTeam}
                         setShowForm={setShowForm}
-                        // setTeams prop might need review based on actual data flow,
-                        // typically a callback like onTeamAddedOrUpdated is used.
                         setTeams={setTeams}
                         token={token}
                         seasons={seasons}
@@ -44,8 +42,16 @@ const TeamsPage = ({ token }) => {
                 ) : (
                     <>
                         {/* Blue Header Section */}
-                        <div className="bg-sky-500 text-black p-6 rounded-lg shadow-md mb-6">
-                            <div className="flex justify-between items-center mb-4">
+                        <div className=" text-red-700 pt-5 px-5 py-20 rounded-lg shadow-md mb-6"
+                            style={{
+                                backgroundImage: 'url(https://i.pinimg.com/736x/e7/b2/85/e7b2855a88a7e8ccd29a30a43333e6af.jpg)',
+                            }}>
+                            {/* Title now comes first */}
+                            <h2 className="text-3xl font-bold text-left tracking-wide mb-4"> {/* Added mb-4 for spacing below title */}
+                                Danh sách đội bóng
+                            </h2>
+                            {/* Row with Button and Filter */}
+                            <div className="flex justify-between items-center"> {/* Removed mb-4 from here */}
                                 {token && (
                                     <button
                                         onClick={() => setShowForm(true)}
@@ -70,9 +76,6 @@ const TeamsPage = ({ token }) => {
                                     </select>
                                 </div>
                             </div>
-                            <h2 className="text-3xl font-bold text-left tracking-wide">
-                                Danh sách đội bóng
-                            </h2>
                         </div>
 
                         {/* Content Section (Teams list will have its own white background) */}
