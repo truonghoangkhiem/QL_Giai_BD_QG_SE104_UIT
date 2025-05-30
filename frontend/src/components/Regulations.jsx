@@ -112,7 +112,7 @@ const Regulations = ({ regulations, setRegulations, setEditingRegulation, setSho
 
     return (
         <div className="max-w-4xl mx-auto p-6">
-            <h1 className="bg-gradient-to-r from-slate-600 to-slate-800 text-4xl font-extrabold text-white py-3 px-6 rounded-lg drop-shadow-md text-center hover:brightness-110 transition-all duration-200 mb-6">
+            <h1 className="bg-gray-900 text-white text-3xl font-bold py-3 px-6 rounded-none border-l-8 border-red-600 mb-6 text-center tracking-wide hover:brightness-110 transition-all duration-200">
                 📜 Danh sách Quy định
             </h1>
             <div className="mb-6 flex justify-center">

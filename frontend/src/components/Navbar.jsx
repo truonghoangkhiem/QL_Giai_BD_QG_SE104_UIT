@@ -27,7 +27,7 @@ const Navbar = ({ token, setToken }) => {
     const isActive = (path) => location.pathname === path;
 
     return (
-        <nav className="fixed left-0 top-0 h-screen bg-gray-900 shadow-md w-16 hover:w-48 transition-all duration-300 ease-in-out group z-50">
+        <nav className="fixed left-0 top-0 h-screen bg-gray-900 shadow-md w-16 hover:w-48  transition-all duration-300 ease-in-out group z-50">
             <div className="flex flex-col h-full">
                 {/* Logo */}
                 <Link to="/" className="text-white p-4 flex items-center gap-3">
@@ -42,8 +42,8 @@ const Navbar = ({ token, setToken }) => {
                     <Link
                         to="/teams"
                         className={`rounded-lg px-3 py-2 text-lg font-semibold flex items-center gap-3 uppercase tracking-tight ${isActive('/teams')
-                                ? 'bg-gray-900 text-white border-l-4 border-red-600'
-                                : 'text-gray-300 hover:bg-red-600 hover:text-white'
+                            ? 'bg-gray-900 text-white border-l-4 border-red-600'
+                            : 'text-gray-300 hover:bg-red-600 hover:text-white'
                             }`}
                     >
                         <BuildingOfficeIcon className="h-6 w-6 flex-shrink-0" />
@@ -52,8 +52,8 @@ const Navbar = ({ token, setToken }) => {
                     <Link
                         to="/matches"
                         className={`rounded-lg px-3 py-2 text-lg font-semibold flex items-center gap-3 uppercase tracking-tight ${isActive('/matches')
-                                ? 'bg-gray-900 text-white border-l-4 border-red-600'
-                                : 'text-gray-300 hover:bg-red-600 hover:text-white'
+                            ? 'bg-gray-900 text-white border-l-4 border-red-600'
+                            : 'text-gray-300 hover:bg-red-600 hover:text-white'
                             }`}
                     >
                         <TrophyIcon className="h-6 w-6 flex-shrink-0" />
@@ -62,8 +62,8 @@ const Navbar = ({ token, setToken }) => {
                     <Link
                         to="/players"
                         className={`rounded-lg px-3 py-2 text-lg font-semibold flex items-center gap-3 uppercase tracking-tight ${isActive('/players')
-                                ? 'bgggreg-gray-900 text-white border-l-4 border-red-600'
-                                : 'text-gray-300 hover:bg-red-600 hover:text-white'
+                            ? 'bgggreg-gray-900 text-white border-l-4 border-red-600'
+                            : 'text-gray-300 hover:bg-red-600 hover:text-white'
                             }`}
                     >
                         <UserIcon className="h-6 w-6 flex-shrink-0" />
@@ -72,8 +72,8 @@ const Navbar = ({ token, setToken }) => {
                     <Link
                         to="/seasons"
                         className={`rounded-lg px-3 py-2 text-lg font-semibold flex items-center gap-3 uppercase tracking-tight ${isActive('/seasons')
-                                ? 'bg-gray-900 text-white border-l-4 border-red-600'
-                                : 'text-gray-300 hover:bg-red-600 hover:text-white'
+                            ? 'bg-gray-900 text-white border-l-4 border-red-600'
+                            : 'text-gray-300 hover:bg-red-600 hover:text-white'
                             }`}
                     >
                         <CalendarIcon className="h-6 w-6 flex-shrink-0" />
@@ -82,8 +82,8 @@ const Navbar = ({ token, setToken }) => {
                     <Link
                         to="/regulations"
                         className={`rounded-lg px-3 py-2 text-lg font-semibold flex items-center gap-3 uppercase tracking-tight ${isActive('/regulations')
-                                ? 'bg-gray-900 text-white border-l-4 border-red-600'
-                                : 'text-gray-300 hover:bg-red-600 hover:text-white'
+                            ? 'bg-gray-900 text-white border-l-4 border-red-600'
+                            : 'text-gray-300 hover:bg-red-600 hover:text-white'
                             }`}
                     >
                         <DocumentTextIcon className="h-6 w-6 flex-shrink-0" />
@@ -92,8 +92,8 @@ const Navbar = ({ token, setToken }) => {
                     <Link
                         to="/rankings"
                         className={`rounded-lg px-3 py-2 text-lg font-semibold flex items-center gap-3 uppercase tracking-tight ${isActive('/rankings')
-                                ? 'bg-gray-900 text-white border-l-4 border-red-600'
-                                : 'text-gray-300 hover:bg-red-600 hover:text-white'
+                            ? 'bg-gray-900 text-white border-l-4 border-red-600'
+                            : 'text-gray-300 hover:bg-red-600 hover:text-white'
                             }`}
                     >
                         <ChartBarIcon className="h-6 w-6 flex-shrink-0" />
@@ -102,8 +102,8 @@ const Navbar = ({ token, setToken }) => {
                     <Link
                         to="/player-rankings"
                         className={`rounded-lg px-3 py-2 text-lg font-semibold flex items-center gap-3 uppercase tracking-tight ${isActive('/player-rankings')
-                                ? 'bg-gray-900 text-white border-l-4 border-red-600'
-                                : 'text-gray-300 hover:bg-red-600 hover:text-white'
+                            ? 'bg-gray-900 text-white border-l-4 border-red-600'
+                            : 'text-gray-300 hover:bg-red-600 hover:text-white'
                             }`}
                     >
                         <StarIcon className="h-6 w-6 flex-shrink-0" />
@@ -117,8 +117,8 @@ const Navbar = ({ token, setToken }) => {
                         <button
                             onClick={handleLogout}
                             className={`rounded-lg px-3 py-2 text-lg font-semibold flex items-center gap-3 w-full uppercase tracking-tight ${isActive('/logout')
-                                    ? 'bg-gray-900 text-white border-l-4 border-red-600'
-                                    : 'text-gray-300 hover:bg-red-600 hover:text-white'
+                                ? 'bg-gray-900 text-white border-l-4 border-red-600'
+                                : 'text-gray-300 hover:bg-red-600 hover:text-white'
                                 }`}
                         >
                             <ArrowLeftOnRectangleIcon className="h-6 w-6 flex-shrink-0" />
@@ -129,8 +129,8 @@ const Navbar = ({ token, setToken }) => {
                             <Link
                                 to="/login"
                                 className={`rounded-lg px-3 py-2 text-lg font-semibold flex items-center gap-3 uppercase tracking-tight ${isActive('/login')
-                                        ? 'bg-gray-900 text-white border-l-4 border-red-600'
-                                        : 'text-gray-300 hover:bg-red-600 hover:text-white'
+                                    ? 'bg-gray-900 text-white border-l-4 border-red-600'
+                                    : 'text-gray-300 hover:bg-red-600 hover:text-white'
                                     }`}
                             >
                                 <ArrowRightOnRectangleIcon className="h-6 w-6 flex-shrink-0" />
@@ -139,8 +139,8 @@ const Navbar = ({ token, setToken }) => {
                             <Link
                                 to="/register"
                                 className={`rounded-lg px-3 py-2 text-lg font-semibold flex items-center gap-3 mt-2 uppercase tracking-tight ${isActive('/register')
-                                        ? 'bg-gray-900 text-white border-l-4 border-red-600'
-                                        : 'text-gray-300 hover:bg-red-600 hover:text-white'
+                                    ? 'bg-gray-900 text-white border-l-4 border-red-600'
+                                    : 'text-gray-300 hover:bg-red-600 hover:text-white'
                                     }`}
                             >
                                 <UserPlusIcon className="h-6 w-6 flex-shrink-0" />

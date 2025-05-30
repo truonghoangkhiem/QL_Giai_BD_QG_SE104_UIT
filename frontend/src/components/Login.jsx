@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // Import Link
 
 const Login = ({ setToken }) => {
     const [email, setEmail] = useState('');
@@ -26,16 +26,16 @@ const Login = ({ setToken }) => {
         <div className="flex min-h-screen"> {/* Container chính sử dụng flex */}
             {/* Cột bên trái - Hình nền */}
             <div
-                className="w-full min-h-screen bg-cover " // Chiếm 50% chiều rộng, full chiều cao, cover và center bg
-                style={{ backgroundImage: "url('https://i.pinimg.com/736x/d9/c4/13/d9c413e6bd4b2d0a83db75a110e60030.jpg')" }}
+                className="w-full min-h-screen bg-cover bg-[center_65%] " // Chiếm 50% chiều rộng, full chiều cao, cover và center bg
+                style={{ backgroundImage: "url('https://imagedelivery.net/c2SKP8Bk0ZKw6UDgeeIlbw/1205ceeb-4aeb-4573-40ce-66172f50dd00/public')" }}
             >
                 {/* Có thể để trống hoặc thêm nội dung/overlay nếu muốn */}
             </div>
 
             {/* Cột bên phải - Form đăng nhập */}
-            <div className="w-1/2 min-h-screen bg-[#F9FAFB] flex items-center justify-center p-4"> {/* Chiếm 50% chiều rộng, full chiều cao, căn giữa nội dung */}
-                <div className="bg-white/80 rounded-lg shadow-lg p-8 max-w-md w-full"> {/* Thẻ chứa form */}
-                    <h2 className="text-4xl font-heading font-bold mb-6 text-center text-black py-3 rounded-md">Đăng nhập</h2>
+            <div className="w-1/2 min-h-screen bg-gray-500 flex items-center justify-center p-4"> {/* Chiếm 50% chiều rộng, full chiều cao, căn giữa nội dung */}
+                <div className="bg-gray-800 rounded-lg shadow-lg p-8 max-w-md w-full"> {/* Thẻ chứa form */}
+                    <h2 className="text-4xl font-heading font-bold mb-6 text-center text-gray-300 py-3 rounded-md">Đăng nhập</h2>
                     {error && <p className="text-red-500 text-center mb-4">{error}</p>}
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
@@ -44,7 +44,7 @@ const Login = ({ setToken }) => {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="Email"
-                                className="w-full p-3 border border-[#E5E7EB] rounded-md focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] text-[#111827] placeholder-[#6B7280]"
+                                className="w-full p-3 border border-[#E5E7EB] rounded-md focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] text-[#111827] placeholder-[#80776b]"
                                 required
                             />
                         </div>
@@ -65,6 +65,12 @@ const Login = ({ setToken }) => {
                             Đăng nhập
                         </button>
                     </form>
+                    <p className="text-center text-gray-400 mt-6">
+                        Chưa có tài khoản?{' '}
+                        <Link to="/register" className="text-orange-400 hover:underline">
+                            Đăng ký ngay
+                        </Link>
+                    </p>
                 </div>
             </div>
         </div>

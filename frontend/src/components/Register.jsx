@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // Import Link
 
 const Register = () => {
     const [username, setUsername] = useState('');
@@ -23,7 +23,7 @@ const Register = () => {
         <div className="min-h-screen bg-[#F9FAFB] bg-cover bg-center flex items-center justify-center p-4"
             style={{ backgroundImage: "url('https://treobangron.com.vn/wp-content/uploads/2022/11/background-bong-da-39.jpg')" }}>
             <div className="bg-white/80 rounded-lg shadow-lg p-8 max-w-md w-full">
-                <h2 className="text-4xl font-heading font-bold mb-6 text-center text-black  py-3 rounded-md">Đăng ký</h2>
+                <h2 className="text-4xl font-heading font-bold mb-6 text-center text-black py-3 rounded-md">Đăng ký</h2>
                 {error && <p className="text-red-500 text-center mb-4">{error}</p>}
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
@@ -63,6 +63,12 @@ const Register = () => {
                         Đăng ký
                     </button>
                 </form>
+                <p className="text-center text-gray-700 mt-6">
+                    Đã có tài khoản?{' '}
+                    <Link to="/login" className="text-[#1E3A8A] hover:underline font-semibold">
+                        Đăng nhập ngay
+                    </Link>
+                </p>
             </div>
         </div>
     );
