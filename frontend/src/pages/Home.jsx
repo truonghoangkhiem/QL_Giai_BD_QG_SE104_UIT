@@ -201,7 +201,7 @@ const Home = () => {
                     <div className="mb-12"> {/* Added mb-12 for spacing consistent with other sections */}
                         <Link to="/matches">
                             <h3 className="bg-gray-900 text-white text-3xl font-bold py-3 px-6 rounded-none border-l-8 border-red-600 mb-6 text-center tracking-wide hover:brightness-110 transition-all duration-200">
-                                Các trận đấu sắp diễn ra ({upcomingMatches.length > 0 ? upcomingMatches.length : 0})
+                                Các trận đấu sắp diễn ra
                             </h3>
                         </Link>
                         {seasonId && upcomingMatches.length > 0 ? (
@@ -256,7 +256,7 @@ const Home = () => {
                     <div className="mb-12">
                         <Link to="/matches">
                             <h3 className="bg-gray-900 text-white text-3xl font-bold py-3 px-6 rounded-none border-l-8 border-red-600 mb-6 text-center tracking-wide hover:brightness-110 transition-all duration-200 ">
-                                Trận đấu đã kết thúc ({pastMatches.length > 0 ? pastMatches.length : 0})
+                                Trận đấu đã kết thúc
                             </h3>
                         </Link>
                         {seasonId && pastMatches.length > 0 && latestMatch ? (
