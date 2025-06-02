@@ -10,6 +10,7 @@ const createPlayerSchema = z.object({
   position: z.string().min(1, "Position is required"),
   isForeigner: z.boolean(),
   number: z.string().min(1, "Number is required"),
+  avatar: z.string().url({ message: "Invalid URL format for avatar" }).optional().or(z.literal('')), // Added avatar field
 });
 
 const updatePlayerSchema = z.object({
@@ -25,6 +26,7 @@ const updatePlayerSchema = z.object({
   position: z.string().optional(),
   isForeigner: z.boolean().optional(),
   number: z.string().optional(),
+  avatar: z.string().url({ message: "Invalid URL format for avatar" }).optional().or(z.literal('')), // Added avatar field
 });
 
 const getPlayerByNameAndNumberSchema = z.object({

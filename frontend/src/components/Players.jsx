@@ -13,6 +13,7 @@ const Players = ({ setEditingPlayer, setShowForm, token, setPlayers, players }) 
     const [success, setSuccess] = useState('');
 
     const API_URL = 'http://localhost:5000';
+    const defaultPlayerAvatar = 'https://th.bing.com/th/id/OIP.2Kb4oZ95hq4HKWdUFHweAAAAAA?w=166&h=180&c=7&pcl=292827&r=0&o=5&dpr=1.3&pid=1.7'; // Placeholder
 
     useEffect(() => {
         const fetchSeasons = async () => {
@@ -183,19 +184,24 @@ const Players = ({ setEditingPlayer, setShowForm, token, setPlayers, players }) 
         });
         return Object.values(grouped);
     };
+    
+    const handleImageError = (e) => {
+        e.target.src = defaultPlayerAvatar;
+        e.target.onerror = null; // Prevent infinite loop if default also fails
+    };
 
-    // Initial loading state with filters visible
+
     const renderFiltersAndTitle = (isInitialLoading = false) => (
         <div className="relative mb-8 shadow-lg rounded-lg overflow-hidden">
             <div
                 className="absolute inset-0 bg-cover bg-center z-0"
                 style={{
                     backgroundImage: `url('https://cdn.pixabay.com/photo/2023/04/01/22/10/goalkeeper-7893178_1280.jpg')`,
-                    filter: 'brightness(1.3)', // tăng độ sáng, có thể thử 1.5, 2,...
+                    filter: 'brightness(1.3)', 
                 }}
             ></div>
-            <div className="absolute inset-0 bg-black opacity-60 z-10"></div> {/* Overlay */}
-            <div className="relative z-20 p-6"> {/* Content layer */}
+            <div className="absolute inset-0 bg-black opacity-60 z-10"></div>
+            <div className="relative z-20 p-6">
                 <h2 className="text-white text-3xl font-bold py-3 text-left mb-6" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.5)' }}>
                     Danh sách cầu thủ
                 </h2>
@@ -257,7 +263,7 @@ const Players = ({ setEditingPlayer, setShowForm, token, setPlayers, players }) 
     return (
         <div className="container mx-auto px-4 py-6 bg-gradient-to-t from-white to-gray-400 min-h-screen text-gray-800">
             {success && <p className="text-center text-green-600 mb-4 p-3 bg-green-100 rounded-md">{success}</p>}
-            {error && !loading && <p className="text-center text-red-500 mb-4 p-3 bg-red-100 rounded-md">{error}</p>} {/* Show error only if not loading */}
+            {error && !loading && <p className="text-center text-red-500 mb-4 p-3 bg-red-100 rounded-md">{error}</p>} 
 
             {renderFiltersAndTitle()}
 
@@ -288,17 +294,16 @@ const Players = ({ setEditingPlayer, setShowForm, token, setPlayers, players }) 
                                     return (
                                         <div
                                             key={player._id}
-                                            className="bg-white hover:shadow-xl transition-shadow duration-300 ease-in-out border border-gray-200 rounded-lg p-5 shadow-sm flex flex-col" // Added flex flex-col
+                                            className="bg-white hover:shadow-xl transition-shadow duration-300 ease-in-out border border-gray-200 rounded-lg p-5 shadow-sm flex flex-col"
                                         >
-                                            <div className="grid grid-cols-2 gap-4 items-start flex-grow"> {/* Added flex-grow */}
+                                            <div className="grid grid-cols-2 gap-4 items-start flex-grow"> 
                                                 <div className="flex flex-col items-center text-center">
                                                     <img
-                                                        src={player.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(player.name)}&background=random&size=96&font-size=0.33&color=fff`}
+                                                        src={player.avatar || defaultPlayerAvatar} // Use player.avatar or default
                                                         alt={`${player.name}`}
                                                         className="w-20 h-20 rounded-full object-cover mb-3 shadow-md"
-                                                        onError={(e) => (e.target.src = 'https://th.bing.com/th/id/OIP.2Kb4oZ95hq4HKWdUFHweAAAAAA?w=166&h=180&c=7&pcl=292827&r=0&o=5&dpr=1.3&pid=1.7')}
+                                                        onError={handleImageError} // Fallback if player.avatar fails
                                                     />
-                                                    {/* Added w-full and truncate for player name */}
                                                     <h3 className="text-md font-semibold text-gray-800 w-full truncate" title={player.name}>
                                                         {player.name}
                                                     </h3>

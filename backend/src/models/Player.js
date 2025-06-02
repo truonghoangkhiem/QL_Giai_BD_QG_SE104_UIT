@@ -13,6 +13,7 @@ const playerSchema = new mongoose.Schema(
     position: { type: String, required: true },
     isForeigner: { type: Boolean, default: false },
     number: { type: String, required: true },
+    avatar: { type: String, default: '' }, // Added avatar field
   },
   { timestamps: true }
 );

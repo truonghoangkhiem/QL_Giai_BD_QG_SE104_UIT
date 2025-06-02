@@ -83,7 +83,7 @@ const createPlayer = async (req, res, next) => {
       Object.assign(new Error(parsed.error.errors[0].message), { status: 400 })
     );
 
-  const { team_id, name, dob, nationality, position, isForeigner, number } =
+  const { team_id, name, dob, nationality, position, isForeigner, number, avatar } = // Added avatar
     parsed.data;
 
   const session = await mongoose.startSession();
@@ -168,6 +168,7 @@ const createPlayer = async (req, res, next) => {
       position,
       isForeigner,
       number,
+      avatar: avatar || '', // Added avatar, default to empty string if not provided
     });
     const savedPlayer = await newPlayer.save({ session });
     
@@ -195,7 +196,7 @@ const updatePlayer = async (req, res, next) => {
       Object.assign(new Error(parsed.error.errors[0].message), { status: 400 })
     );
 
-  const updates = parsed.data;
+  const updates = parsed.data; // updates will now include avatar if provided
   const playerIdParam = req.params.id;
 
   if (!mongoose.Types.ObjectId.isValid(playerIdParam)) {
@@ -331,7 +332,7 @@ const updatePlayer = async (req, res, next) => {
     }
 
 
-    const updatedPlayer = await Player.findByIdAndUpdate(playerId, updates, { new: true, session });
+    const updatedPlayer = await Player.findByIdAndUpdate(playerId, updates, { new: true, session }); // updates now includes avatar
      if (!updatedPlayer) {
         throw Object.assign(new Error("Player not found during update"), { status: 404 });
     }

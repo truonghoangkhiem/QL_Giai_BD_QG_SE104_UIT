@@ -10,13 +10,14 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
         nationality: '',
         dob: '',
         isForeigner: false,
+        avatar: '', // Added avatar
     };
 
     const [formData, setFormData] = useState(initialFormDataState);
     const [seasons, setSeasons] = useState([]);
-    const [selectedSeasonId, setSelectedSeasonId] = useState(''); // Đổi tên để rõ ràng là ID
-    const [teamsInSelectedSeason, setTeamsInSelectedSeason] = useState([]); // Đội trong mùa giải đã chọn
-    const [selectedTeamId, setSelectedTeamId] = useState(''); // ID của đội được chọn
+    const [selectedSeasonId, setSelectedSeasonId] = useState('');
+    const [teamsInSelectedSeason, setTeamsInSelectedSeason] = useState([]);
+    const [selectedTeamId, setSelectedTeamId] = useState('');
 
     const [error, setError] = useState('');
     const [loadingSeasons, setLoadingSeasons] = useState(true);
@@ -28,21 +29,19 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
     const resetFormForNewPlayer = useCallback(() => {
         setSelectedTeamId('');
         setFormData(initialFormDataState);
-        // Giữ lại selectedSeasonId nếu người dùng muốn thêm cầu thủ khác vào cùng mùa giải
     }, [initialFormDataState]);
 
-    // Effect 1: Fetch Seasons khi component mount hoặc khi token thay đổi
     useEffect(() => {
         const fetchSeasons = async () => {
             if (!token) {
                 setError("Token không hợp lệ. Vui lòng đăng nhập lại.");
                 setLoadingSeasons(false);
-                setSeasons([]); // Reset seasons nếu không có token
-                setSelectedSeasonId(''); // Reset selected season
+                setSeasons([]);
+                setSelectedSeasonId('');
                 return;
             }
             setLoadingSeasons(true);
-            setError(''); // Clear lỗi cũ
+            setError('');
             try {
                 const response = await axios.get(`${API_URL}/api/seasons`, {
                     headers: { Authorization: `Bearer ${token}` },
@@ -50,13 +49,11 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
                 const seasonsData = response.data.data || [];
                 setSeasons(seasonsData);
                 if (seasonsData.length > 0) {
-                    // Nếu không phải đang sửa và chưa có mùa giải nào được chọn, chọn mùa đầu tiên
                     if (!editingPlayer && !selectedSeasonId) {
                         setSelectedSeasonId(seasonsData[0]._id);
                     }
-                    // Nếu đang sửa, logic chọn mùa giải sẽ ở useEffect của editingPlayer
                 } else {
-                    setSelectedSeasonId(''); // Không có mùa giải nào
+                    setSelectedSeasonId('');
                 }
             } catch (err) {
                 setError(`Không thể tải danh sách mùa giải: ${err.response?.data?.message || err.message}`);
@@ -67,9 +64,8 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
             }
         };
         fetchSeasons();
-    }, [token]); // Chỉ phụ thuộc vào token, editingPlayer sẽ được xử lý riêng
+    }, [token]);
 
-    // Effect 2: Fetch Teams khi selectedSeasonId thay đổi
     useEffect(() => {
         if (!selectedSeasonId || !token) {
             setTeamsInSelectedSeason([]);
@@ -79,8 +75,8 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
         const fetchTeams = async () => {
             setLoadingTeams(true);
             setError('');
-            setTeamsInSelectedSeason([]); // Reset danh sách đội cũ
-            setSelectedTeamId('');     // Reset đội đã chọn khi mùa giải thay đổi
+            setTeamsInSelectedSeason([]);
+            setSelectedTeamId('');
             try {
                 const response = await axios.get(`${API_URL}/api/teams/seasons/${selectedSeasonId}`, {
                     headers: { Authorization: `Bearer ${token}` },
@@ -96,20 +92,16 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
         fetchTeams();
     }, [selectedSeasonId, token]);
 
-    // Effect 3: Populate Form khi editingPlayer thay đổi hoặc khi selectedTeamId thay đổi (cho thêm mới)
     useEffect(() => {
         if (editingPlayer) {
             const playerTeamId = (typeof editingPlayer.team_id === 'object' ? editingPlayer.team_id._id : editingPlayer.team_id)?.toString();
             const playerTeamSeasonId = (typeof editingPlayer.team_id?.season_id === 'object' ? editingPlayer.team_id.season_id._id : editingPlayer.team_id?.season_id)?.toString();
 
-            // Nếu mùa giải của cầu thủ đang sửa khác với mùa giải đang chọn trên form, cập nhật selectedSeasonId
-            // Điều này sẽ tự động trigger việc load lại danh sách đội cho mùa giải đó (Effect 2)
             if (playerTeamSeasonId && playerTeamSeasonId !== selectedSeasonId) {
                 setSelectedSeasonId(playerTeamSeasonId);
             }
-            // Sau khi selectedSeasonId đúng, selectedTeamId sẽ được set (nếu đội có trong danh sách mới) bởi Effect 2 hoặc ở dưới
             
-            setSelectedTeamId(playerTeamId || ''); // Set selectedTeamId theo cầu thủ đang sửa
+            setSelectedTeamId(playerTeamId || '');
 
             setFormData({
                 team_id: playerTeamId || '',
@@ -119,15 +111,16 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
                 nationality: editingPlayer.nationality || '',
                 dob: editingPlayer.dob ? new Date(editingPlayer.dob).toISOString().split('T')[0] : '',
                 isForeigner: editingPlayer.isForeigner || false,
+                avatar: editingPlayer.avatar || '', // Added avatar
             });
         } else {
-            // Khi thêm mới, team_id trong form sẽ được cập nhật dựa trên selectedTeamId
             setFormData({
                 ...initialFormDataState,
                 team_id: selectedTeamId,
+                avatar: '', // Ensure avatar is reset for new player
             });
         }
-    }, [editingPlayer, selectedTeamId]); // Chỉ phụ thuộc vào editingPlayer và selectedTeamId
+    }, [editingPlayer, selectedTeamId]);
 
 
     const validateForm = () => {
@@ -147,6 +140,9 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
         today.setHours(0,0,0,0); 
         if (isNaN(dob.getTime())) { setError('Ngày sinh không hợp lệ.'); return false;}
         if (dob > today) { setError('Ngày sinh không thể ở tương lai.'); return false; }
+        if (formData.avatar && !/^https?:\/\/.+\..+/.test(formData.avatar)) { // Basic URL validation
+            setError('URL ảnh đại diện không hợp lệ.'); return false;
+        }
         return true;
     };
 
@@ -212,10 +208,9 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
                 }
             } else { 
                 if (formData.isForeigner && (!editingPlayer.isForeigner || formData.team_id !== (typeof editingPlayer.team_id === 'object' ? editingPlayer.team_id._id : editingPlayer.team_id)?.toString()) ) { 
-                    // Kiểm tra nếu isForeigner được set là true HOẶC nếu đang đổi đội và cầu thủ mới là ngoại binh
                     const teamToCheck = formData.team_id;
                     const playersInTargetTeam = formData.team_id === (typeof editingPlayer.team_id === 'object' ? editingPlayer.team_id._id : editingPlayer.team_id)?.toString() 
-                                              ? playersInTeam // Nếu vẫn là đội cũ
+                                              ? playersInTeam 
                                               : (await axios.get(`${API_URL}/api/players/team/${teamToCheck}`, { headers: { Authorization: `Bearer ${token}` } })).data.data || [];
 
                     const foreignPlayersCount = playersInTargetTeam.filter(p => p.isForeigner && p._id !== editingPlayer._id).length;
@@ -274,13 +269,14 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
         
         const config = { headers: { Authorization: `Bearer ${token}` } };
         const playerDataToSend = {
-            team_id: formData.team_id, // Đã được đảm bảo bởi selectedTeamId
+            team_id: formData.team_id,
             name: formData.name,
             number: formData.number.toString(),
             position: formData.position,
             nationality: formData.nationality,
             dob: formData.dob,
             isForeigner: formData.isForeigner,
+            avatar: formData.avatar.trim() === '' ? null : formData.avatar.trim(), // Send null if empty, else trimmed URL
         };
 
         try {
@@ -295,7 +291,6 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
                 );
                 playerOverallSuccessMessage = 'Cập nhật cầu thủ thành công!';
             } else {
-                // 1. Tạo Player
                 const playerResponse = await axios.post(`${API_URL}/api/players`, playerDataToSend, config);
                 savedPlayer = playerResponse.data.data;
 
@@ -304,30 +299,24 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
                 }
                 playerOverallSuccessMessage = `Thêm cầu thủ ${savedPlayer.name} thành công. `;
 
-                // 2. Tạo PlayerResult ban đầu cho cầu thủ mới
                 const playerResultData = {
                     player_id: savedPlayer._id,
-                    season_id: selectedSeasonId, // Sử dụng selectedSeasonId đã được quản lý
+                    season_id: selectedSeasonId,
                     team_id: savedPlayer.team_id,
                 };
-                console.log("Frontend: Creating PlayerResult with payload:", playerResultData);
                 let newPlayerResult;
                 try {
                     const playerResultResponse = await axios.post(`${API_URL}/api/player_results`, playerResultData, config);
                     newPlayerResult = playerResultResponse.data.data;
                     if(!newPlayerResult?._id){
-                        // Lỗi từ backend đã được throw và bắt ở catch ngoài cùng
                         throw new Error(playerResultResponse.data?.message || "Tạo PlayerResult không trả về ID.");
                     }
                     playerOverallSuccessMessage += `Khởi tạo kết quả thành công. `;
                 } catch (prError) {
-                    console.error("Frontend: Failed to create PlayerResult", prError.response?.data || prError.message);
-                    // Cố gắng rollback Player
                     try { 
                         await axios.delete(`${API_URL}/api/players/${savedPlayer._id}`, config); 
                         playerOverallSuccessMessage += `Tạo kết quả thất bại (${prError.response?.data?.message || prError.message}). Cầu thủ đã được hoàn tác.`;
                     } catch (delErr) { 
-                        console.error("Rollback player failed", delErr);
                         playerOverallSuccessMessage += `Tạo kết quả thất bại (${prError.response?.data?.message || prError.message}). Không thể hoàn tác cầu thủ.`;
                     }
                     setError(playerOverallSuccessMessage); 
@@ -335,19 +324,15 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
                     return; 
                 }
 
-                // 3. Tạo PlayerRanking ban đầu cho cầu thủ mới
                 const playerRankingData = {
                     season_id: selectedSeasonId,
                     player_results_id: newPlayerResult._id,
                 };
-                console.log("Frontend: Creating PlayerRanking with payload:", playerRankingData);
                 try {
                     await axios.post(`${API_URL}/api/player_rankings`, playerRankingData, config);
                     playerOverallSuccessMessage += `Khởi tạo xếp hạng thành công.`;
                 } catch (prkError) {
-                    console.error("Frontend: Failed to create PlayerRanking", prkError.response?.data || prkError.message);
                     playerOverallSuccessMessage += `Khởi tạo xếp hạng thất bại: ${prkError.response?.data?.message || prkError.message}. Vui lòng kiểm tra lại.`;
-                    // Không rollback PlayerResult và Player ở đây vì 2 bước trước đã thành công.
                 }
                 
                 setPlayers((prev) => [...prev, savedPlayer]);
@@ -357,12 +342,10 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
             setShowForm(false);
             setEditingPlayer(null);
             
-            if (!editingPlayer) { // Nếu là thêm mới, giữ lại lựa chọn season/team
-                // setSelectedSeasonId(selectedSeasonId); // Đã giữ
-                // setSelectedTeamId(formData.team_id); // Đã giữ
-                setFormData(prev => ({...initialFormDataState, team_id: formData.team_id})); // Reset các trường khác, giữ team_id
+            if (!editingPlayer) { 
+                setFormData(prev => ({...initialFormDataState, team_id: formData.team_id, avatar: ''})); 
             } else {
-                resetFormForNewPlayer(false); // Reset hoàn toàn nếu là sửa
+                resetFormForNewPlayer(false); 
             }
 
         } catch (err) { 
@@ -398,8 +381,6 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
                         value={selectedSeasonId}
                         onChange={(e) => {
                             setSelectedSeasonId(e.target.value);
-                            // Reset đội khi mùa giải thay đổi, useEffect sẽ xử lý việc load teams và cập nhật selectedTeamId
-                            // setSelectedTeamId(''); // Không cần thiết vì useEffect của selectedSeasonId sẽ làm
                         }}
                         className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         disabled={loadingSeasons || !!editingPlayer} 
@@ -520,6 +501,19 @@ const PlayerForm = ({ editingPlayer, setEditingPlayer, setShowForm, setPlayers, 
                         />
                     </div>
                 </div>
+
+                <div>
+                    <label htmlFor="avatar" className="block text-sm font-medium text-gray-700">URL Ảnh đại diện:</label>
+                    <input
+                        id="avatar"
+                        type="url"
+                        value={formData.avatar}
+                        onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
+                        placeholder="https://example.com/player.jpg"
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    />
+                </div>
+
 
                 <div className="flex items-center">
                     <input

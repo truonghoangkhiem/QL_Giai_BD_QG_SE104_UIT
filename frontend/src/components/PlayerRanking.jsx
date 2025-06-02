@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const PlayerRanking = ({ playerResults, teams, selectedDate, token }) => {
-    const [players, setPlayers] = useState([]);
+    const [playersWithDetails, setPlayersWithDetails] = useState([]); // Renamed to avoid confusion
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const playersPerPage = 10;
-    const defaultAvatarUrl = 'https://ui-avatars.com/api/?name=Unknown&background=random&size=50';
+    const defaultAvatarUrl = 'https://th.bing.com/th/id/OIP.2Kb4oZ95hq4HKWdUFHweAAAAAA?w=166&h=180&c=7&pcl=292827&r=0&o=5&dpr=1.3&pid=1.7'; // Default Player Avatar
 
     const API_URL = 'http://localhost:5000';
 
@@ -17,35 +17,43 @@ const PlayerRanking = ({ playerResults, teams, selectedDate, token }) => {
             setError('');
 
             if (!playerResults || playerResults.length === 0) {
-                setPlayers([]);
+                setPlayersWithDetails([]);
                 setLoading(false);
                 return;
             }
 
             try {
                 const playerDetailsPromises = playerResults.map(async (result) => {
-                    let player = { name: `Cầu thủ ${result.player_id.slice(-6)}`, number: 'N/A' };
+                    let playerDetail = { name: `Cầu thủ ${result.player_id.slice(-6)}`, number: 'N/A', avatar: defaultAvatarUrl }; // Default avatar
                     try {
                         const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
                         const playerResponse = await axios.get(`${API_URL}/api/players/${result.player_id}`, config);
-                        player = playerResponse.data.data || player;
+                        if (playerResponse.data && playerResponse.data.data) {
+                             playerDetail = {
+                                ...playerDetail, // Keep defaults if some fields are missing
+                                ...playerResponse.data.data,
+                                avatar: playerResponse.data.data.avatar || defaultAvatarUrl // Use fetched avatar or default
+                            };
+                        }
                     } catch (err) {
                         console.error(`Lỗi khi lấy thông tin cầu thủ ${result.player_id}:`, err.response?.data || err.message);
+                        // Keep default playerDetail if fetch fails
                     }
 
                     const team = teams.find((t) => t._id === result.team_id) || {
                         team_name: 'Không xác định',
-                        logo: defaultAvatarUrl,
+                        logo: 'https://th.bing.com/th/id/OIP.iiLfIvv8F-PfjMrjObypGgHaHa?rs=1&pid=ImgDetMain', // Default team logo
                     };
 
                     return {
                         _id: result._id,
                         player_id: result.player_id,
                         team_id: result.team_id,
-                        playerName: player.name,
-                        playerNumber: player.number,
+                        playerName: playerDetail.name,
+                        playerNumber: playerDetail.number,
+                        playerAvatar: playerDetail.avatar, // Store avatar
                         teamName: team.team_name,
-                        teamLogo: team.logo || defaultAvatarUrl,
+                        teamLogo: team.logo || 'https://th.bing.com/th/id/OIP.iiLfIvv8F-PfjMrjObypGgHaHa?rs=1&pid=ImgDetMain',
                         matchesPlayed: Number(result.matchesPlayed || 0),
                         goals: Number(result.totalGoals || 0),
                         assists: Number(result.assists || 0),
@@ -60,10 +68,10 @@ const PlayerRanking = ({ playerResults, teams, selectedDate, token }) => {
                     .filter((p) => p)
                     .sort((a, b) => b.goals - a.goals || b.assists - a.assists || a.playerName.localeCompare(b.playerName));
 
-                setPlayers(validPlayers);
+                setPlayersWithDetails(validPlayers);
             } catch (err) {
                 setError('Không thể tải dữ liệu xếp hạng cầu thủ: ' + (err.message || 'Lỗi không xác định'));
-                setPlayers([]);
+                setPlayersWithDetails([]);
             } finally {
                 setLoading(false);
             }
@@ -72,20 +80,20 @@ const PlayerRanking = ({ playerResults, teams, selectedDate, token }) => {
         if (playerResults && teams) {
             fetchPlayerDetails();
         } else {
-            setPlayers([]);
+            setPlayersWithDetails([]);
             setLoading(false);
         }
     }, [playerResults, teams, token]);
 
     const filteredPlayersByDate = selectedDate
-        ? players.filter((player) => {
+        ? playersWithDetails.filter((player) => {
             const playerDate = new Date(player.date);
             const filterDate = new Date(selectedDate);
             filterDate.setUTCHours(0, 0, 0, 0);
             playerDate.setUTCHours(0, 0, 0, 0);
             return playerDate <= filterDate;
         })
-        : players;
+        : playersWithDetails;
 
     const rankedAndSortedPlayers = filteredPlayersByDate.sort((a, b) => {
         if (b.goals !== a.goals) return b.goals - a.goals;
@@ -93,9 +101,7 @@ const PlayerRanking = ({ playerResults, teams, selectedDate, token }) => {
         return a.playerName.localeCompare(b.playerName);
     });
 
-    // Tách cầu thủ hạng 1
     const topPlayer = rankedAndSortedPlayers[0];
-    // Loại bỏ cầu thủ hạng 1 khỏi danh sách bảng xếp hạng
     const remainingPlayers = rankedAndSortedPlayers.slice(1);
 
     const indexOfLastPlayer = currentPage * playersPerPage;
@@ -103,8 +109,9 @@ const PlayerRanking = ({ playerResults, teams, selectedDate, token }) => {
     const paginatedPlayers = remainingPlayers.slice(indexOfFirstPlayer, indexOfLastPlayer);
     const totalPages = Math.ceil(remainingPlayers.length / playersPerPage) || 1;
 
-    const handleImageError = (e) => {
-        e.target.src = defaultAvatarUrl;
+    const handleImageError = (e, isTeamLogo = false) => {
+        e.target.src = isTeamLogo ? 'https://th.bing.com/th/id/OIP.iiLfIvv8F-PfjMrjObypGgHaHa?rs=1&pid=ImgDetMain' : defaultAvatarUrl;
+        e.target.onerror = null; 
     };
 
     const handleNextPage = () => {
@@ -131,18 +138,15 @@ const PlayerRanking = ({ playerResults, teams, selectedDate, token }) => {
         <div className="bg-gradient-to-t from-white to-gray-500 rounded-2xl shadow-lg p-8">
             {error && <p className="text-red-500 text-center p-3 bg-red-100 rounded-md mb-4">{error}</p>}
 
-            {/* Card cho cầu thủ hạng 1 */}
             {topPlayer ? (
                 <div className="mb-8 p-6 bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-xl shadow-xl border-2 ">
                     <div className="flex flex-col md:flex-row items-center gap-6">
                         <div className="flex-shrink-0">
                             <img
-                                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-                                    topPlayer.playerName
-                                )}&background=random&size=128`}
+                                src={topPlayer.playerAvatar || defaultAvatarUrl} // Use playerAvatar
                                 alt={`${topPlayer.playerName} avatar`}
                                 className="w-32 h-32 rounded-full object-cover shadow-lg"
-                                onError={handleImageError}
+                                onError={(e) => handleImageError(e)}
                             />
                         </div>
                         <div className="flex-1 text-center md:text-left">
@@ -154,7 +158,7 @@ const PlayerRanking = ({ playerResults, teams, selectedDate, token }) => {
                                     src={topPlayer.teamLogo}
                                     alt={`${topPlayer.teamName} logo`}
                                     className="w-8 h-8 rounded-full object-cover"
-                                    onError={handleImageError}
+                                    onError={(e) => handleImageError(e, true)}
                                 />
                                 <p className="text-lg">{topPlayer.teamName}</p>
                             </div>
@@ -172,7 +176,6 @@ const PlayerRanking = ({ playerResults, teams, selectedDate, token }) => {
                 <p className="text-center text-gray-500 mb-8">Không có cầu thủ nào để hiển thị.</p>
             )}
 
-            {/* Bảng xếp hạng cho các cầu thủ còn lại */}
             {remainingPlayers.length === 0 && !error && !loading ? (
                 <p className="text-center text-gray-500 py-4">Không có thông tin xếp hạng cầu thủ cho lựa chọn hiện tại.</p>
             ) : (
@@ -198,16 +201,14 @@ const PlayerRanking = ({ playerResults, teams, selectedDate, token }) => {
                                         className="border-b border-black hover:bg-red-400 transition duration-150"
                                     >
                                         <td className="px-6 py-4 text-gray-700">
-                                            {(currentPage - 1) * playersPerPage + index + 2} {/* Bắt đầu từ hạng 2 */}
+                                            {(currentPage - 1) * playersPerPage + index + 2}
                                         </td>
                                         <td className="px-6 py-4 flex items-center gap-3">
                                             <img
-                                                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-                                                    player.playerName
-                                                )}&background=random&size=50`}
+                                                src={player.playerAvatar || defaultAvatarUrl} // Use playerAvatar
                                                 alt={`${player.playerName} avatar`}
                                                 className="w-8 h-8 rounded-full object-cover shadow-sm"
-                                                onError={handleImageError}
+                                                onError={(e) => handleImageError(e)}
                                             />
                                             <span className="font-medium text-gray-800">
                                                 {player.playerName} (#{player.playerNumber})
