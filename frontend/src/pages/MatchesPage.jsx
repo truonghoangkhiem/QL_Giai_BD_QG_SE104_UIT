@@ -196,13 +196,6 @@ const MatchesPage = ({ token }) => {
           {token && (
             <div className="flex justify-start space-x-4 mb-6">
               <button
-                onClick={() => setShowForm(true)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition disabled:bg-blue-300 shadow-sm font-medium"
-                disabled={showForm || showAutoCreateForm}
-              >
-                Thêm Trận Đấu
-              </button>
-              <button
                 onClick={() => setShowAutoCreateForm(true)}
                 className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition disabled:bg-green-300 shadow-sm font-medium"
                 disabled={showForm || showAutoCreateForm}
