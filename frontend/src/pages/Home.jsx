@@ -197,6 +197,61 @@ const Home = () => {
                 <div className="w-full md:w-3/4 bg-white/95 rounded-2xl shadow-xl p-8 backdrop-blur-sm animate-slide-up">
                     {error && <p className="text-red-500 bg-red-100 p-3 rounded-md mb-6 text-center">{error}</p>}
 
+                    {/* Section trận đấu sắp diễn ra */}
+                    <div className="mb-12"> {/* Added mb-12 for spacing consistent with other sections */}
+                        <Link to="/matches">
+                            <h3 className="bg-gray-900 text-white text-3xl font-bold py-3 px-6 rounded-none border-l-8 border-red-600 mb-6 text-center tracking-wide hover:brightness-110 transition-all duration-200">
+                                Các trận đấu sắp diễn ra ({upcomingMatches.length > 0 ? upcomingMatches.length : 0})
+                            </h3>
+                        </Link>
+                        {seasonId && upcomingMatches.length > 0 ? (
+                            <div className="relative flex items-center">
+                                <button
+                                    onClick={handleScrollLeft}
+                                    className={`flex-shrink-0 w-6 h-full bg-gray-300 text-gray-700 hover:bg-gray-400 hover:scale-105 rounded-lg shadow-lg transition-all duration-200 z-10 flex items-center justify-center ${upcomingMatches.length <= 1 ? 'hidden' : ''}`} >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" > <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" ></path> </svg>
+                                </button>
+                                <div ref={scrollContainerRef} className="flex-1 flex gap-4 pb-4 overflow-x-hidden" style={{ scrollBehavior: 'smooth', scrollbarWidth: 'none', msOverflowStyle: 'none', }} >
+                                    {upcomingMatches.slice(0, 5).map((match) => (
+                                        <div key={match._id} className="flex-shrink-0 w-72 bg-gray-50 rounded-lg border border-gray-200 border-l-4 shadow-md p-4 transition-all duration-300 hover:shadow-lg hover:border-red-500" >
+                                            <div className="text-center mb-3"> <span className="text-sm text-gray-800 font-semibold"> {formatMatchDate(match.date)} </span> </div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-2 w-1/3">
+                                                    <img src={match.team1?.logo || 'https://th.bing.com/th/id/OIP.iiLfIvv8F-PfjMrjObypGgHaHa?rs=1&pid=ImgDetMain'} alt={`${match.team1?.team_name || 'Team 1'} logo`} className="w-10 h-10 object-contain rounded-full border border-gray-200 shadow-sm" onError={(e) => (e.target.src = 'https://th.bing.com/th/id/OIP.iiLfIvv8F-PfjMrjObypGgHaHa?rs=1&pid=ImgDetMain')} />
+                                                    <span className="text-sm font-semibold text-gray-800 text-left flex-1"> {match.team1?.team_name || 'Team 1'} </span>
+                                                </div>
+                                                <div className="text-xl font-bold text-gray-700 bg-gray-100 px-4 py-1 rounded-md"> VS </div>
+                                                <div className="flex items-center gap-2 w-1/3 justify-end">
+                                                    <span className="text-sm font-semibold text-gray-800 text-right flex-1"> {match.team2?.team_name || 'Team 2'} </span>
+                                                    <img src={match.team2?.logo || 'https://th.bing.com/th/id/OIP.iiLfIvv8F-PfjMrjObypGgHaHa?rs=1&pid=ImgDetMain'} alt={`${match.team2?.team_name || 'Team 2'} logo`} className="w-10 h-10 object-contain rounded-full border border-gray-200 shadow-sm" onError={(e) => (e.target.src = 'https://th.bing.com/th/id/OIP.iiLfIvv8F-PfjMrjObypGgHaHa?rs=1&pid=ImgDetMain')} />
+                                                </div>
+                                            </div>
+                                            <div className="text-center"> <span className="text-sm text-gray-600 font-semibold"> 🏟 {match.stadium || 'Không xác định'} </span> </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <style> {` .overflow-x-hidden::-webkit-scrollbar { display: none; } `} </style>
+                                <button onClick={handleScrollRight} className={`flex-shrink-0 w-6 h-full bg-gray-300 text-gray-700 hover:bg-gray-400 hover:scale-105 rounded-lg shadow-lg transition-all duration-200 z-10 flex items-center justify-center ${upcomingMatches.length <= 1 ? 'hidden' : ''}`} >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" > <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" ></path> </svg>
+                                </button>
+                            </div>
+                        ) : (
+                            seasonId && <p className="text-center text-gray-500 text-lg">Không có trận đấu nào sắp diễn ra trong mùa giải này.</p>
+                        )}
+                        {!seasonId && !error && <p className="text-center text-gray-500 text-lg">Vui lòng chọn một mùa giải để xem trận đấu.</p>}
+
+                        {seasonId && (
+                            <div className="mt-8 text-center">
+                                <Link
+                                    to="/matches"
+                                    className="inline-block bg-red-600 text-white uppercase font-bold py-2 px-6 rounded-full hover:bg-red-700 transition-all duration-200"
+                                >
+                                    Xem tất cả trận đấu
+                                </Link>
+                            </div>
+                        )}
+                    </div>
+
                     {/* Section trận đấu đã kết thúc gần nhất */}
                     <div className="mb-12">
                         <Link to="/matches">
@@ -251,7 +306,7 @@ const Home = () => {
                     </div>
 
                     {/* Section bảng xếp hạng */}
-                    <div className="mb-12">
+                    <div className="mb-12"> {/* Ensured mb-12 for consistent spacing */}
                         <h3 className="bg-gray-900 text-white text-3xl font-bold py-3 px-6 rounded-none border-l-8 border-red-600 mb-6 text-center tracking-wide hover:brightness-110 transition-all duration-200">
                             {leagueName}
                         </h3>
@@ -272,60 +327,6 @@ const Home = () => {
                         )}
                     </div>
 
-                    {/* Section trận đấu sắp diễn ra */}
-                    <div>
-                        <Link to="/matches">
-                            <h3 className="bg-gray-900 text-white text-3xl font-bold py-3 px-6 rounded-none border-l-8 border-red-600 mb-6 text-center tracking-wide hover:brightness-110 transition-all duration-200">
-                                Các trận đấu sắp diễn ra ({upcomingMatches.length > 0 ? upcomingMatches.length : 0})
-                            </h3>
-                        </Link>
-                        {seasonId && upcomingMatches.length > 0 ? (
-                            <div className="relative flex items-center">
-                                <button
-                                    onClick={handleScrollLeft}
-                                    className={`flex-shrink-0 w-6 h-full bg-gray-300 text-gray-700 hover:bg-gray-400 hover:scale-105 rounded-lg shadow-lg transition-all duration-200 z-10 flex items-center justify-center ${upcomingMatches.length <= 1 ? 'hidden' : ''}`} >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" > <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" ></path> </svg>
-                                </button>
-                                <div ref={scrollContainerRef} className="flex-1 flex gap-4 pb-4 overflow-x-hidden" style={{ scrollBehavior: 'smooth', scrollbarWidth: 'none', msOverflowStyle: 'none', }} >
-                                    {upcomingMatches.slice(0, 5).map((match) => (
-                                        <div key={match._id} className="flex-shrink-0 w-72 bg-gray-50 rounded-lg border border-gray-200 border-l-4 shadow-md p-4 transition-all duration-300 hover:shadow-lg hover:border-red-500" >
-                                            <div className="text-center mb-3"> <span className="text-sm text-gray-800 font-semibold"> {formatMatchDate(match.date)} </span> </div>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center gap-2 w-1/3">
-                                                    <img src={match.team1?.logo || 'https://th.bing.com/th/id/OIP.iiLfIvv8F-PfjMrjObypGgHaHa?rs=1&pid=ImgDetMain'} alt={`${match.team1?.team_name || 'Team 1'} logo`} className="w-10 h-10 object-contain rounded-full border border-gray-200 shadow-sm" onError={(e) => (e.target.src = 'https://th.bing.com/th/id/OIP.iiLfIvv8F-PfjMrjObypGgHaHa?rs=1&pid=ImgDetMain')} />
-                                                    <span className="text-sm font-semibold text-gray-800 text-left flex-1"> {match.team1?.team_name || 'Team 1'} </span>
-                                                </div>
-                                                <div className="text-xl font-bold text-gray-700 bg-gray-100 px-4 py-1 rounded-md"> VS </div>
-                                                <div className="flex items-center gap-2 w-1/3 justify-end">
-                                                    <span className="text-sm font-semibold text-gray-800 text-right flex-1"> {match.team2?.team_name || 'Team 2'} </span>
-                                                    <img src={match.team2?.logo || 'https://th.bing.com/th/id/OIP.iiLfIvv8F-PfjMrjObypGgHaHa?rs=1&pid=ImgDetMain'} alt={`${match.team2?.team_name || 'Team 2'} logo`} className="w-10 h-10 object-contain rounded-full border border-gray-200 shadow-sm" onError={(e) => (e.target.src = 'https://th.bing.com/th/id/OIP.iiLfIvv8F-PfjMrjObypGgHaHa?rs=1&pid=ImgDetMain')} />
-                                                </div>
-                                            </div>
-                                            <div className="text-center"> <span className="text-sm text-gray-600 font-semibold"> 🏟 {match.stadium || 'Không xác định'} </span> </div>
-                                        </div>
-                                    ))}
-                                </div>
-                                <style> {` .overflow-x-hidden::-webkit-scrollbar { display: none; } `} </style>
-                                <button onClick={handleScrollRight} className={`flex-shrink-0 w-6 h-full bg-gray-300 text-gray-700 hover:bg-gray-400 hover:scale-105 rounded-lg shadow-lg transition-all duration-200 z-10 flex items-center justify-center ${upcomingMatches.length <= 1 ? 'hidden' : ''}`} >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" > <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" ></path> </svg>
-                                </button>
-                            </div>
-                        ) : (
-                            seasonId && <p className="text-center text-gray-500 text-lg">Không có trận đấu nào sắp diễn ra trong mùa giải này.</p>
-                        )}
-                        {!seasonId && !error && <p className="text-center text-gray-500 text-lg">Vui lòng chọn một mùa giải để xem trận đấu.</p>}
-
-                        {seasonId && (
-                            <div className="mt-8 text-center">
-                                <Link
-                                    to="/matches"
-                                    className="inline-block bg-red-600 text-white uppercase font-bold py-2 px-6 rounded-full hover:bg-red-700 transition-all duration-200"
-                                >
-                                    Xem tất cả trận đấu
-                                </Link>
-                            </div>
-                        )}
-                    </div>
                 </div>
             </div>
         </div>

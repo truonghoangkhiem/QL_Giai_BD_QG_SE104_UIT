@@ -1,3 +1,4 @@
+// File: truonghoangkhiem/ql_giai_bd_qg_se104_uit/QL_Giai_BD_QG_SE104_UIT-ten-nhanh-moi/frontend/src/components/Matches.jsx
 import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { CalendarIcon, MapPinIcon, XCircleIcon, ClockIcon, ChevronDownIcon, ChevronUpIcon, UsersIcon } from '@heroicons/react/24/outline';
@@ -27,7 +28,8 @@ const Matches = ({
   const [currentPage, setCurrentPage] = useState(1);
   const matchesPerPage = 7;
 
-  // States for lineup display
+  const [allPlayersMap, setAllPlayersMap] = useState({});
+
   const [expandedMatchId, setExpandedMatchId] = useState(null);
   const [matchLineups, setMatchLineups] = useState({ team1: null, team2: null });
   const [lineupLoading, setLineupLoading] = useState(false);
@@ -63,6 +65,23 @@ const Matches = ({
     }
     return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
   };
+
+  useEffect(() => {
+    const fetchAllPlayers = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/players');
+        const playersData = response.data.data || [];
+        const playerMap = playersData.reduce((acc, player) => {
+          acc[player._id] = player;
+          return acc;
+        }, {});
+        setAllPlayersMap(playerMap);
+      } catch (err) {
+        console.error('Lỗi lấy danh sách tất cả cầu thủ:', err);
+      }
+    };
+    fetchAllPlayers();
+  }, []);
 
   useEffect(() => {
     if (hideDropdown) return;
@@ -135,15 +154,12 @@ const Matches = ({
         setLoading(false);
         setError("Vui lòng chọn một mùa giải hoặc bộ lọc khác.");
         return;
-      } else { // hideDropdown is true, means it's for home page, needs initialSeasonId
+      } else {
         if (!initialSeasonId) {
           setMatchesState([]);
           setLoading(false);
           return;
         }
-        // If hideDropdown is true, it implies it's on a page (like Home) where matches are fetched by a pre-set initialSeasonId.
-        // The URL logic above should correctly use initialSeasonId if selectedSeasonId is not set.
-        // This block might be redundant if the URL logic handles initialSeasonId correctly.
       }
 
       try {
@@ -192,7 +208,7 @@ const Matches = ({
   const handleEdit = (match) => {
     setEditingMatch(match);
     setShowForm(true);
-    setExpandedMatchId(null); // Close lineup when editing
+    setExpandedMatchId(null);
   };
 
   const handleDelete = async (id) => {
@@ -344,6 +360,7 @@ const Matches = ({
       list.map((match) => (
         <div key={match.id || match._id} className="border-b border-gray-200 w-full">
           <div className="grid grid-cols-1 md:grid-cols-12 items-center py-4 gap-4 px-2 md:px-4">
+            {/* Team 1 */}
             <div className="col-span-12 md:col-span-5 flex items-center gap-3">
               <img
                 src={match.team1?.logo || defaultLogoUrl}
@@ -355,6 +372,7 @@ const Matches = ({
                 {match.team1?.team_name || 'Đội không xác định'}
               </span>
             </div>
+            {/* Score & Info */}
             <div className="col-span-12 md:col-span-2 flex flex-col items-center text-center my-2 md:my-0">
               {renderMatchScore(match.score, match.date)}
               <div className="text-xs md:text-sm text-gray-400">
@@ -367,6 +385,7 @@ const Matches = ({
                 <MapPinIcon className="inline h-3 w-3 mr-1" />{match.stadium || 'Chưa rõ sân'}
               </span>
             </div>
+            {/* Team 2 */}
             <div className="col-span-12 md:col-span-5 flex items-center justify-start md:justify-end gap-3">
               <span className="text-gray-800 font-medium text-left md:text-right truncate order-2 md:order-1" title={match.team2?.team_name || 'Đội không xác định'}>
                 {match.team2?.team_name || 'Đội không xác định'}
@@ -379,6 +398,65 @@ const Matches = ({
               />
             </div>
 
+            {/* Goal Scorers - START (Two Columns) */}
+            {new Date(match.date) <= now && match.score && /^\d+-\d+$/.test(match.score) && match.goalDetails && match.goalDetails.length > 0 && (
+              <div className="col-span-12 mt-3 pt-2 border-t border-gray-200">
+                <p className="font-semibold text-sm text-gray-700 mb-2 text-center">Ghi bàn:</p>
+                <div className="flex flex-col md:flex-row justify-between gap-4 text-xs text-gray-600">
+                  {/* Column for Team 1 Scorers */}
+                  <div className="w-full md:w-1/2">
+                    <h4 className="font-medium text-gray-800 text-center md:text-left mb-1">{match.team1?.team_name || 'Đội 1'}</h4>
+                    <ul className="list-none pl-0 space-y-1">
+                      {match.goalDetails
+                        .filter(goal => goal.team_id === match.team1?._id)
+                        .map((goal, index) => {
+                          const scorer = allPlayersMap[goal.player_id];
+                          const scorerName = scorer ? scorer.name : 'N/A';
+                          return (
+                            <li key={`t1-goal-${index}-${match.id || match._id}`} className="text-gray-600">
+                              {scorerName} ({goal.minute}')
+                              {goal.goalType === 'OG' && <span className="text-red-500 font-medium"> (OG)</span>}
+                              {goal.goalType !== 'normal' && goal.goalType !== 'OG' && ` (${goal.goalType.toUpperCase()})`}
+                            </li>
+                          );
+                        })}
+                      {match.goalDetails.filter(goal => goal.team_id === match.team1?._id).length === 0 && (
+                        <li className="italic text-gray-400 text-center md:text-left">Không có</li>
+                      )}
+                    </ul>
+                  </div>
+
+                  {/* Divider (optional, for larger screens) */}
+                  <div className="hidden md:block border-l border-gray-300 mx-2"></div>
+
+                  {/* Column for Team 2 Scorers */}
+                  <div className="w-full md:w-1/2">
+                    <h4 className="font-medium text-gray-800 text-center md:text-right mb-1">{match.team2?.team_name || 'Đội 2'}</h4>
+                    <ul className="list-none pl-0 space-y-1 md:text-right">
+                      {match.goalDetails
+                        .filter(goal => goal.team_id === match.team2?._id)
+                        .map((goal, index) => {
+                          const scorer = allPlayersMap[goal.player_id];
+                          const scorerName = scorer ? scorer.name : 'N/A';
+                          return (
+                            <li key={`t2-goal-${index}-${match.id || match._id}`} className="text-gray-600">
+                              {scorerName} ({goal.minute}')
+                              {goal.goalType === 'OG' && <span className="text-red-500 font-medium"> (OG)</span>}
+                              {goal.goalType !== 'normal' && goal.goalType !== 'OG' && ` (${goal.goalType.toUpperCase()})`}
+                            </li>
+                          );
+                        })}
+                      {match.goalDetails.filter(goal => goal.team_id === match.team2?._id).length === 0 && (
+                        <li className="italic text-gray-400 text-center md:text-right">Không có</li>
+                      )}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* Goal Scorers - END */}
+
+            {/* Action Buttons */}
             <div className="col-span-12 flex justify-center items-center gap-2 mt-2">
               <button
                 onClick={() => handleToggleLineups(match)}
@@ -405,6 +483,7 @@ const Matches = ({
               )}
             </div>
           </div>
+          {/* Lineup Display */}
           {expandedMatchId === (match.id || match._id) && (
             <div className="px-2 md:px-6 py-3 bg-gray-50 border-t border-gray-200">
               {lineupLoading && <p className="text-sm text-gray-500 text-center">Đang tải đội hình...</p>}

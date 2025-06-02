@@ -49,8 +49,11 @@ const Seasons = ({ setEditingSeason, setShowForm, token }) => {
     if (error) return <p className="text-red-500 text-center text-lg py-10 bg-red-50 p-4 rounded-md">{error}</p>;
 
     return (
-        // Container này giờ không cần padding lớn vì SeasonsPage hoặc App.jsx đã có
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        // Div gốc đã được loại bỏ các class 'bg-white', 'rounded-lg', 'shadow-md'
+        // vì container cha trong SeasonsPage.jsx sẽ đảm nhận các style này.
+        // Class 'overflow-hidden' có thể giữ lại nếu cần thiết cho nội dung trực tiếp bên trong,
+        // nhưng hiện tại div con 'overflow-x-auto' đã xử lý việc cuộn cho bảng.
+        <div className="">
             {/* Tiêu đề đã được chuyển lên SeasonsPage */}
             {seasons.length === 0 ? (
                 <p className="text-center text-gray-500 py-10">Chưa có mùa giải nào được tạo.</p>

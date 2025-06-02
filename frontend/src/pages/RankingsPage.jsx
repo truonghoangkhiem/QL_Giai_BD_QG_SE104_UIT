@@ -81,10 +81,16 @@ const RankingsPage = ({ token }) => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-gray-300/85 py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-7xl mx-auto ">
                 {/* Tiêu đề */}
-                <h1 className="bg-gray-900 text-white text-3xl font-bold py-3 px-6 rounded-none border-l-8 border-red-600 mb-6 text-center tracking-wide hover:brightness-110 transition-all duration-200">
+                <h1 className="text-3xl sm:text-4xl font-bold text-center tracking-tight mb-6 text-red-800  pt-10 px-5 py-16  shadow-xl  md:text-5xl lg:text-6xl" //text-3xl sm:text-4xl font-bold text-center
+                    style={{
+                        backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(https://as2.ftcdn.net/v2/jpg/10/71/13/17/1000_F_1071131715_3c5mFvqcKnMC42oDNuLZkz2R902E7dC4.jpg)',
+                        backgroundSize: 'cover',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center', // hoặc 'center'
+                    }}>
                     Bảng Xếp Hạng {selectedSeasonName && `- ${selectedSeasonName}`}
                 </h1>
 

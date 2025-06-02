@@ -20,55 +20,71 @@ const Register = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#F9FAFB] bg-cover bg-center flex items-center justify-center p-4"
-            style={{ backgroundImage: "url('https://media.istockphoto.com/id/504637736/vi/anh/th%E1%BB%A7-m%C3%B4n-b%C3%B3ng-%C4%91%C3%A1-b%E1%BA%AFt-b%C3%B3ng.jpg?s=612x612&w=0&k=20&c=ltnY8LxWCiRp5nwYVpglNiHHe1SWCLS9isyOfQMvD2E=')" }}>
-            <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-xl p-8 max-w-md w-full"> {/* Tăng độ mờ và bóng */}
-                <h2 className="text-4xl font-heading font-bold mb-6 text-center text-gray-800 py-3">Đăng ký</h2> {/* Đổi màu text */}
-                {error && <p className="text-red-600 text-center mb-4 bg-red-100 p-3 rounded-md">{error}</p>}
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div>
-                        <input
-                            type="text"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            placeholder="Tên người dùng"
-                            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-theme-red text-gray-700 placeholder-gray-400 shadow-sm" // Chuẩn hóa input
-                            required
-                        />
-                    </div>
-                    <div>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="Email"
-                            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-theme-red text-gray-700 placeholder-gray-400 shadow-sm" // Chuẩn hóa input
-                            required
-                        />
-                    </div>
-                    <div>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Mật khẩu"
-                            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-theme-red text-gray-700 placeholder-gray-400 shadow-sm" // Chuẩn hóa input
-                            required
-                        />
-                    </div>
-                    <button
-                        type="submit"
-                        className="w-full bg-theme-red hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition-colors duration-200 text-lg" // Chuẩn hóa button
-                    >
-                        Đăng ký
-                    </button>
-                </form>
-                <p className="text-center text-gray-600 mt-8"> {/* Đổi màu text */}
-                    Đã có tài khoản?{' '}
-                    <Link to="/login" className="font-semibold text-theme-red hover:text-red-500 hover:underline">
-                        Đăng nhập ngay
-                    </Link>
-                </p>
+        <div className="min-h-screen flex">
+            {/* Cột trái: Form đăng ký (Theme tối giống Login.jsx) */}
+            <div className="w-full md:w-1/2 lg:w-2/5 bg-gray-500 flex items-center justify-center p-4 md:p-8">
+                <div className="bg-gray-800 rounded-lg shadow-xl p-8 max-w-md w-full">
+                    <h2 className="text-3xl md:text-4xl font-heading font-bold mb-6 text-center text-gray-300 py-3">
+                        Tạo tài khoản
+                    </h2>
+                    {error && (
+                        <p className="text-red-400 text-center mb-4 bg-red-900/50 p-3 rounded-md">
+                            {error}
+                        </p>
+                    )}
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div>
+                            <input
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                placeholder="Tên người dùng"
+                                className="w-full p-3 border border-gray-600 bg-gray-700 text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-theme-red placeholder-gray-400 shadow-sm"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="Email"
+                                className="w-full p-3 border border-gray-600 bg-gray-700 text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-theme-red placeholder-gray-400 shadow-sm"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Mật khẩu"
+                                className="w-full p-3 border border-gray-600 bg-gray-700 text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-theme-red placeholder-gray-400 shadow-sm"
+                                required
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            className="w-full bg-theme-red hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition-colors duration-200 text-lg"
+                        >
+                            Đăng ký
+                        </button>
+                    </form>
+                    <p className="text-center text-gray-400 mt-8">
+                        Đã có tài khoản?{' '}
+                        <Link to="/login" className="font-semibold text-theme-red hover:text-red-500 hover:underline">
+                            Đăng nhập ngay
+                        </Link>
+                    </p>
+                </div>
+            </div>
+
+            {/* Cột phải: Hình ảnh nền (Cristiano Ronaldo) */}
+            <div
+                className="hidden md:block md:w-1/2 lg:w-3/5 bg-cover bg-center"
+                style={{ backgroundImage: "url('https://r4.wallpaperflare.com/wallpaper/819/699/581/cristiano-ronaldo-real-madrid-wallpaper-2014-wallpaper-433bd8dda095f3fd8b1536b6f6874848.jpg')" }}
+            >
+                {/* Có thể giữ lại hoặc bỏ trống tùy ý */}
             </div>
         </div>
     );

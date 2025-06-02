@@ -72,13 +72,15 @@ const PlayerRankingPage = ({ token }) => {
     useEffect(() => {
         const fetchData = async () => {
             if (!selectedSeasonId || !/^[0-9a-fA-F]{24}$/.test(selectedSeasonId)) {
-                setError('Mùa giải không hợp lệ.');
-                setLoading(false);
+                // setError('Mùa giải không hợp lệ.'); // Already handled by season loading
+                // setLoading(false); // Avoid multiple loading state changes
+                setPlayerResults([]);
+                setTeams([]);
                 return;
             }
 
             setLoading(true);
-            setError('');
+            setError(''); // Reset error before new fetch
             setPlayerResults([]);
             setTeams([]);
 
@@ -110,7 +112,7 @@ const PlayerRankingPage = ({ token }) => {
                 setError(
                     err.response?.status === 401
                         ? 'Dữ liệu bị giới hạn do chưa đăng nhập. Vui lòng đăng nhập để xem đầy đủ.'
-                        : 'Không có thông tin xếp hạng cầu thủ.'
+                        : 'Không có thông tin xếp hạng cầu thủ cho lựa chọn này.' // More specific error
                 );
             } finally {
                 setLoading(false);
@@ -119,6 +121,10 @@ const PlayerRankingPage = ({ token }) => {
 
         if (selectedSeasonId) {
             fetchData();
+        } else {
+            setLoading(false); // Ensure loading is false if no seasonId
+            setPlayerResults([]);
+            setTeams([]);
         }
     }, [selectedSeasonId, selectedDate, token]);
 
@@ -136,14 +142,15 @@ const PlayerRankingPage = ({ token }) => {
 
     const handleSeasonChange = (e) => {
         setSelectedSeasonId(e.target.value);
-        setSelectedDate(new Date().toISOString().split('T')[0]);
+        // Optionally reset date to current date when season changes, or keep existing date
+        // setSelectedDate(new Date().toISOString().split('T')[0]);
     };
 
     // Tên mùa giải được chọn
     const selectedSeasonName = seasons.find((season) => season._id === selectedSeasonId)?.season_name || '';
 
-    // Trạng thái loading
-    if (loading) {
+    // Trạng thái loading (This specific one will be shown before the main content is ready)
+    if (loading && (!seasons.length && !selectedSeasonId)) { // More specific initial loading
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-100">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
@@ -152,64 +159,102 @@ const PlayerRankingPage = ({ token }) => {
     }
 
     return (
-        <div className="min-h-screen  py-12 px-4 sm:px-6 lg:px-8 pl-20">
+        <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 pl-4 md:pl-20"> {/* Adjusted pl for responsiveness */}
             <div className="max-w-7xl mx-auto">
-                {/* Tiêu đề */}
-                <h1 className="bg-gray-900 text-white text-3xl font-bold py-3 px-6 rounded-none border-l-8 border-red-600 mb-6 text-center tracking-wide hover:brightness-110 transition-all duration-200">
-                    Xếp Hạng Cầu Thủ {selectedSeasonName && `- ${selectedSeasonName}`}
-                </h1>
 
-                {/* Thông báo lỗi */}
-                {error && (
-                    <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-lg shadow-lg mx-auto max-w-2xl">
+                {/* New container for Title and Filters with Background Image */}
+                <div
+                    className="p-6 rounded-xl shadow-xl mb-8 bg-gray-700 pt-10 px-5 py-16" // Added default bg as placeholder
+                    style={{
+                        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://wallpaperbat.com/img/470248-create-five-wallpaper-of-your-favorites-soccer-players.jpg')`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center 5%',
+                    }}
+                >
+                    {/* Tiêu đề */}
+                    <h1
+                        className="text-3xl sm:text-4xl font-bold text-center tracking-tight mb-6 text-red-800"
+                        style={{ textShadow: '2px 2px 6px rgba(0,0,0,0.7)' }}
+                    >
+                        Xếp Hạng Cầu Thủ {selectedSeasonName && `- ${selectedSeasonName}`}
+                    </h1>
+
+                    {/* Bộ lọc */}
+                    <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6">
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <label
+                                htmlFor="season-select"
+                                className="text-sm font-medium text-gray-100 shrink-0" // Added shrink-0
+                                style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}
+                            >
+                                Mùa giải:
+                            </label>
+                            <select
+                                id="season-select"
+                                value={selectedSeasonId || ''}
+                                onChange={handleSeasonChange}
+                                className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out shadow-sm hover:border-gray-400"
+                            >
+                                <option value="">Chọn mùa giải</option>
+                                {seasons.map((season) => (
+                                    <option key={season._id} value={season._id}>
+                                        {`${season.season_name} (${formatDate(season.start_date)} - ${formatDate(season.end_date)})`}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <label
+                                htmlFor="date-filter"
+                                className="text-sm font-medium text-gray-100 shrink-0" // Added shrink-0
+                                style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}
+                            >
+                                Ngày:
+                            </label>
+                            <input
+                                type="date"
+                                id="date-filter"
+                                value={selectedDate}
+                                onChange={handleDateChange}
+                                className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out shadow-sm hover:border-gray-400"
+                            />
+                        </div>
+                    </div>
+                </div>
+                {/* End of New Container */}
+
+                {/* Thông báo lỗi (nếu có và không đang loading dữ liệu chính) */}
+                {error && !loading && (
+                    <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-lg shadow-md mx-auto max-w-3xl text-center">
                         {error}
                     </div>
                 )}
 
-                {/* Bộ lọc */}
-                <div className="mb-8 flex flex-col sm:flex-row justify-center gap-4 bg-white p-6 rounded-2xl shadow-lg">
-                    <div className="flex items-center gap-3">
-                        <label htmlFor="season-select" className="text-sm font-medium text-gray-700">
-                            Mùa giải:
-                        </label>
-                        <select
-                            id="season-select"
-                            value={selectedSeasonId || ''}
-                            onChange={handleSeasonChange}
-                            className="w-full sm:w-64 bg-white border border-gray-200 rounded-lg px-4 py-2 text-gray-700 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition duration-200 hover:border-blue-400 hover:shadow-md"
-                        >
-                            <option value="">Chọn mùa giải</option>
-                            {seasons.map((season) => (
-                                <option key={season._id} value={season._id}>
-                                    {`${season.season_name} (${formatDate(season.start_date)} - ${formatDate(season.end_date)})`}
-                                </option>
-                            ))}
-                        </select>
+                {/* Hiển thị component PlayerRanking hoặc thông báo loading/không có dữ liệu */}
+                {loading && selectedSeasonId ? ( // Show loading indicator when fetching data for a selected season
+                    <div className="flex justify-center items-center h-64">
+                        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <label htmlFor="date-filter" className="text-sm font-medium text-gray-700">
-                            Ngày:
-                        </label>
-                        <input
-                            type="date"
-                            id="date-filter"
-                            value={selectedDate}
-                            onChange={handleDateChange}
-                            className="w-full sm:w-48 bg-white border border-gray-200 rounded-lg px-4 py-2 text-gray-700 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition duration-200 hover:border-blue-400 hover:shadow-md"
-                        />
+                ) : selectedSeasonId && playerResults.length === 0 && !error ? ( // No results but no error
+                    <div className="mb-6 p-4 bg-yellow-50 text-yellow-700 rounded-lg shadow-md mx-auto max-w-3xl text-center">
+                        Không có dữ liệu xếp hạng cầu thủ cho mùa giải và ngày đã chọn.
                     </div>
-                </div>
+                ) : selectedSeasonId ? ( // Has results
+                    <PlayerRanking
+                        seasonId={selectedSeasonId} // Pass seasonId if PlayerRanking component uses it
+                        token={token}
+                        seasons={seasons} // Pass seasons if PlayerRanking component uses it
+                        teams={teams}
+                        playerResults={playerResults}
+                        selectedDate={selectedDate}
+                        formatDate={formatDate} // Pass formatDate if PlayerRanking component uses it
+                    />
+                ) : !selectedSeasonId && !loading && !error && seasons.length > 0 ? ( // No season selected, but seasons are available
+                    <div className="mb-6 p-4 bg-blue-50 text-blue-700 rounded-lg shadow-md mx-auto max-w-3xl text-center">
+                        Vui lòng chọn một mùa giải để xem xếp hạng cầu thủ.
+                    </div>
+                ) : null}
 
-                {/* Hiển thị component PlayerRanking */}
-                <PlayerRanking
-                    seasonId={selectedSeasonId}
-                    token={token}
-                    seasons={seasons}
-                    teams={teams}
-                    playerResults={playerResults}
-                    selectedDate={selectedDate}
-                    formatDate={formatDate}
-                />
             </div>
         </div>
     );
