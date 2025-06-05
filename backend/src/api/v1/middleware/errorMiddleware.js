@@ -19,7 +19,7 @@ const errorMiddleware = (err, req, res, next) => {
   }
 
   // Lỗi hệ thống chung
-  return errorResponse(res, "Internal Server Error", 500);
+  return errorResponse(res, "Hệ thống đã xảy ra lỗi. Vui lòng thử lại sau.", 500);
 };
 
 export { errorMiddleware }; // Xuất trực tiếp hàm errorMiddleware

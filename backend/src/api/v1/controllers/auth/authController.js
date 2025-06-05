@@ -29,7 +29,7 @@ const registerUser = async (req, res, next) => {
     // Kiểm tra email đã tồn tại
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      const error = new Error("Email already exists");
+      const error = new Error("Email này đã được sử dụng. Vui lòng sử dụng email khác.");
       error.status = 400;
       return next(error);
     }
@@ -70,7 +70,7 @@ const loginUser = async (req, res, next) => {
 
     const user = await User.findOne({ email });
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      const error = new Error("Email or password is incorrect");
+      const error = new Error("Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại.");
       error.status = 401;
       return next(error);
     }
@@ -106,12 +106,12 @@ const updatePasswordUser = async (req, res, next) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      const error = new Error("Email not correct");
+      const error = new Error("Không tìm thấy tài khoản với email này.");
       error.status = 404;
       return next(error);
     }
     if (!(await bcrypt.compare(oldpassword, user.password))) {
-      const error = new Error("Old password is incorrect");
+      const error = new Error("Mật khẩu cũ không chính xác.");
       error.status = 401;
       return next(error);
     }
@@ -145,12 +145,12 @@ const updateUsername = async (req, res, next) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      const error = new Error("User not correct");
+      const error = new Error("Không tìm thấy tài khoản với email này.");
       error.status = 404;
       return next(error);
     }
     if (!(await bcrypt.compare(Inputpassword, user.password))) {
-      const error = new Error("Password is incorrect");
+      const error = new Error("Mật khẩu không chính xác.");
       error.status = 401;
       return next(error);
     }
@@ -179,12 +179,12 @@ const deleteUser = async (req, res, next) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      const error = new Error("Email not correct");
+      const error = new Error("Không tìm thấy tài khoản với email này.");
       error.status = 404;
       return next(error);
     }
     if (!(await bcrypt.compare(password, user.password))) {
-      const error = new Error("Password is incorrect");
+      const error = new Error("Mật khẩu không chính xác.");
       error.status = 401;
       return next(error);
     }

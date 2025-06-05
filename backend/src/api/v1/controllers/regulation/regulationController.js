@@ -104,7 +104,7 @@ const createRegulation = async (req, res, next) => {
     const requiredFields = VALID_REGULATIONS[regulation_name];
     for (let field of requiredFields) {
       if (!(field in rules)) {
-        const error = new Error(`Missing field: ${field}`);
+        const error = new Error(`Bạn chưa nhập đủ thông tin cho quy định. Thiếu trường: ${field}.`);
         error.status = 400;
         return next(error);
       }
@@ -112,7 +112,7 @@ const createRegulation = async (req, res, next) => {
 
     // Kiểm tra logic dữ liệu
     if (!validateRules(regulation_name, rules)) {
-      const error = new Error("Invalid rules data");
+      const error = new Error("Các giá trị bạn nhập cho quy định không hợp lệ (ví dụ: tuổi tối thiểu lớn hơn tuổi tối đa).");
       error.status = 400;
       return next(error);
     }

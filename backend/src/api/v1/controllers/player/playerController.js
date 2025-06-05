@@ -116,7 +116,7 @@ const createPlayer = async (req, res, next) => {
 
     const existingNumber = await Player.findOne({ team_id: teamObjectId, number }).session(session);
     if (existingNumber) {
-      throw Object.assign(new Error("Player number already exists in this team"), {
+      throw Object.assign(new Error("Số áo này đã có cầu thủ khác trong đội sử dụng."), {
           status: 400,
         });
     }
@@ -124,7 +124,7 @@ const createPlayer = async (req, res, next) => {
     const playersInTeam = await Player.find({ team_id: teamObjectId }).session(session);
     if (playersInTeam.length >= maxPlayersPerTeam) {
       throw Object.assign(
-          new Error(`Team already has maximum ${maxPlayersPerTeam} players`),
+          new Error(`Đội đã đủ số lượng cầu thủ tối đa (${maxPlayersPerTeam}).`),
           { status: 400 }
         );
     }
@@ -134,7 +134,7 @@ const createPlayer = async (req, res, next) => {
       if (foreignCount >= maxForeignPlayers) {
         throw Object.assign(
             new Error(
-              `Team can have only ${maxForeignPlayers} foreign players`
+              `Đội đã đủ số lượng cầu thủ ngoại binh tối đa (${maxForeignPlayers}).`
             ),
             { status: 400 }
           );
@@ -155,7 +155,7 @@ const createPlayer = async (req, res, next) => {
 
     if (age < minAge || age > maxAge) {
       throw Object.assign(
-          new Error(`Player age must be between ${minAge} and ${maxAge}. Current age: ${age}`),
+          new Error(`Tuổi của cầu thủ không phù hợp với quy định (${minAge} - ${maxAge} tuổi). Tuổi hiện tại: ${age}`),
           { status: 400 }
         );
     }
@@ -228,7 +228,7 @@ const updatePlayer = async (req, res, next) => {
             _id: { $ne: playerId } 
         }).session(session);
         if (numberExists) {
-            throw Object.assign(new Error("Player number already exists in this team"), { status: 400 });
+            throw Object.assign(new Error("Số áo này đã có cầu thủ khác trong đội sử dụng."), { status: 400 });
         }
     }
 
@@ -244,7 +244,7 @@ const updatePlayer = async (req, res, next) => {
     }).session(session);
 
     if (!regulation || !regulation.rules) {
-        throw Object.assign(new Error("Age Regulation not found or rules not defined for the team's season"), { status: 500 });
+        throw Object.assign(new Error("Quy định về độ tuổi của giải đấu chưa được thiết lập. Vui lòng liên hệ quản trị viên."), { status: 500 });
     }
     const { minAge, maxAge, maxForeignPlayers } = regulation.rules;
     if (minAge === undefined || maxAge === undefined || maxForeignPlayers === undefined) {

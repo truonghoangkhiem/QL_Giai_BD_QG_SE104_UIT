@@ -52,7 +52,7 @@ const getMatchesById = async (req, res, next) => {
       "team1 team2 season_id goalDetails.player_id goalDetails.team_id"
     );
     if (!match) {
-      return next(Object.assign(new Error("Match not found"), { status: 404 }));
+      return next(Object.assign(new Error("Không tìm thấy trận đấu để cập nhật."), { status: 404 }));
     }
     // Frontend will call /api/matchlineups/match/:match_id to get lineups
     return successResponse(res, match, "Match found successfully");
@@ -84,7 +84,7 @@ const createMatch = async (req, res, next) => {
 
     const teamsInSeason = await Team.find({ season_id }).session(session);
     if (teamsInSeason.length < 2) {
-      throw Object.assign(new Error("Not enough teams for a match schedule (minimum 2 teams required)."), {
+      throw Object.assign(new Error("Không đủ đội trong mùa giải để tạo lịch thi đấu (yêu cầu tối thiểu 2 đội)."), {
         status: 400,
       });
     }
@@ -114,7 +114,7 @@ const createMatch = async (req, res, next) => {
     if (nonCompliantTeams.length > 0) {
       throw Object.assign(
         new Error(
-          `Cannot create match schedule. The following teams do not meet the minimum player registration requirement of ${minPlayersRequiredForTeam} player(s) as per Age Regulation: ${nonCompliantTeams.join(", ")}.`
+          `Không thể tạo lịch. Các đội sau chưa đăng ký đủ số lượng cầu thủ tối thiểu theo quy định: ${nonCompliantTeams.join(", ")}.`
         ),
         { status: 400 }
       );
@@ -224,7 +224,7 @@ const createMatch = async (req, res, next) => {
                              : teamsInSeason.length * (teamsInSeason.length - 1);
 
     if (schedule.length === 0 && teamsInSeason.length >=2 && allPairings.length > 0) {
-         throw Object.assign(new Error(`Failed to generate any matches. Expected ${expectedTotalMatches}.`), { status: 400 });
+         throw Object.assign(new Error(`Tạo lịch thi đấu tự động thất bại. Vui lòng kiểm tra lại các quy định hoặc thử lại sau.`), { status: 400 });
     }
 
     let responseMessage = `Created ${schedule.length} matches successfully.`;
@@ -326,7 +326,7 @@ const updateMatch = async (req, res, next) => {
         .session(session);
 
     if (!match) {
-      throw Object.assign(new Error("Match not found"), { status: 404 });
+      throw Object.assign(new Error("Không tìm thấy trận đấu để cập nhật."), { status: 404 });
     }
 
     const updateFields = parseResult.data;
@@ -376,13 +376,13 @@ const updateMatch = async (req, res, next) => {
 
 
         if (!isPlayerInTeam1Participating && !isPlayerInTeam2Participating) {
-            throw Object.assign(new Error(`Goal scorer ${playerDoc.name} is not in the lineup for this match.`), { status: 400 });
+            throw Object.assign(new Error(`Lỗi ghi bàn: Cầu thủ được chọn không có trong đội hình thi đấu của trận này.`), { status: 400 });
         }
 
         if (goal.goalType === "OG") {
             if (beneficiaryTeamIdForGoal.equals(match.team1._id)) { // OG benefits team1
                 if (!actualPlayerTeamId.equals(match.team2._id)) { // Scorer must be from team2
-                    throw Object.assign(new Error(`Own Goal for ${match.team1.team_name} invalid: Scorer ${playerDoc.name} must be from ${match.team2.team_name}.`), { status: 400 });
+                    throw Object.assign(new Error(`Lỗi bàn phản lưới nhà: Cầu thủ ghi bàn và đội hưởng lợi không hợp lệ.`), { status: 400 });
                 }
                 if (!isPlayerInTeam2Participating) {
                      throw Object.assign(new Error(`Own Goal scorer ${playerDoc.name} (from ${match.team2.team_name}) is not listed as participating for ${match.team2.team_name}.`), { status: 400 });
@@ -529,7 +529,7 @@ const deleteMatch = async (req, res, next) => {
 
     const matchToDelete = await Match.findById(matchId).session(session);
     if (!matchToDelete) {
-      throw Object.assign(new Error("Match not found"), { status: 404 });
+      throw Object.assign(new Error("Không tìm thấy trận đấu để cập nhật."), { status: 404 });
     }
 
     const { season_id: seasonIdObj, team1: team1IdObj, team2: team2IdObj, date: matchDateRaw, score: deletedMatchScore } = matchToDelete;

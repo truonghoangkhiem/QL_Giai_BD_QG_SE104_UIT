@@ -66,7 +66,7 @@ const getTeamsByNameAndSeasonId = async (req, res, next) => {
 
     const team = await Team.findOne({ team_name: team_name_param, season_id: seasonIdObj });
     if (!team) {
-      const error = new Error("Team not found");
+      const error = new Error("Không tìm thấy đội bóng được yêu cầu.");
       error.status = 404;
       return next(error);
     }
@@ -90,7 +90,7 @@ const getTeamsByID = async (req, res, next) => {
     const team_id_obj = new mongoose.Types.ObjectId(req.params.id);
     const team = await Team.findById(team_id_obj).populate("season_id");
     if (!team) {
-      const error = new Error("Team not found");
+      const error = new Error("Không tìm thấy đội bóng được yêu cầu.");
       error.status = 404;
       return next(error);
     }
@@ -122,7 +122,7 @@ const createTeam = async (req, res, next) => {
     const Check_season_id = new mongoose.Types.ObjectId(season_id);
     const season = await Season.findById(Check_season_id).session(session);
     if (!season) {
-      const error = new Error("Season not found");
+      const error = new Error("Không tìm thấy mùa giải bạn đã chọn.");
       error.status = 404;
       throw error;
     }
@@ -197,7 +197,7 @@ const updateTeam = async (req, res, next) => {
     const teamId = new mongoose.Types.ObjectId(req.params.id);
     const existingTeam = await Team.findById(teamId).session(session);
     if (!existingTeam) {
-      const error = new Error("Team not found");
+      const error = new Error("Không tìm thấy đội bóng được yêu cầu.");
       error.status = 404;
       throw error;
     }
@@ -229,7 +229,7 @@ const updateTeam = async (req, res, next) => {
 
     const result = await Team.findByIdAndUpdate(teamId, { $set: updatedTeamData }, { new: true, session });
     if (!result) {
-        const error = new Error("Team not found during update"); // Should not happen if existingTeam was found
+        const error = new Error("Không tìm thấy đội bóng được yêu cầu."); // Should not happen if existingTeam was found
         error.status = 404;
         throw error;
     }
@@ -297,7 +297,7 @@ const recalculateSeasonData = async (season_id_str, excluded_team_id_str = null)
         await PlayerRanking.deleteMany({ season_id: seasonId, player_id: { $in: activePlayerIds } }).session(session);
 
         const season = await Season.findById(seasonId).session(session);
-        if (!season) throw new Error("Season not found for recalculation.");
+        if (!season) throw new Error("Không tìm thấy mùa giải bạn đã chọn.");
         const seasonStartDate = new Date(season.start_date);
         seasonStartDate.setUTCHours(0, 0, 0, 0);
 
@@ -370,7 +370,7 @@ const deleteTeam = async (req, res, next) => {
     const teamId = new mongoose.Types.ObjectId(req.params.id);
     const teamToDelete = await Team.findById(teamId).session(session);
     if (!teamToDelete) {
-      const error = new Error("Team not found");
+      const error = new Error("Không tìm thấy đội bóng được yêu cầu.");
       error.status = 404;
       throw error;
     }
@@ -432,7 +432,7 @@ const getTeamsByIDSeason = async (req, res, next) => {
     const season_id_obj = new mongoose.Types.ObjectId(req.params.season_id);
     const season = await Season.findById(season_id_obj);
     if (!season) {
-      const error = new Error("Season not found");
+      const error = new Error("Không tìm thấy mùa giải bạn đã chọn.");
       error.status = 404;
       return next(error);
     }
