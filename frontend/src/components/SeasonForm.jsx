@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const SeasonForm = ({ editingSeason, setEditingSeason, setShowForm, setSeasons }) => {
+const SeasonForm = ({ editingSeason, setEditingSeason, setShowForm, onSuccess, token }) => {
     const [formData, setFormData] = useState({
         season_name: '',
         start_date: '',
         end_date: '',
-        status: true, // Thêm status mặc định
+        status: true,
     });
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState(''); // Thêm state cho thông báo thành công
+    const [isSubmitting, setIsSubmitting] = useState(false); // State cho vòng xoay tải
 
     useEffect(() => {
         if (editingSeason) {
@@ -20,7 +20,6 @@ const SeasonForm = ({ editingSeason, setEditingSeason, setShowForm, setSeasons }
                 status: editingSeason.status !== undefined ? editingSeason.status : true,
             });
         } else {
-            // Reset form khi không có editingSeason (trường hợp thêm mới)
             setFormData({
                 season_name: '',
                 start_date: '',
@@ -33,41 +32,29 @@ const SeasonForm = ({ editingSeason, setEditingSeason, setShowForm, setSeasons }
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        setSuccess('');
-
+        
         if (new Date(formData.start_date) > new Date(formData.end_date)) {
             setError('Ngày bắt đầu không thể sau ngày kết thúc.');
             return;
         }
 
+        setIsSubmitting(true); // Bắt đầu tải
+
         try {
             if (editingSeason) {
-                await axios.put(`http://localhost:5000/api/seasons/${editingSeason._id}`, formData);
-                // setSeasons prop có thể không cần nếu component cha (Seasons) tự fetch lại list
-                // Tuy nhiên, nếu muốn cập nhật ngay lập tức mà không fetch lại, bạn cần truyền setSeasons
-                if (setSeasons) { // Kiểm tra xem setSeasons có được truyền không
-                    setSeasons((prev) =>
-                        prev.map((season) => (season._id === editingSeason._id ? { ...season, ...formData, _id: editingSeason._id } : season))
-                    );
-                }
-                setSuccess('Cập nhật mùa giải thành công!');
+                await axios.put(`http://localhost:5000/api/seasons/${editingSeason._id}`, formData, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
             } else {
-                const response = await axios.post('http://localhost:5000/api/seasons', formData);
-                if (setSeasons) { // Kiểm tra xem setSeasons có được truyền không
-                    setSeasons((prev) => [...prev, response.data.data]);
-                }
-                setSuccess('Thêm mùa giải thành công!');
+                await axios.post('http://localhost:5000/api/seasons', formData, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
             }
-
-            // Đóng form sau một khoảng thời gian để người dùng đọc thông báo
-            setTimeout(() => {
-                setShowForm(false);
-                setEditingSeason(null);
-                setSuccess(''); // Clear success message
-            }, 2000);
-
+            onSuccess(); // Gọi hàm xử lý thành công của component cha để đóng form và tìm nạp lại
         } catch (err) {
             setError(err.response?.data?.message || 'Không thể lưu mùa giải');
+        } finally {
+            setIsSubmitting(false); // Dừng tải
         }
     };
 
@@ -77,7 +64,6 @@ const SeasonForm = ({ editingSeason, setEditingSeason, setShowForm, setSeasons }
                 {editingSeason ? 'Sửa mùa giải' : 'Thêm mùa giải mới'}
             </h2>
             {error && <p className="text-red-600 mb-4 text-center p-3 bg-red-100 rounded-md">{error}</p>}
-            {success && <p className="text-green-600 mb-4 text-center p-3 bg-green-100 rounded-md">{success}</p>}
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
@@ -90,6 +76,7 @@ const SeasonForm = ({ editingSeason, setEditingSeason, setShowForm, setSeasons }
                         placeholder="Ví dụ: V-League 2025"
                         className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-theme-red text-gray-700 placeholder-gray-400 shadow-sm"
                         required
+                        disabled={isSubmitting}
                     />
                 </div>
                 <div>
@@ -101,6 +88,7 @@ const SeasonForm = ({ editingSeason, setEditingSeason, setShowForm, setSeasons }
                         onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
                         className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-theme-red text-gray-700 placeholder-gray-400 shadow-sm"
                         required
+                        disabled={isSubmitting}
                     />
                 </div>
                 <div>
@@ -112,6 +100,7 @@ const SeasonForm = ({ editingSeason, setEditingSeason, setShowForm, setSeasons }
                         onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
                         className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-theme-red text-gray-700 placeholder-gray-400 shadow-sm"
                         required
+                        disabled={isSubmitting}
                     />
                 </div>
                 <div className="flex items-center">
@@ -122,6 +111,7 @@ const SeasonForm = ({ editingSeason, setEditingSeason, setShowForm, setSeasons }
                         checked={formData.status}
                         onChange={(e) => setFormData({ ...formData, status: e.target.checked })}
                         className="h-4 w-4 text-theme-red border-gray-300 rounded focus:ring-theme-red"
+                        disabled={isSubmitting}
                     />
                     <label htmlFor="status" className="ml-2 block text-sm text-gray-900">
                         Kích hoạt mùa giải
@@ -132,19 +122,24 @@ const SeasonForm = ({ editingSeason, setEditingSeason, setShowForm, setSeasons }
                         type="button"
                         onClick={() => {
                             setShowForm(false);
-                            setEditingSeason(null); // Quan trọng: reset editingSeason
-                            setError(''); // Clear lỗi khi hủy
-                            setSuccess(''); // Clear thành công khi hủy
+                            setEditingSeason(null);
+                            setError('');
                         }}
                         className="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-colors duration-200"
+                        disabled={isSubmitting}
                     >
                         Hủy
                     </button>
                     <button
                         type="submit"
-                        className="bg-theme-red hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-colors duration-200"
+                        className="bg-theme-red hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-colors duration-200 flex items-center justify-center w-36"
+                        disabled={isSubmitting}
                     >
-                        {editingSeason ? 'Lưu thay đổi' : 'Thêm mùa giải'}
+                        {isSubmitting ? (
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        ) : (
+                            editingSeason ? 'Lưu thay đổi' : 'Thêm mùa giải'
+                        )}
                     </button>
                 </div>
             </form>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, setRegulations, token }) => {
+const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, setRegulations, token, seasons, onSuccess  }) => {
     const [formData, setFormData] = useState({
         season_id: '',
         season_name: '',
@@ -28,35 +28,36 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
             ],
         },
     });
-    const [seasons, setSeasons] = useState([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    // const [seasons, setSeasons] = useState([]);
     const [existingRegulations, setExistingRegulations] = useState([]);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
 
     const rankingCriteriaOptions = ['points', 'goalDifference', 'goalsFor', 'headToHead'];
 
-    useEffect(() => {
-        const fetchSeasonsAndRegulations = async () => {
-            try {
-                const [seasonsResponse, regulationsResponse] = await Promise.all([
-                    axios.get('http://localhost:5000/api/seasons'),
-                    axios.get('http://localhost:5000/api/regulations'),
-                ]);
-                setSeasons(seasonsResponse.data.data);
-                setExistingRegulations(regulationsResponse.data.data);
-                if (!editingRegulation && seasonsResponse.data.data.length > 0) {
-                    setFormData((prev) => ({
-                        ...prev,
-                        season_id: seasonsResponse.data.data[0]._id,
-                        season_name: seasonsResponse.data.data[0].season_name,
-                    }));
-                }
-            } catch (err) {
-                setError('Không thể tải dữ liệu mùa giải hoặc quy định');
-            }
-        };
-        fetchSeasonsAndRegulations();
-    }, [editingRegulation]);
+    // useEffect(() => {
+    //     const fetchSeasonsAndRegulations = async () => {
+    //         try {
+    //             const [seasonsResponse, regulationsResponse] = await Promise.all([
+    //                 axios.get('http://localhost:5000/api/seasons'),
+    //                 axios.get('http://localhost:5000/api/regulations'),
+    //             ]);
+    //             setSeasons(seasonsResponse.data.data);
+    //             setExistingRegulations(regulationsResponse.data.data);
+    //             if (!editingRegulation && seasonsResponse.data.data.length > 0) {
+    //                 setFormData((prev) => ({
+    //                     ...prev,
+    //                     season_id: seasonsResponse.data.data[0]._id,
+    //                     season_name: seasonsResponse.data.data[0].season_name,
+    //                 }));
+    //             }
+    //         } catch (err) {
+    //             setError('Không thể tải dữ liệu mùa giải hoặc quy định');
+    //         }
+    //     };
+    //     fetchSeasonsAndRegulations();
+    // }, [editingRegulation]);
 
     useEffect(() => {
         if (editingRegulation) {
@@ -149,6 +150,7 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setIsSubmitting(true);
         try {
             let rules = {};
             switch (formData.regulation_name) {
@@ -271,31 +273,29 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                     { rules },
                     { headers }
                 );
-                setRegulations((prev) =>
-                    prev.map((regulation) =>
-                        regulation._id === editingRegulation._id
-                            ? { ...regulation, rules: response.data.data?.rules || rules }
-                            : regulation
-                    )
-                );
-                setSuccessMessage('Sửa quy định thành công');
+                // setRegulations((prev) =>
+                //     prev.map((regulation) =>
+                //         regulation._id === editingRegulation._id
+                //             ? { ...regulation, rules: response.data.data?.rules || rules }
+                //             : regulation
+                //     )
+                // );
+                // setSuccessMessage('Sửa quy định thành công');
             } else {
                 response = await axios.post('http://localhost:5000/api/regulations/', data, { headers });
-                setRegulations((prev) => [
-                    ...prev,
-                    { ...response.data.data, season_name: formData.season_name },
-                ]);
-                setSuccessMessage('Thêm quy định thành công');
+                // setRegulations((prev) => [
+                //     ...prev,
+                //     { ...response.data.data, season_name: formData.season_name },
+                // ]);
+                // setSuccessMessage('Thêm quy định thành công');
             }
-            setTimeout(() => {
-                setShowForm(false);
-                setEditingRegulation(null);
-                setSuccessMessage('');
-                setError('');
-            }, 3000);
+            onSuccess();
+           
         } catch (err) {
             console.error('Error details:', err.response?.data);
             setError(err.response?.data?.message || err.message || 'Không thể lưu quy định');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -613,6 +613,8 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                 </div>
             )}
             <form onSubmit={handleSubmit} className="space-y-6">
+                <fieldset disabled={isSubmitting} className="space-y-6">
+
                 <div>
                     <label htmlFor="season-select" className="block text-lg font-medium text-gray-700 mb-2">
                         Mùa giải
@@ -621,7 +623,8 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                         id="season-select"
                         value={formData.season_id}
                         onChange={handleSeasonChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm disabled:bg-gray-100"
+                        disabled={!!editingRegulation}
                         required
                     >
                         {seasons.length === 0 ? (
@@ -636,14 +639,15 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                     </select>
                 </div>
                 <div>
-                    <label htmlFor="regulation-name" className="block text-lg font-medium text-gray-700 mb-2">
+                    <label htmlFor="regulation-name" className="block text-lg font-medium text-gray-700 mb-2 ">
                         Tên quy định
                     </label>
                     <select
                         id="regulation-name"
                         value={formData.regulation_name}
                         onChange={(e) => setFormData({ ...formData, regulation_name: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm disabled:bg-gray-100"
+                        disabled={!!editingRegulation}
                         required
                     >
                         <option value="">Chọn tên quy định</option>
@@ -654,26 +658,26 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                     </select>
                 </div>
                 {formData.regulation_name && renderFields()}
-                <div className="flex justify-center space-x-4">
-                    <button
-                        type="submit"
-                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-shadow shadow-md"
-                    >
-                        Lưu
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setShowForm(false);
-                            setEditingRegulation(null);
-                            setError('');
-                            setSuccessMessage('');
-                        }}
-                        className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-shadow shadow-md"
-                    >
-                        Hủy
-                    </button>
-                </div>
+                <div className="flex justify-center space-x-4 pt-4">
+                <button
+        type="button"
+        onClick={() => { setShowForm(false); setEditingRegulation(null); setError(''); }}
+        className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-shadow shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed"
+        disabled={isSubmitting}
+    >
+        Hủy
+    </button>
+    <button
+        type="submit"
+        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-shadow shadow-md flex items-center justify-center w-28 disabled:bg-blue-400 disabled:cursor-not-allowed"
+        disabled={isSubmitting}
+    >
+        {isSubmitting ? (
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+        ) : 'Lưu'}
+    </button>
+</div>
+                </fieldset>
             </form>
         </div>
     );

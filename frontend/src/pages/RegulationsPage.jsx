@@ -1,18 +1,15 @@
-import React, { useState, useEffect } from 'react'; // Thêm useEffect
-import axios from 'axios'; // Thêm axios
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import Regulations from '../components/Regulations';
 import RegulationForm from '../components/RegulationForm';
 
 const RegulationsPage = ({ token }) => {
     const [showForm, setShowForm] = useState(false);
     const [editingRegulation, setEditingRegulation] = useState(null);
-    // Bỏ regulations state ở đây vì Regulations component tự quản lý
-    // const [regulations, setRegulations] = useState([]);
-
-    // State cho seasons và selectedSeasonId sẽ được quản lý trong RegulationsPage
-    // để truyền xuống cho cả Regulations (hiển thị) và RegulationForm (thêm/sửa)
     const [seasons, setSeasons] = useState([]);
     const [selectedSeasonId, setSelectedSeasonId] = useState('');
+    const [refreshKey, setRefreshKey] = useState(0);
+    const [pageError, setPageError] = useState(''); // Trạng thái lỗi tập trung cho trang
 
     useEffect(() => {
         const fetchSeasons = async () => {
@@ -20,62 +17,67 @@ const RegulationsPage = ({ token }) => {
                 const seasonsRes = await axios.get('http://localhost:5000/api/seasons');
                 setSeasons(seasonsRes.data.data);
                 if (seasonsRes.data.data.length > 0) {
-                    setSelectedSeasonId(seasonsRes.data.data[0]._id); // Chọn mùa giải đầu tiên mặc định
+                    setSelectedSeasonId(seasonsRes.data.data[0]._id);
                 }
             } catch (err) {
                 console.error('Không thể tải danh sách mùa giải', err);
-                // Có thể thêm state error ở đây để hiển thị cho người dùng
+                setPageError('Lỗi: Không thể tải danh sách mùa giải.');
             }
         };
         fetchSeasons();
     }, []);
 
-    // Callback để refresh lại danh sách regulations khi form được submit thành công
-    // Component Regulations sẽ tự fetch lại khi selectedSeasonId thay đổi (hoặc có thể thêm 1 state trigger)
-    // Tuy nhiên, nếu RegulationForm thêm mới/sửa đổi, chúng ta cần 1 cách để Regulations biết và fetch lại.
-    // Cách đơn giản là truyền một key thay đổi hoặc một callback.
-    // Hiện tại, Regulations đã có useEffect theo dõi selectedSeasonId,
-    // nên nếu không đổi mùa giải thì nó không fetch lại.
-    // Chúng ta có thể thêm một state `refreshKey` để trigger việc fetch lại trong Regulations
-    const [refreshKey, setRefreshKey] = useState(0);
     const handleFormSuccess = () => {
         setShowForm(false);
         setEditingRegulation(null);
-        setRefreshKey(prevKey => prevKey + 1); // Thay đổi key để trigger fetch lại trong Regulations
+        setRefreshKey(prevKey => prevKey + 1);
     };
 
+    const handleEditClick = (regulation) => {
+        setEditingRegulation(regulation);
+        setShowForm(true);
+    };
+
+    const handleDeleteClick = async (id) => {
+        // Hộp thoại xác nhận trước khi xóa
+        if (!window.confirm('Bạn có chắc chắn muốn xóa quy định này không?')) {
+            return false; // Người dùng đã hủy
+        }
+        try {
+            await axios.delete(`http://localhost:5000/api/regulations/${id}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            setRefreshKey(prevKey => prevKey + 1); // Kích hoạt tải lại danh sách
+            return true; // Thành công
+        } catch (err) {
+            setPageError(err.response?.data?.message || 'Không thể xóa quy định. Vui lòng thử lại.');
+            console.error('Lỗi xóa quy định:', err);
+            return false; // Thất bại
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gray-100 font-sans"
             style={{
-                backgroundImage: 'url(https://i.pinimg.com/736x/cd/07/2b/cd072bdf8a259e2d064fbb291a4456e8.jpg)', // Background cho toàn trang
+                backgroundImage: 'url(https://i.pinimg.com/736x/cd/07/2b/cd072bdf8a259e2d064fbb291a4456e8.jpg)',
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                backgroundAttachment: 'scroll', // Để background cố định khi cuộn
+                backgroundAttachment: 'scroll',
             }}>
             <div className="container mx-auto p-4 md:p-6">
+                {pageError && <p className="text-red-500 bg-red-100 p-3 rounded-md mb-4 text-center">{pageError}</p>}
                 {showForm ? (
                     <RegulationForm
                         editingRegulation={editingRegulation}
-                        setEditingRegulation={setEditingRegulation} // Giữ lại để form biết đang sửa gì
-                        setShowForm={setShowForm} // Để đóng form
-                        // setRegulations prop không còn cần thiết nếu Regulations tự fetch
                         token={token}
-                        seasons={seasons} // Truyền danh sách mùa giải cho form
-                        initialSelectedSeasonId={editingRegulation ? editingRegulation.season_id : selectedSeasonId} // Mùa giải cho quy định đang sửa hoặc mùa đang chọn
-                        onSuccess={handleFormSuccess} // Callback khi form thành công
+                        seasons={seasons}
+                        onSuccess={handleFormSuccess}
+                        setShowForm={setShowForm}
+                        setEditingRegulation={setEditingRegulation}
                     />
                 ) : (
-                    // Container chính cho phần hiển thị danh sách (giống SeasonsPage)
                     <div className="bg-white/90 rounded-lg shadow-xl overflow-hidden">
-                        {/* Header Section - Tiêu đề và nút Thêm */}
-                        <div className="flex flex-col sm:flex-row justify-between items-center px-6 py-5 border-b border-gray-200"
-                            style={{ // Có thể thêm background riêng cho header này nếu muốn
-                                // backgroundImage: 'url(link_anh_nen_header_neu_co)',
-                                // backgroundSize: 'cover',
-                                // backgroundPosition: 'center',
-                            }}
-                        >
+                        <div className="flex flex-col sm:flex-row justify-between items-center px-6 py-5 border-b border-gray-200">
                             <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-3 sm:mb-0">
                                 📜Quản lý Quy định Giải đấu
                             </h1>
@@ -89,9 +91,7 @@ const RegulationsPage = ({ token }) => {
                             )}
                         </div>
 
-                        {/* Phần chọn mùa giải và danh sách quy định */}
                         <div className="p-4 md:p-6">
-                            {/* Phần chọn mùa giải giờ sẽ nằm ở đây, bên trong RegulationsPage */}
                             <div className="mb-6 flex justify-center sm:justify-start">
                                 <div className="w-full sm:w-auto sm:max-w-xs md:max-w-sm">
                                     <label htmlFor="page-season-select" className="block text-sm font-medium text-gray-700 mb-1">
@@ -114,13 +114,12 @@ const RegulationsPage = ({ token }) => {
                             </div>
 
                             <Regulations
-                                // regulations và setRegulations được quản lý bên trong Regulations component dựa trên selectedSeasonId và refreshKey
-                                setEditingRegulation={setEditingRegulation}
-                                setShowForm={setShowForm}
+                                onEdit={handleEditClick}
+                                onDelete={handleDeleteClick}
                                 token={token}
-                                selectedSeasonId={selectedSeasonId} // Truyền mùa giải đã chọn xuống
-                                seasons={seasons} // Truyền danh sách mùa giải xuống (để lấy tên mùa giải)
-                                refreshKey={refreshKey} // Truyền key để trigger fetch lại
+                                selectedSeasonId={selectedSeasonId}
+                                seasons={seasons}
+                                refreshKey={refreshKey}
                             />
                         </div>
                     </div>
