@@ -35,6 +35,11 @@ const Matches = ({
   const [lineupLoading, setLineupLoading] = useState(false);
   const [lineupError, setLineupError] = useState('');
 
+  // --- BẮT ĐẦU THAY ĐỔI ---
+  // State để theo dõi ID của trận đấu đang bị xóa
+  const [deletingId, setDeletingId] = useState(null);
+  // --- KẾT THÚC THAY ĐỔI ---
+
 
   const matchesToDisplayState = propMatches !== undefined ? propMatches : localMatches;
   const setMatchesState = setPropMatches || setLocalMatches;
@@ -211,12 +216,15 @@ const Matches = ({
     setExpandedMatchId(null);
   };
 
+  // --- BẮT ĐẦU THAY ĐỔI ---
   const handleDelete = async (id) => {
     if (!token) {
       setError('Vui lòng đăng nhập để xóa trận đấu');
       return;
     }
+    // Hiển thị hộp thoại xác nhận của trình duyệt
     if (window.confirm('Bạn có chắc chắn muốn xóa trận đấu này? Điều này sẽ xóa luôn đội hình và ảnh hưởng kết quả, xếp hạng liên quan.')) {
+      setDeletingId(id); // Bắt đầu hiển thị vòng xoay
       try {
         await axios.delete(`http://localhost:5000/api/matches/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -225,9 +233,12 @@ const Matches = ({
       } catch (err) {
         console.error("Delete error:", err.response?.data || err.message);
         setError(err.response?.data?.message || 'Không thể xóa trận đấu.');
+      } finally {
+        setDeletingId(null); // Dừng hiển thị vòng xoay
       }
     }
   };
+  // --- KẾT THÚC THAY ĐỔI ---
 
   const handleToggleLineups = async (match) => {
     const matchId = match.id || match._id;
@@ -473,12 +484,21 @@ const Matches = ({
                   >
                     Sửa
                   </button>
-                  <button
-                    onClick={() => handleDelete(match.id || match._id)}
-                    className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition text-sm"
-                  >
-                    Xóa
-                  </button>
+                  {/* --- BẮT ĐẦU THAY ĐỔI --- */}
+                  {deletingId === (match.id || match._id) ? (
+                    <div className="flex justify-center items-center w-14 h-7">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900"></div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleDelete(match.id || match._id)}
+                      className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition text-sm"
+                      disabled={deletingId !== null}
+                    >
+                      Xóa
+                    </button>
+                  )}
+                  {/* --- KẾT THÚC THAY ĐỔI --- */}
                 </>
               )}
             </div>

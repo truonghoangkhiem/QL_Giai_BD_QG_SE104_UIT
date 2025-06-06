@@ -122,7 +122,7 @@ const createRegulation = async (req, res, next) => {
       regulation_name,
     });
     if (existingRegulation) {
-      const error = new Error("Regulation already exists for this season");
+      const error = new Error("Đã tồn tại quy định với tên này trong mùa giải này.");
       error.status = 400;
       return next(error);
     }
@@ -167,7 +167,7 @@ const getRegulationById = async (req, res, next) => {
 
     const regulation = await Regulation.findById(id);
     if (!regulation) {
-      const error = new Error("Regulation not found");
+      const error = new Error("Không tìm thấy quy định được yêu cầu.");
       error.status = 404;
       return next(error);
     }
@@ -200,14 +200,14 @@ const updateRegulation = async (req, res, next) => {
 
     const regulation = await Regulation.findById(id);
     if (!regulation) {
-      const error = new Error("Regulation not found");
+      const error = new Error("Không tìm thấy quy định được yêu cầu.");
       error.status = 404;
       return next(error);
     }
 
     // Kiểm tra logic dữ liệu
     if (!validateRules(regulation.regulation_name, rules)) {
-      const error = new Error("Invalid rules data");
+      const error = new Error("Các giá trị bạn nhập cho quy định không hợp lệ (ví dụ: tuổi tối thiểu lớn hơn tuổi tối đa).");
       error.status = 400;
       return next(error);
     }
@@ -232,7 +232,7 @@ const deleteRegulation = async (req, res, next) => {
 
     const regulation = await Regulation.findById(id);
     if (!regulation) {
-      const error = new Error("Regulation not found");
+      const error = new Error("Không tìm thấy quy định được yêu cầu.");
       error.status = 404;
       return next(error);
     }
@@ -264,7 +264,7 @@ const getIdRegulations = async (req, res, next) => {
       regulation_name,
     });
     if (!regulation) {
-      const error = new Error("Regulation not found");
+      const error = new Error("Không tìm thấy quy định được yêu cầu.");
       error.status = 404;
       return next(error);
     }

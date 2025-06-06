@@ -1,3 +1,5 @@
+// frontend/src/pages/RegulationsPage.jsx
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Regulations from '../components/Regulations';
@@ -71,6 +73,7 @@ const RegulationsPage = ({ token }) => {
                         editingRegulation={editingRegulation}
                         token={token}
                         seasons={seasons}
+                        selectedSeasonId={selectedSeasonId} // <-- THAY ĐỔI: Truyền ID mùa giải đã chọn
                         onSuccess={handleFormSuccess}
                         setShowForm={setShowForm}
                         setEditingRegulation={setEditingRegulation}

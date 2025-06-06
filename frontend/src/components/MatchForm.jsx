@@ -1,3 +1,4 @@
+// File: truonghoangkhiem/ql_giai_bd_qg_se104_uit/QL_Giai_BD_QG_SE104_UIT-ten-nhanh-moi/frontend/src/components/MatchForm.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
@@ -10,7 +11,7 @@ const getPositionAbbreviation = (position) => {
   if (lowerPos.includes('midfielder') || lowerPos.includes('tiền vệ')) return 'MF';
   if (lowerPos.includes('defender') || lowerPos.includes('hậu vệ')) return 'DF';
   if (lowerPos.includes('goalkeeper') || lowerPos.includes('thủ môn')) return 'GK';
-  
+
   return 'SUB'; // Mặc định cho các trường hợp khác
 };
 // --- KẾT THÚC THAY ĐỔI ---
@@ -27,7 +28,7 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
 
   const [formData, setFormData] = useState(initialFormData);
   const [goalDetails, setGoalDetails] = useState([]);
-  
+
   // Lineup states
   const [lineupTeam1Players, setLineupTeam1Players] = useState([]);
   const [lineupTeam2Players, setLineupTeam2Players] = useState([]);
@@ -39,7 +40,9 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [loading, setLoading] = useState(false);
+  // --- BẮT ĐẦU THAY ĐỔI ---
+  const [isSubmitting, setIsSubmitting] = useState(false); // Đổi tên `loading` thành `isSubmitting` cho rõ nghĩa
+  // --- KẾT THÚC THAY ĐỔI ---
   const [loadingPlayers, setLoadingPlayers] = useState(false);
   const [loadingLineups, setLoadingLineups] = useState(false);
 
@@ -292,17 +295,18 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
     setTeamLineup(teamLineup.filter((_, i) => i !== index));
   };
 
+  // --- BẮT ĐẦU THAY ĐỔI ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
-    setLoading(true);
+    setIsSubmitting(true); // Bắt đầu tải
 
     if (!token) {
-      setError('Vui lòng đăng nhập.'); setLoading(false); return;
+      setError('Vui lòng đăng nhập.'); setIsSubmitting(false); return;
     }
     if (!editingMatch) {
-      setError('Không có thông tin trận đấu để sửa.'); setLoading(false); return;
+      setError('Không có thông tin trận đấu để sửa.'); setIsSubmitting(false); return;
     }
     
     const matchId = editingMatch.id || editingMatch._id;
@@ -310,28 +314,28 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
 
     const currentScore = formData.score.trim();
     if (!validateScore(currentScore)) {
-      setError('Tỉ số phải dạng số-số (vd: 2-1) hoặc để trống.'); setLoading(false); return;
+      setError('Tỉ số phải dạng số-số (vd: 2-1) hoặc để trống.'); setIsSubmitting(false); return;
     }
     
     if (currentScore && /^\d+-\d+$/.test(currentScore)) {
         if(lineupTeam1Players.length === 0 || lineupTeam2Players.length === 0) {
           setError("Phải nhập đội hình cho cả hai đội khi có tỉ số.");
-          setLoading(false);
+          setIsSubmitting(false);
           return;
         }
         const goalValidation = validateGoalDetails(currentScore, goalDetails);
         if (goalValidation !== true) {
-          setError(goalValidation); setLoading(false); return;
+          setError(goalValidation); setIsSubmitting(false); return;
         }
     } else if (goalDetails.length > 0 && (!currentScore || !/^\d+-\d+$/.test(currentScore))) {
-        setError("Không thể có chi tiết bàn thắng khi chưa có tỉ số hợp lệ."); setLoading(false); return;
+        setError("Không thể có chi tiết bàn thắng khi chưa có tỉ số hợp lệ."); setIsSubmitting(false); return;
     }
 
     if (!formData.date || isNaN(new Date(formData.date).getTime())) {
-      setError('Ngày thi đấu không hợp lệ.'); setLoading(false); return;
+      setError('Ngày thi đấu không hợp lệ.'); setIsSubmitting(false); return;
     }
     if (!formData.time) {
-        setError('Giờ thi đấu không được để trống.'); setLoading(false); return;
+        setError('Giờ thi đấu không được để trống.'); setIsSubmitting(false); return;
     }
 
     try {
@@ -357,17 +361,12 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
       const lineupTeam1Payload = { match_id: matchId, team_id: editingMatch.team1._id, season_id: seasonId, players: lineupTeam1Players };
       if (lineupTeam1Players.length > 0) {
         await axios.post(`http://localhost:5000/api/matchlineups`, lineupTeam1Payload, { headers: { Authorization: `Bearer ${token}` } });
-      }// else {
-      //   await axios.delete(`http://localhost:5000/api/matchlineups/match/${matchId}/team/${editingMatch.team1._id}`, { headers: { Authorization: `Bearer ${token}` } });
-      // }
-
+      }
 
       const lineupTeam2Payload = { match_id: matchId, team_id: editingMatch.team2._id, season_id: seasonId, players: lineupTeam2Players };
       if (lineupTeam2Players.length > 0) {
         await axios.post(`http://localhost:5000/api/matchlineups`, lineupTeam2Payload, { headers: { Authorization: `Bearer ${token}` } });
-      }// else {
-      //   await axios.delete(`http://localhost:5000/api/matchlineups/match/${matchId}/team/${editingMatch.team2._id}`, { headers: { Authorization: `Bearer ${token}` } });
-      // }
+      }
       
       if (matchPayload.score !== null && /^\d+-\d+$/.test(matchPayload.score)) {
         await axios.put(`http://localhost:5000/api/team_results/${matchId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
@@ -394,9 +393,10 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
       console.error('Submit error:', err.response?.data || err.message, err.stack);
       setError(err.response?.data?.message || 'Không thể lưu trận đấu hoặc đội hình.');
     } finally {
-      setLoading(false);
+      setIsSubmitting(false); // Dừng tải
     }
   };
+  // --- KẾT THÚC THAY ĐỔI ---
   
   const renderLineupInputs = (teamLabel, lineupPlayers, setTeamLineup, allTeamPlayers) => (
     <div>
@@ -461,111 +461,114 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
       {error && <p className="text-red-600 bg-red-100 p-3 rounded-lg mb-4 text-center font-medium">{error}</p>}
       {success && <p className="text-green-600 bg-green-100 p-3 rounded-lg mb-4 text-center font-medium">{success}</p>}
       
+      {/* --- BẮT ĐẦU THAY ĐỔI --- */}
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div><label className="block text-sm font-medium text-gray-700 mb-1">Đội 1: {formData.team1Name}</label></div>
-          <div><label className="block text-sm font-medium text-gray-700 mb-1">Đội 2: {formData.team2Name}</label></div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label htmlFor="match-date" className="block text-sm font-medium text-gray-700 mb-1">Ngày Thi Đấu</label>
-            <input id="match-date" type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" required />
+        <fieldset disabled={isSubmitting || loadingPlayers || loadingLineups} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Đội 1: {formData.team1Name}</label></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Đội 2: {formData.team2Name}</label></div>
           </div>
-          <div>
-            <label htmlFor="match-time" className="block text-sm font-medium text-gray-700 mb-1">Giờ Thi Đấu</label>
-            <input id="match-time" type="time" value={formData.time} onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-              className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" required/>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label htmlFor="stadium" className="block text-sm font-medium text-gray-700 mb-1">Sân Vận Động</label>
-            <input id="stadium" type="text" value={formData.stadium} onChange={(e) => setFormData({ ...formData, stadium: e.target.value })}
-              placeholder="Sân vận động" className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" required/>
-          </div>
-          <div>
-            <label htmlFor="score" className="block text-sm font-medium text-gray-700 mb-1">Tỉ Số (vd: 2-1, trống nếu chưa đá)</label>
-            <input id="score" type="text" value={formData.score} onChange={(e) => setFormData({ ...formData, score: e.target.value })}
-              placeholder="x-y" className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"/>
-          </div>
-        </div>
-
-        {editingMatch && (
-            <>
-              {renderLineupInputs(formData.team1Name || "Đội 1", lineupTeam1Players, setLineupTeam1Players, allPlayersOfTeam1)}
-              <hr className="my-6 border-gray-300"/>
-              {renderLineupInputs(formData.team2Name || "Đội 2", lineupTeam2Players, setLineupTeam2Players, allPlayersOfTeam2)}
-            </>
-        )}
-
-
-        {(formData.score && /^\d+-\d+$/.test(formData.score)) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Cầu Thủ Ghi Bàn</label>
-            {goalDetails.map((goal, index) => (
-                <div key={index} className="grid grid-cols-1 sm:grid-cols-5 gap-3 mb-3 p-3 bg-gray-50 rounded-lg shadow-sm items-center">
-                    <div className="sm:col-span-2">
-                        <label htmlFor={`goal-player-${index}`} className="text-xs text-gray-600">Cầu thủ</label>
-                        <select id={`goal-player-${index}`} value={goal.playerId || ''} onChange={(e) => handleGoalDetailChange(index, 'playerId', e.target.value)}
-                            className="w-full p-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-sm" required>
-                            <option value="">Chọn cầu thủ ghi bàn</option>
-                            <optgroup label={`${formData.team1Name} (Đội hình)`}>
-                                {lineupTeam1Players.map(p => getPlayerByIdFromAll(p.player_id)).filter(Boolean).map(player => (<option key={player._id} value={player._id}>{player.name} (#{player.number})</option>))}
-                            </optgroup>
-                            <optgroup label={`${formData.team2Name} (Đội hình)`}>
-                                {lineupTeam2Players.map(p => getPlayerByIdFromAll(p.player_id)).filter(Boolean).map(player => (<option key={player._id} value={player._id}>{player.name} (#{player.number})</option>))}
-                            </optgroup>
-                        </select>
-                    </div>
-                    <div>
-                        <label htmlFor={`beneficiary-team-${index}`} className="text-xs text-gray-600">Đội hưởng</label>
-                        <select id={`beneficiary-team-${index}`} value={goal.beneficiaryTeamId || ''} onChange={(e) => handleGoalDetailChange(index, 'beneficiaryTeamId', e.target.value)}
-                            className="w-full p-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-sm" required>
-                            <option value="">Chọn đội hưởng</option>
-                            {editingMatch?.team1 && <option value={editingMatch.team1._id}>{formData.team1Name}</option>}
-                            {editingMatch?.team2 && <option value={editingMatch.team2._id}>{formData.team2Name}</option>}
-                        </select>
-                    </div>
-                     <div>
-                        <label htmlFor={`goal-minute-${index}`} className="text-xs text-gray-600">Phút</label>
-                        <input id={`goal-minute-${index}`} type="number" value={goal.minute || ''} onChange={(e) => handleGoalDetailChange(index, 'minute', e.target.value)}
-                            placeholder="Phút" className="w-full p-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-sm" required
-                            min={goalRegulation?.rules?.goalTimeLimit?.minMinute || 0} max={goalRegulation?.rules?.goalTimeLimit?.maxMinute || 120} />
-                    </div>
-                    <div className="flex items-end gap-2">
-                        <div className="flex-grow">
-                            <label htmlFor={`goal-type-${index}`} className="text-xs text-gray-600">Loại</label>
-                            <select id={`goal-type-${index}`} value={goal.goalType || 'normal'} onChange={(e) => handleGoalDetailChange(index, 'goalType', e.target.value)}
-                                className="w-full p-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-sm" required>
-                                {goalRegulation?.rules?.goalTypes?.length > 0 ? 
-                                  goalRegulation.rules.goalTypes.map(type => (<option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>))
-                                  : <option value="normal">Normal</option> }
-                            </select>
-                        </div>
-                        <button type="button" onClick={() => removeGoalDetail(index)}
-                            className="bg-red-500 text-white px-2.5 py-2 rounded-lg hover:bg-red-600 transition shadow-sm text-sm">Xóa</button>
-                    </div>
-                </div>
-            ))}
-            <button type="button" onClick={addGoalDetail}
-                className="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition shadow-sm mt-2 text-sm">
-                Thêm Bàn Thắng
-            </button>
+              <label htmlFor="match-date" className="block text-sm font-medium text-gray-700 mb-1">Ngày Thi Đấu</label>
+              <input id="match-date" type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" required />
             </div>
-        )}
+            <div>
+              <label htmlFor="match-time" className="block text-sm font-medium text-gray-700 mb-1">Giờ Thi Đấu</label>
+              <input id="match-time" type="time" value={formData.time} onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" required/>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label htmlFor="stadium" className="block text-sm font-medium text-gray-700 mb-1">Sân Vận Động</label>
+              <input id="stadium" type="text" value={formData.stadium} onChange={(e) => setFormData({ ...formData, stadium: e.target.value })}
+                placeholder="Sân vận động" className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" required/>
+            </div>
+            <div>
+              <label htmlFor="score" className="block text-sm font-medium text-gray-700 mb-1">Tỉ Số (vd: 2-1, trống nếu chưa đá)</label>
+              <input id="score" type="text" value={formData.score} onChange={(e) => setFormData({ ...formData, score: e.target.value })}
+                placeholder="x-y" className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"/>
+            </div>
+          </div>
 
-        <div className="flex justify-center space-x-4 pt-4">
-          <button type="submit" disabled={loading || loadingPlayers || loadingLineups}
-            className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition disabled:bg-blue-300 shadow-md">
-            {loading || loadingPlayers || loadingLineups ? 'Đang xử lý...' : (editingMatch ? 'Lưu Thay Đổi' : 'Thêm Trận')}
-          </button>
-          <button type="button" onClick={() => { setShowForm(false); setEditingMatch(null); setError(''); setSuccess(''); }}
-            className="bg-gray-500 text-white px-6 py-2.5 rounded-lg hover:bg-gray-600 transition disabled:bg-gray-300 shadow-md" disabled={loading || loadingPlayers || loadingLineups}>
-            Hủy
-          </button>
-        </div>
+          {editingMatch && (
+              <>
+                {renderLineupInputs(formData.team1Name || "Đội 1", lineupTeam1Players, setLineupTeam1Players, allPlayersOfTeam1)}
+                <hr className="my-6 border-gray-300"/>
+                {renderLineupInputs(formData.team2Name || "Đội 2", lineupTeam2Players, setLineupTeam2Players, allPlayersOfTeam2)}
+              </>
+          )}
+
+          {(formData.score && /^\d+-\d+$/.test(formData.score)) && (
+              <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Cầu Thủ Ghi Bàn</label>
+              {goalDetails.map((goal, index) => (
+                  <div key={index} className="grid grid-cols-1 sm:grid-cols-5 gap-3 mb-3 p-3 bg-gray-50 rounded-lg shadow-sm items-center">
+                      <div className="sm:col-span-2">
+                          <label htmlFor={`goal-player-${index}`} className="text-xs text-gray-600">Cầu thủ</label>
+                          <select id={`goal-player-${index}`} value={goal.playerId || ''} onChange={(e) => handleGoalDetailChange(index, 'playerId', e.target.value)}
+                              className="w-full p-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-sm" required>
+                              <option value="">Chọn cầu thủ ghi bàn</option>
+                              <optgroup label={`${formData.team1Name} (Đội hình)`}>
+                                  {lineupTeam1Players.map(p => getPlayerByIdFromAll(p.player_id)).filter(Boolean).map(player => (<option key={player._id} value={player._id}>{player.name} (#{player.number})</option>))}
+                              </optgroup>
+                              <optgroup label={`${formData.team2Name} (Đội hình)`}>
+                                  {lineupTeam2Players.map(p => getPlayerByIdFromAll(p.player_id)).filter(Boolean).map(player => (<option key={player._id} value={player._id}>{player.name} (#{player.number})</option>))}
+                              </optgroup>
+                          </select>
+                      </div>
+                      <div>
+                          <label htmlFor={`beneficiary-team-${index}`} className="text-xs text-gray-600">Đội hưởng</label>
+                          <select id={`beneficiary-team-${index}`} value={goal.beneficiaryTeamId || ''} onChange={(e) => handleGoalDetailChange(index, 'beneficiaryTeamId', e.target.value)}
+                              className="w-full p-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-sm" required>
+                              <option value="">Chọn đội hưởng</option>
+                              {editingMatch?.team1 && <option value={editingMatch.team1._id}>{formData.team1Name}</option>}
+                              {editingMatch?.team2 && <option value={editingMatch.team2._id}>{formData.team2Name}</option>}
+                          </select>
+                      </div>
+                       <div>
+                          <label htmlFor={`goal-minute-${index}`} className="text-xs text-gray-600">Phút</label>
+                          <input id={`goal-minute-${index}`} type="number" value={goal.minute || ''} onChange={(e) => handleGoalDetailChange(index, 'minute', e.target.value)}
+                              placeholder="Phút" className="w-full p-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-sm" required
+                              min={goalRegulation?.rules?.goalTimeLimit?.minMinute || 0} max={goalRegulation?.rules?.goalTimeLimit?.maxMinute || 120} />
+                      </div>
+                      <div className="flex items-end gap-2">
+                          <div className="flex-grow">
+                              <label htmlFor={`goal-type-${index}`} className="text-xs text-gray-600">Loại</label>
+                              <select id={`goal-type-${index}`} value={goal.goalType || 'normal'} onChange={(e) => handleGoalDetailChange(index, 'goalType', e.target.value)}
+                                  className="w-full p-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-sm" required>
+                                  {goalRegulation?.rules?.goalTypes?.length > 0 ? 
+                                    goalRegulation.rules.goalTypes.map(type => (<option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>))
+                                    : <option value="normal">Normal</option> }
+                              </select>
+                          </div>
+                          <button type="button" onClick={() => removeGoalDetail(index)}
+                              className="bg-red-500 text-white px-2.5 py-2 rounded-lg hover:bg-red-600 transition shadow-sm text-sm">Xóa</button>
+                      </div>
+                  </div>
+              ))}
+              <button type="button" onClick={addGoalDetail}
+                  className="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition shadow-sm mt-2 text-sm">
+                  Thêm Bàn Thắng
+              </button>
+              </div>
+          )}
+
+          <div className="flex justify-center space-x-4 pt-4">
+            <button type="submit" disabled={isSubmitting || loadingPlayers || loadingLineups}
+              className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition disabled:bg-blue-300 shadow-md flex items-center justify-center min-w-[120px]">
+              {isSubmitting ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : (editingMatch ? 'Lưu Thay Đổi' : 'Thêm Trận')}
+            </button>
+            <button type="button" onClick={() => { setShowForm(false); setEditingMatch(null); setError(''); setSuccess(''); }}
+              className="bg-gray-500 text-white px-6 py-2.5 rounded-lg hover:bg-gray-600 transition disabled:bg-gray-300 shadow-md" disabled={isSubmitting || loadingPlayers || loadingLineups}>
+              Hủy
+            </button>
+          </div>
+        </fieldset>
       </form>
+      {/* --- KẾT THÚC THAY ĐỔI --- */}
     </div>
   );
 };

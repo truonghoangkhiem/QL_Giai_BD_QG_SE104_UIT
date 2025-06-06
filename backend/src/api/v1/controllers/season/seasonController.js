@@ -75,7 +75,7 @@ const createSeason = async (req, res, next) => {
 
     const checkExist = await Season.findOne({ season_name });
     if (checkExist) {
-      const error = new Error("Season name already exists");
+      const error = new Error("Tên mùa giải đã tồn tại");
       error.status = 400;
       return next(error);
     }
@@ -128,7 +128,7 @@ const updateSeason = async (req, res, next) => {
           _id: { $ne: season_id_obj },
         });
         if (checkExist) {
-          const error = new Error("Season name already exists");
+          const error = new Error("Tên mùa giải đã tồn tại");
           error.status = 400;
           return next(error);
         }

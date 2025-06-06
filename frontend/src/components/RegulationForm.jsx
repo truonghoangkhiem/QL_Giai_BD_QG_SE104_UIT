@@ -1,7 +1,9 @@
+// frontend/src/components/RegulationForm.jsx
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, setRegulations, token, seasons, onSuccess  }) => {
+const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, token, seasons, selectedSeasonId, onSuccess  }) => {
     const [formData, setFormData] = useState({
         season_id: '',
         season_name: '',
@@ -15,52 +17,30 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
             matchRounds: '',
             homeTeamRule: '',
             goalTypes: '',
-            includeOG: false, // Thêm trường để theo dõi checkbox OG
+            includeOG: false,
             goalTimeLimit: { minMinute: '', maxMinute: '' },
             winPoints: '',
             drawPoints: '',
             losePoints: '',
             rankingCriteria: [
                 { criterion: 'points', priority: '' },
-                { criterion: 'goalDifference', priority: '' },
+                { criterion: 'goalsDifference', priority: '' },
                 { criterion: 'goalsFor', priority: '' },
-                { criterion: 'headToHead', priority: '' },
+                { criterion: 'headToHeadPoints', priority: '' },
             ],
         },
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
-    // const [seasons, setSeasons] = useState([]);
     const [existingRegulations, setExistingRegulations] = useState([]);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
 
-    const rankingCriteriaOptions = ['points', 'goalDifference', 'goalsFor', 'headToHead'];
+    const rankingCriteriaOptions = ['points', 'goalsDifference', 'goalsFor', 'headToHeadPoints'];
 
-    // useEffect(() => {
-    //     const fetchSeasonsAndRegulations = async () => {
-    //         try {
-    //             const [seasonsResponse, regulationsResponse] = await Promise.all([
-    //                 axios.get('http://localhost:5000/api/seasons'),
-    //                 axios.get('http://localhost:5000/api/regulations'),
-    //             ]);
-    //             setSeasons(seasonsResponse.data.data);
-    //             setExistingRegulations(regulationsResponse.data.data);
-    //             if (!editingRegulation && seasonsResponse.data.data.length > 0) {
-    //                 setFormData((prev) => ({
-    //                     ...prev,
-    //                     season_id: seasonsResponse.data.data[0]._id,
-    //                     season_name: seasonsResponse.data.data[0].season_name,
-    //                 }));
-    //             }
-    //         } catch (err) {
-    //             setError('Không thể tải dữ liệu mùa giải hoặc quy định');
-    //         }
-    //     };
-    //     fetchSeasonsAndRegulations();
-    // }, [editingRegulation]);
-
+    // --- BẮT ĐẦU THAY ĐỔI: Khởi tạo giá trị cho form ---
     useEffect(() => {
         if (editingRegulation) {
+            // Logic khi sửa một quy định đã có (giữ nguyên)
             const rules = editingRegulation.rules || {};
             const rankingCriteria = rankingCriteriaOptions.map((criterion) => {
                 const priority = rules.rankingCriteria?.indexOf(criterion) + 1;
@@ -81,8 +61,8 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                     maxForeignPlayers: rules.maxForeignPlayers?.toString() || '',
                     matchRounds: rules.matchRounds?.toString() || '',
                     homeTeamRule: rules.homeTeamRule || '',
-                    goalTypes: rules.goalTypes?.filter(type => type !== 'OG').join(', ') || '', // Loại bỏ OG khỏi input
-                    includeOG: rules.goalTypes?.includes('OG') || false, // Đặt checkbox dựa trên OG
+                    goalTypes: rules.goalTypes?.filter(type => type !== 'OG').join(', ') || '',
+                    includeOG: rules.goalTypes?.includes('OG') || false,
                     goalTimeLimit: {
                         minMinute: rules.goalTimeLimit?.minMinute?.toString() || '',
                         maxMinute: rules.goalTimeLimit?.maxMinute?.toString() || '',
@@ -93,8 +73,21 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                     rankingCriteria,
                 },
             });
+        } else {
+            // Logic khi tạo quy định mới
+            // Sử dụng `selectedSeasonId` được truyền từ trang cha
+            const initialSeason = seasons.find(s => s._id === selectedSeasonId) || (seasons.length > 0 ? seasons[0] : null);
+            if (initialSeason) {
+                setFormData(prev => ({
+                    ...prev,
+                    season_id: initialSeason._id,
+                    season_name: initialSeason.season_name,
+                }));
+            }
         }
-    }, [editingRegulation]);
+    }, [editingRegulation, selectedSeasonId, seasons]);
+    // --- KẾT THÚC THAY ĐỔI ---
+
 
     const handleSeasonChange = (e) => {
         const selectedSeason = seasons.find((season) => season._id === e.target.value);
@@ -264,30 +257,16 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
                 regulation_name: formData.regulation_name,
                 rules,
             };
-            console.log('Data sent to backend:', data);
+
             const headers = { Authorization: `Bearer ${token}` };
-            let response;
             if (editingRegulation) {
-                response = await axios.put(
+                await axios.put(
                     `http://localhost:5000/api/regulations/${editingRegulation._id}`,
                     { rules },
                     { headers }
                 );
-                // setRegulations((prev) =>
-                //     prev.map((regulation) =>
-                //         regulation._id === editingRegulation._id
-                //             ? { ...regulation, rules: response.data.data?.rules || rules }
-                //             : regulation
-                //     )
-                // );
-                // setSuccessMessage('Sửa quy định thành công');
             } else {
-                response = await axios.post('http://localhost:5000/api/regulations/', data, { headers });
-                // setRegulations((prev) => [
-                //     ...prev,
-                //     { ...response.data.data, season_name: formData.season_name },
-                // ]);
-                // setSuccessMessage('Thêm quy định thành công');
+                await axios.post('http://localhost:5000/api/regulations/', data, { headers });
             }
             onSuccess();
            
@@ -300,6 +279,7 @@ const RegulationForm = ({ editingRegulation, setEditingRegulation, setShowForm, 
     };
 
     const renderFields = () => {
+        // ... (phần renderFields không thay đổi, bạn có thể giữ nguyên)
         switch (formData.regulation_name) {
             case 'Age Regulation':
                 return (

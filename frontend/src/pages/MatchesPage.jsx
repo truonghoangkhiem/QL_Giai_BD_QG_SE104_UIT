@@ -1,3 +1,4 @@
+// File: truonghoangkhiem/ql_giai_bd_qg_se104_uit/QL_Giai_BD_QG_SE104_UIT-ten-nhanh-moi/frontend/src/pages/MatchesPage.jsx
 import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 import Matches from '../components/Matches';
@@ -15,7 +16,9 @@ const MatchesPage = ({ token }) => {
   const [seasons, setSeasons] = useState([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [loading, setLoading] = useState(false);
+  // --- BẮT ĐẦU THAY ĐỔI ---
+  const [isCreatingSchedule, setIsCreatingSchedule] = useState(false); // Đổi tên `loading`
+  // --- KẾT THÚC THAY ĐỔI ---
 
   // Fetch seasons for the dropdown
   React.useEffect(() => {
@@ -31,35 +34,35 @@ const MatchesPage = ({ token }) => {
   }, []);
 
   const memoizedSetMatches = useCallback((newMatches) => {
-    console.log('New matches:', newMatches);
     setMatches(newMatches);
   }, []);
 
   const onPastMatchesFetched = useCallback((pastMatches) => {
-    console.log('Past matches fetched:', pastMatches);
+    // Logic xử lý khi có các trận đã qua
   }, []);
 
+  // --- BẮT ĐẦU THAY ĐỔI ---
   const handleAutoCreateSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
-    setLoading(true);
+    setIsCreatingSchedule(true); // Bắt đầu tải
 
     if (!token) {
       setError('Vui lòng đăng nhập để tạo trận đấu tự động.');
-      setLoading(false);
+      setIsCreatingSchedule(false);
       return;
     }
 
     if (!autoCreateData.season_id) {
       setError('Vui lòng chọn mùa giải.');
-      setLoading(false);
+      setIsCreatingSchedule(false);
       return;
     }
 
     if (autoCreateData.matchperday < 1) {
       setError('Số trận đấu mỗi ngày phải lớn hơn hoặc bằng 1.');
-      setLoading(false);
+      setIsCreatingSchedule(false);
       return;
     }
 
@@ -71,7 +74,6 @@ const MatchesPage = ({ token }) => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // Fetch updated matches after creating
       const response = await axios.get(`http://localhost:5000/api/matches/seasons/${autoCreateData.season_id}`);
       setMatches(response.data.data || response.data || []);
 
@@ -88,11 +90,10 @@ const MatchesPage = ({ token }) => {
         setError('Không thể tạo lịch thi đấu. Vui lòng thử lại.');
       }
     } finally {
-      setLoading(false);
+      setIsCreatingSchedule(false); // Dừng tải
     }
   };
-
-  console.log('Token in MatchesPage:', token);
+  // --- KẾT THÚC THAY ĐỔI ---
 
   return (
     <div className="container mx-auto p-6">
@@ -125,71 +126,75 @@ const MatchesPage = ({ token }) => {
               {success}
             </p>
           )}
+          {/* --- BẮT ĐẦU THAY ĐỔI --- */}
           <form onSubmit={handleAutoCreateSubmit} className="space-y-6">
-            <div>
-              <label
-                htmlFor="season_id"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Mùa Giải
-              </label>
-              <select
-                id="season_id"
-                value={autoCreateData.season_id}
-                onChange={(e) =>
-                  setAutoCreateData({ ...autoCreateData, season_id: e.target.value })
-                }
-                className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                required
-              >
-                <option value="">Chọn mùa giải</option>
-                {seasons.map((season) => (
-                  <option key={season._id} value={season._id}>
-                    {season.season_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label
-                htmlFor="matchperday"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Số Trận Mỗi Ngày
-              </label>
-              <input
-                type="number"
-                id="matchperday"
-                value={autoCreateData.matchperday}
-                onChange={(e) =>
-                  setAutoCreateData({
-                    ...autoCreateData,
-                    matchperday: parseInt(e.target.value, 10),
-                  })
-                }
-                min="1"
-                className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                required
-              />
-            </div>
-            <div className="flex justify-center space-x-4">
-              <button
-                type="submit"
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:bg-blue-300 shadow-sm"
-                disabled={loading}
-              >
-                {loading ? 'Đang Tạo...' : 'Tạo Lịch'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowAutoCreateForm(false)}
-                className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition disabled:bg-gray-300 shadow-sm"
-                disabled={loading}
-              >
-                Hủy
-              </button>
-            </div>
+            <fieldset disabled={isCreatingSchedule} className="space-y-6">
+              <div>
+                <label
+                  htmlFor="season_id"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Mùa Giải
+                </label>
+                <select
+                  id="season_id"
+                  value={autoCreateData.season_id}
+                  onChange={(e) =>
+                    setAutoCreateData({ ...autoCreateData, season_id: e.target.value })
+                  }
+                  className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                  required
+                >
+                  <option value="">Chọn mùa giải</option>
+                  {seasons.map((season) => (
+                    <option key={season._id} value={season._id}>
+                      {season.season_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor="matchperday"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Số Trận Mỗi Ngày
+                </label>
+                <input
+                  type="number"
+                  id="matchperday"
+                  value={autoCreateData.matchperday}
+                  onChange={(e) =>
+                    setAutoCreateData({
+                      ...autoCreateData,
+                      matchperday: parseInt(e.target.value, 10),
+                    })
+                  }
+                  min="1"
+                  className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                  required
+                />
+              </div>
+              <div className="flex justify-center space-x-4">
+                <button
+                  type="submit"
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:bg-blue-300 shadow-sm flex items-center justify-center min-w-[100px]"
+                  disabled={isCreatingSchedule}
+                >
+                  {isCreatingSchedule ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : 'Tạo Lịch'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAutoCreateForm(false)}
+                  className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition disabled:bg-gray-300 shadow-sm"
+                  disabled={isCreatingSchedule}
+                >
+                  Hủy
+                </button>
+              </div>
+            </fieldset>
           </form>
+          {/* --- KẾT THÚC THAY ĐỔI --- */}
         </div>
       ) : (
         <>
