@@ -75,8 +75,8 @@ export const calculateAndSaveTeamRankings = async (seasonId, dateForRanking, ses
             // Trong một hệ thống đầy đủ, bạn cần xác định nhóm các đội bằng điểm và sau đó so sánh H2H chỉ trong nhóm đó.
             // Ở đây, chúng ta giả định headToHeadPoints trên TeamResult là một map { opponent_id: points_against_opponent }
             // Việc này đơn giản hóa và có thể không hoàn toàn chính xác cho mọi kịch bản H2H phức tạp.
-            const pointsA_vs_B = (a.headToHeadPoints && a.headToHeadPoints.get(b.team_id.toString())) || 0;
-            const pointsB_vs_A = (b.headToHeadPoints && b.headToHeadPoints.get(a.team_id.toString())) || 0;
+            const pointsA_vs_B = (a.headToHeadPoints && a.headToHeadPoints[b.team_id.toString()]) || 0;
+            const pointsB_vs_A = (b.headToHeadPoints && b.headToHeadPoints[a.team_id.toString()]) || 0;
             if (pointsA_vs_B !== pointsB_vs_A) return pointsB_vs_A - pointsA_vs_B; // Đội có điểm H2H cao hơn sẽ xếp trên
         } else if (a[field] !== b[field]) {
             return (b[field] || 0) - (a[field] || 0); // Mặc định: giá trị cao hơn là tốt hơn
