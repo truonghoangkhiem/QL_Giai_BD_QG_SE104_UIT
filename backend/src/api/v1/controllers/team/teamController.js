@@ -1,4 +1,5 @@
-// backend/src/api/v1/controllers/team/teamController.js
+// File: backend/src/api/v1/controllers/team/teamController.js
+
 import Team from "../../../../models/Team.js";
 import Season from "../../../../models/Season.js";
 import Player from "../../../../models/Player.js";
@@ -8,6 +9,7 @@ import PlayerResult from "../../../../models/PlayerResult.js";
 import Ranking from "../../../../models/Ranking.js";
 import PlayerRanking from "../../../../models/PlayerRanking.js";
 import Regulation from "../../../../models/Regulation.js";
+import MatchLineup from "../../../../models/MatchLineup.js";
 import { successResponse } from "../../../../utils/responseFormat.js";
 import {
   CreateTeamSchema,
@@ -18,14 +20,94 @@ import {
 import { SeasonIdSchema } from "../../../../schemas/seasonSchema.js";
 import mongoose from "mongoose";
 
-// Import các hàm helper nếu cần (ví dụ: từ rankingController, player_resultsController, ...)
-import { updateTeamResultsForDateInternal } from "./team_resultsController.js"; // Giả sử có hàm này được export
-import { calculateAndSaveTeamRankings } from "./rankingController.js"; // Giả sử có hàm này được export
-import { updatePlayerResultsForDateInternal } from "../player/player_resultsController.js"; // Giả sử có hàm này
-import { calculateAndSavePlayerRankings } from "../player/player_rankingsController.js"; // Giả sử có hàm này
+// Import các hàm helper
+import { updateTeamResultsForDateInternal } from "./team_resultsController.js";
+import { calculateAndSaveTeamRankings } from "./rankingController.js";
+import { updatePlayerResultsForDateInternal } from "../player/player_resultsController.js";
+import { calculateAndSavePlayerRankings } from "../player/player_rankingsController.js";
 
 
-// Lấy tất cả đội bóng
+// HÀM TÍNH TOÁN LẠI DỮ LIỆU MÙA GIẢI (HÀM NÀY SẼ ĐƯỢC CHẠY NGẦM)
+const recalculateSeasonData = async (season_id_str, excluded_team_id_str = null) => {
+    console.log(`[BACKGROUND JOB] Starting recalculation for season ${season_id_str}, excluding team ${excluded_team_id_str}`);
+    const backgroundSession = await mongoose.startSession();
+    backgroundSession.startTransaction();
+    try {
+        const seasonId = new mongoose.Types.ObjectId(season_id_str);
+        
+        const rankingRegulation = await Regulation.findOne({ season_id: seasonId, regulation_name: "Ranking Rules" }).session(backgroundSession);
+        if (!rankingRegulation || !rankingRegulation.rules) {
+            throw new Error("Ranking Regulation not found or rules not defined for the season.");
+        }
+        const teamRegulationRules = {
+            winPoints: rankingRegulation.rules.winPoints || 3,
+            drawPoints: rankingRegulation.rules.drawPoints || 1,
+            losePoints: rankingRegulation.rules.losePoints || 0,
+        };
+
+        const teamsQuery = { season_id: seasonId };
+        if (excluded_team_id_str) {
+            teamsQuery._id = { $ne: new mongoose.Types.ObjectId(excluded_team_id_str) };
+        }
+        const activeTeams = await Team.find(teamsQuery).session(backgroundSession);
+        const activeTeamIds = activeTeams.map(t => t._id);
+        
+        // Cập nhật lại tất cả các trận đấu còn lại
+        const relevantMatches = await Match.find({ season_id: seasonId, team1: { $in: activeTeamIds }, team2: { $in: activeTeamIds }, score: { $ne: null, $regex: /^\d+-\d+$/ } }).session(backgroundSession);
+
+        // Xóa sạch dữ liệu cũ của các đội còn lại
+        await TeamResult.deleteMany({ season_id: seasonId, team_id: { $in: activeTeamIds } }).session(backgroundSession);
+        await Ranking.deleteMany({ season_id: seasonId, team_id: { $in: activeTeamIds } }).session(backgroundSession);
+        
+        const activePlayers = await Player.find({ team_id: { $in: activeTeamIds }}).session(backgroundSession);
+        const activePlayerIds = activePlayers.map(p => p._id);
+        await PlayerResult.deleteMany({ season_id: seasonId, player_id: { $in: activePlayerIds } }).session(backgroundSession);
+        await PlayerRanking.deleteMany({ season_id: seasonId, player_id: { $in: activePlayerIds } }).session(backgroundSession);
+
+        const season = await Season.findById(seasonId).session(backgroundSession);
+        if (!season) throw new Error("Season not found during recalculation.");
+        const seasonStartDate = new Date(season.start_date);
+        seasonStartDate.setUTCHours(0, 0, 0, 0);
+
+        // Tạo lại dữ liệu ban đầu
+        for (const team of activeTeams) {
+            await TeamResult.create([{ team_id: team._id, season_id: seasonId, date: seasonStartDate }], { session: backgroundSession });
+            const playersOfTeam = activePlayers.filter(p => p.team_id.equals(team._id));
+            for (const player of playersOfTeam) {
+                await PlayerResult.create([{ player_id: player._id, season_id: seasonId, team_id: team._id, date: seasonStartDate }], { session: backgroundSession });
+            }
+        }
+        
+        const allMatchDatesInvolved = [...new Set(relevantMatches.map(m => new Date(m.date).toISOString().split('T')[0]))];
+        const datesToProcess = [...new Set([seasonStartDate.toISOString().split('T')[0], ...allMatchDatesInvolved])]
+                                .map(dstr => new Date(dstr))
+                                .sort((a,b) => a - b);
+
+        for (const currentDate of datesToProcess) {
+            // Tính toán lại kết quả
+            for (const team of activeTeams) {
+                await updateTeamResultsForDateInternal(team._id, seasonId, currentDate, teamRegulationRules, backgroundSession);
+                const playersOfTeam = activePlayers.filter(p => p.team_id.equals(team._id));
+                for (const player of playersOfTeam) {
+                    await updatePlayerResultsForDateInternal(player._id, team._id, seasonId, currentDate, backgroundSession);
+                }
+            }
+            // Tính toán lại xếp hạng
+            await calculateAndSaveTeamRankings(seasonId, currentDate, backgroundSession);
+            await calculateAndSavePlayerRankings(seasonId, currentDate, backgroundSession);
+        }
+
+        await backgroundSession.commitTransaction();
+        console.log(`[BACKGROUND JOB] Recalculation for season ${season_id_str} (excluding team ${excluded_team_id_str || 'none'}) completed successfully.`);
+    } catch (error) {
+        await backgroundSession.abortTransaction();
+        console.error(`[BACKGROUND JOB] Error during season data recalculation for season ${season_id_str}:`, error);
+    } finally {
+        backgroundSession.endSession();
+    }
+};
+
+// GET all teams
 const getTeams = async (req, res, next) => {
   try {
     const teams = await Team.find().populate("season_id");
@@ -35,7 +117,7 @@ const getTeams = async (req, res, next) => {
   }
 };
 
-// Lấy đội bóng theo tên và ID mùa giải
+// GET team by name and season ID
 const getTeamsByNameAndSeasonId = async (req, res, next) => {
   const season_id_param = req.params.season_id;
   const team_name_param = req.params.team_name;
@@ -55,15 +137,6 @@ const getTeamsByNameAndSeasonId = async (req, res, next) => {
     }
     const seasonIdObj = new mongoose.Types.ObjectId(season_id_param);
 
-    const { success: idSuccess, error: idError } = SeasonIdSchema.safeParse({
-      id: season_id_param,
-    });
-    if (!idSuccess) {
-      const validationError = new Error(idError.errors[0].message);
-      validationError.status = 400;
-      return next(validationError);
-    }
-
     const team = await Team.findOne({ team_name: team_name_param, season_id: seasonIdObj });
     if (!team) {
       const error = new Error("Không tìm thấy đội bóng được yêu cầu.");
@@ -77,7 +150,7 @@ const getTeamsByNameAndSeasonId = async (req, res, next) => {
   }
 };
 
-// Lấy đội bóng theo ID
+// GET team by ID
 const getTeamsByID = async (req, res, next) => {
   try {
     const { success, error } = TeamIdSchema.safeParse({ id: req.params.id });
@@ -100,7 +173,7 @@ const getTeamsByID = async (req, res, next) => {
   }
 };
 
-// Thêm đội bóng (CHỈ TẠO TEAM, KHÔNG TẠO TEAM_RESULT HAY RANKING)
+// CREATE a team
 const createTeam = async (req, res, next) => {
   const { season_id, team_name, stadium, coach, logo } = req.body;
   const session = await mongoose.startSession();
@@ -149,12 +222,10 @@ const createTeam = async (req, res, next) => {
     await session.commitTransaction();
     session.endSession();
 
-    // Trả về thông tin đội bóng vừa tạo.
-    // Frontend sẽ chịu trách nhiệm gọi API tạo TeamResult và Ranking.
     return successResponse(
       res,
-      savedTeam, // Trả về object Team đầy đủ
-      "Created team successfully. Frontend should now create initial TeamResult and Ranking.",
+      savedTeam,
+      "Created team successfully.",
       201
     );
   } catch (error) {
@@ -167,7 +238,7 @@ const createTeam = async (req, res, next) => {
   }
 };
 
-// Sửa đội bóng
+// UPDATE a team
 const updateTeam = async (req, res, next) => {
   const { team_name, stadium, coach, logo } = req.body;
   const session = await mongoose.startSession();
@@ -222,18 +293,13 @@ const updateTeam = async (req, res, next) => {
     }
     
     if (Object.keys(updatedTeamData).length === 0) {
-        await session.abortTransaction(); // Không có gì thay đổi, không cần commit
+        await session.abortTransaction();
         session.endSession();
         return successResponse(res, existingTeam, "No changes made to the team");
     }
 
     const result = await Team.findByIdAndUpdate(teamId, { $set: updatedTeamData }, { new: true, session });
-    if (!result) {
-        const error = new Error("Không tìm thấy đội bóng được yêu cầu."); // Should not happen if existingTeam was found
-        error.status = 404;
-        throw error;
-    }
-
+    
     await session.commitTransaction();
     session.endSession();
     return successResponse(res, result, "Team updated successfully");
@@ -246,169 +312,58 @@ const updateTeam = async (req, res, next) => {
   }
 };
 
-
-// Hàm tính toán lại dữ liệu mùa giải (đã điều chỉnh)
-const recalculateSeasonData = async (season_id_str, excluded_team_id_str = null) => {
-    console.log(`Recalculating data for season ${season_id_str}, excluding team ${excluded_team_id_str}`);
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    try {
-        const seasonId = new mongoose.Types.ObjectId(season_id_str);
-        const excludedTeamObjectId = excluded_team_id_str ? new mongoose.Types.ObjectId(excluded_team_id_str) : null;
-
-        const rankingRegulation = await Regulation.findOne({ season_id: seasonId, regulation_name: "Ranking Rules" }).session(session);
-        if (!rankingRegulation || !rankingRegulation.rules) {
-            throw new Error("Ranking Regulation not found or rules not defined for the season.");
-        }
-        const teamRegulationRules = {
-            winPoints: rankingRegulation.rules.winPoints || 3,
-            drawPoints: rankingRegulation.rules.drawPoints || 1,
-            losePoints: rankingRegulation.rules.losePoints || 0,
-        };
-        const rankingCriteria = rankingRegulation.rules.rankingCriteria || ['points', 'goalsDifference', 'goalsFor'];
-
-
-        const matchesQuery = { season_id: seasonId, score: { $ne: null, $regex: /^\d+-\d+$/ } };
-        if (excludedTeamObjectId) {
-            matchesQuery.$nor = [
-                { team1: excludedTeamObjectId },
-                { team2: excludedTeamObjectId }
-            ];
-        }
-        const relevantMatches = await Match.find(matchesQuery).populate('team1 team2 goalDetails.player_id').session(session);
-
-        const teamsQuery = { season_id: seasonId };
-        if (excludedTeamObjectId) {
-            teamsQuery._id = { $ne: excludedTeamObjectId };
-        }
-        const activeTeams = await Team.find(teamsQuery).session(session);
-        const activeTeamIds = activeTeams.map(t => t._id);
-        
-        const playersQuery = { team_id: { $in: activeTeamIds }};
-        // Không cần loại trừ cầu thủ của đội bị xóa ở đây nữa vì activeTeamIds đã loại trừ đội đó
-        const activePlayers = await Player.find(playersQuery).session(session);
-        const activePlayerIds = activePlayers.map(p => p._id);
-
-
-        // Xóa TeamResult, Ranking, PlayerResult, PlayerRanking CŨ của các đội/cầu thủ CÒN LẠI trong mùa giải
-        await TeamResult.deleteMany({ season_id: seasonId, team_id: { $in: activeTeamIds } }).session(session);
-        await Ranking.deleteMany({ season_id: seasonId, team_id: { $in: activeTeamIds } }).session(session);
-        await PlayerResult.deleteMany({ season_id: seasonId, player_id: { $in: activePlayerIds } }).session(session);
-        await PlayerRanking.deleteMany({ season_id: seasonId, player_id: { $in: activePlayerIds } }).session(session);
-
-        const season = await Season.findById(seasonId).session(session);
-        if (!season) throw new Error("Không tìm thấy mùa giải bạn đã chọn.");
-        const seasonStartDate = new Date(season.start_date);
-        seasonStartDate.setUTCHours(0, 0, 0, 0);
-
-        // Tạo TeamResult và PlayerResult ban đầu cho ngày bắt đầu mùa giải cho các đội/cầu thủ CÒN LẠI
-        for (const team of activeTeams) {
-            await TeamResult.create([{
-                team_id: team._id,
-                season_id: seasonId,
-                date: seasonStartDate,
-            }], { session });
-
-            const playersOfTeam = activePlayers.filter(p => p.team_id.equals(team._id));
-            for (const player of playersOfTeam) {
-                await PlayerResult.create([{
-                    player_id: player._id,
-                    season_id: seasonId,
-                    team_id: team._id,
-                    date: seasonStartDate,
-                }], { session });
-            }
-        }
-        
-        const allMatchDatesInvolved = [...new Set(relevantMatches.map(m => new Date(m.date).toISOString().split('T')[0]))];
-        const datesToProcess = [...new Set([seasonStartDate.toISOString().split('T')[0], ...allMatchDatesInvolved])]
-                                .sort((a,b) => new Date(a) - new Date(b));
-
-        for (const dateStr of datesToProcess) {
-            const currentDate = new Date(dateStr);
-            currentDate.setUTCHours(0,0,0,0);
-
-            for (const team of activeTeams) {
-                await updateTeamResultsForDateInternal(team._id, seasonId, currentDate, teamRegulationRules, session);
-                const playersOfTeam = activePlayers.filter(p => p.team_id.equals(team._id));
-                for (const player of playersOfTeam) {
-                    await updatePlayerResultsForDateInternal(player._id, team._id, seasonId, currentDate, session);
-                }
-            }
-        }
-
-        for (const dateStr of datesToProcess) {
-            const currentDate = new Date(dateStr);
-            currentDate.setUTCHours(0,0,0,0);
-            await calculateAndSaveTeamRankings(seasonId, currentDate, session); // Sử dụng hàm đã export
-            await calculateAndSavePlayerRankings(seasonId, currentDate, session); // Sử dụng hàm đã export
-        }
-
-        await session.commitTransaction();
-        console.log(`Recalculation for season ${season_id_str} (excluding team ${excluded_team_id_str || 'none'}) completed successfully.`);
-    } catch (error) {
-        await session.abortTransaction();
-        console.error(`Error during season data recalculation for season ${season_id_str}:`, error);
-    } finally {
-        session.endSession();
-    }
-};
-
-
-// Xóa đội bóng
+// DELETE a team - OPTIMIZED
 const deleteTeam = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+  let teamToDeleteInfo = null;
   try {
     const { success, error } = TeamIdSchema.safeParse({ id: req.params.id });
     if (!success) {
-      const validationError = new Error(error.errors[0].message);
-      validationError.status = 400;
-      throw validationError; 
+      throw Object.assign(new Error(error.errors[0].message), { status: 400 });
     }
 
     const teamId = new mongoose.Types.ObjectId(req.params.id);
     const teamToDelete = await Team.findById(teamId).session(session);
     if (!teamToDelete) {
-      const error = new Error("Không tìm thấy đội bóng được yêu cầu.");
-      error.status = 404;
-      throw error;
+      throw Object.assign(new Error("Không tìm thấy đội bóng được yêu cầu."), { status: 404 });
     }
 
-    const seasonId = teamToDelete.season_id; // Đây là ObjectId
-
-    // 1. Delete Players of the team
+    // --- PHASE 1: GATHER INFO & DELETE ---
+    teamToDeleteInfo = {
+        seasonId: teamToDelete.season_id.toString(),
+        teamId: teamToDelete._id.toString()
+    };
+    
+    // 1. Delete Players and their data
     const playersToDelete = await Player.find({ team_id: teamId }).session(session);
-    const playerIdsToDelete = playersToDelete.map(p => p._id);
-
-    if (playerIdsToDelete.length > 0) {
-      // Delete PlayerResults and PlayerRankings for these players IN THIS SPECIFIC season
-      await PlayerResult.deleteMany({ player_id: { $in: playerIdsToDelete }, season_id: seasonId }).session(session);
-      await PlayerRanking.deleteMany({ player_id: { $in: playerIdsToDelete }, season_id: seasonId }).session(session);
-      await Player.deleteMany({ _id: { $in: playerIdsToDelete } }).session(session); // Xóa cầu thủ
+    if (playersToDelete.length > 0) {
+        const playerIdsToDelete = playersToDelete.map(p => p._id);
+        await PlayerResult.deleteMany({ player_id: { $in: playerIdsToDelete } }, { session });
+        await PlayerRanking.deleteMany({ player_id: { $in: playerIdsToDelete } }, { session });
+        await Player.deleteMany({ _id: { $in: playerIdsToDelete } }, { session });
     }
 
-    // 2. Delete Matches involving the team IN THIS SPECIFIC season
-    // (Nếu một đội có thể tham gia nhiều mùa giải, cần cẩn thận hơn. Giả định đội chỉ thuộc 1 mùa.)
-    await Match.deleteMany({ season_id: seasonId, $or: [{ team1: teamId }, { team2: teamId }] }).session(session);
+    // 2. Delete Matches involving the team
+    await Match.deleteMany({ $or: [{ team1: teamId }, { team2: teamId }] }, { session });
+    await MatchLineup.deleteMany({ team_id: teamId }, { session });
 
-    // 3. Delete TeamResult for this team IN THIS SPECIFIC season
-    await TeamResult.deleteMany({ team_id: teamId, season_id: seasonId }).session(session);
+    // 3. Delete TeamResult & Ranking
+    await TeamResult.deleteMany({ team_id: teamId }, { session });
+    await Ranking.deleteMany({ team_id: teamId }, { session });
 
-    // 4. Delete Ranking for this team IN THIS SPECIFIC season
-    await Ranking.deleteMany({ team_id: teamId, season_id: seasonId }).session(session);
-
-    // 5. Delete the Team itself
-    await Team.deleteOne({ _id: teamId }).session(session);
+    // 4. Delete the Team
+    await Team.deleteOne({ _id: teamId }, { session });
     
     await session.commitTransaction(); 
-    session.endSession(); // Kết thúc session trước khi gọi recalculate
+    session.endSession(); 
 
-    // 6. Recalculate data cho mùa giải, loại trừ đội vừa xóa
-    // Hàm này sẽ chạy trong session riêng của nó.
-    await recalculateSeasonData(seasonId.toString(), teamId.toString());
+    // --- PHASE 2: IMMEDIATE RESPONSE ---
+    successResponse(res, null, "Đã xóa đội bóng thành công. Dữ liệu mùa giải đang được tính toán lại trong nền...", 200);
 
-    return successResponse(res, null, "Deleted team and initiated season data recalculation successfully", 200);
+    // --- PHASE 3: ASYNC (FIRE-AND-FORGET) RECALCULATION ---
+    // Gọi hàm tính toán lại mà không cần `await`
+    recalculateSeasonData(teamToDeleteInfo.seasonId, teamToDeleteInfo.teamId);
 
   } catch (error) {
     if (session.inTransaction()) {
@@ -420,7 +375,7 @@ const deleteTeam = async (req, res, next) => {
   }
 };
 
-// Lấy đội bóng theo season_id
+// GET teams by season ID
 const getTeamsByIDSeason = async (req, res, next) => {
   try {
     const { success, error } = SeasonIdSchema.safeParse({ id: req.params.season_id });
@@ -459,5 +414,5 @@ export {
   deleteTeam,
   getTeamsByIDSeason,
   getTeamsByNameAndSeasonId,
-  recalculateSeasonData,
+  recalculateSeasonData, // Export để có thể gọi từ nơi khác nếu cần
 };

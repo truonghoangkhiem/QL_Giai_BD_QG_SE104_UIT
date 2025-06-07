@@ -28,18 +28,16 @@ const Matches = ({
   const [currentPage, setCurrentPage] = useState(1);
   const matchesPerPage = 7;
 
-  const [allPlayersMap, setAllPlayersMap] = useState({});
-
+  // State đội hình
   const [expandedMatchId, setExpandedMatchId] = useState(null);
   const [matchLineups, setMatchLineups] = useState({ team1: null, team2: null });
   const [lineupLoading, setLineupLoading] = useState(false);
   const [lineupError, setLineupError] = useState('');
 
-  // --- BẮT ĐẦU THAY ĐỔI ---
-  // State để theo dõi ID của trận đấu đang bị xóa
   const [deletingId, setDeletingId] = useState(null);
-  // --- KẾT THÚC THAY ĐỔI ---
 
+  // Không cần allPlayersMap nữa
+  // const [allPlayersMap, setAllPlayersMap] = useState({});
 
   const matchesToDisplayState = propMatches !== undefined ? propMatches : localMatches;
   const setMatchesState = setPropMatches || setLocalMatches;
@@ -71,22 +69,7 @@ const Matches = ({
     return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
   };
 
-  useEffect(() => {
-    const fetchAllPlayers = async () => {
-      try {
-        const response = await axios.get('http://localhost:5000/api/players');
-        const playersData = response.data.data || [];
-        const playerMap = playersData.reduce((acc, player) => {
-          acc[player._id] = player;
-          return acc;
-        }, {});
-        setAllPlayersMap(playerMap);
-      } catch (err) {
-        console.error('Lỗi lấy danh sách tất cả cầu thủ:', err);
-      }
-    };
-    fetchAllPlayers();
-  }, []);
+  // useEffect để lấy allPlayers đã được loại bỏ vì không cần thiết nữa
 
   useEffect(() => {
     if (hideDropdown) return;
@@ -165,6 +148,7 @@ const Matches = ({
           setLoading(false);
           return;
         }
+        url = `http://localhost:5000/api/matches/seasons/${initialSeasonId}`;
       }
 
       try {
@@ -216,15 +200,13 @@ const Matches = ({
     setExpandedMatchId(null);
   };
 
-  // --- BẮT ĐẦU THAY ĐỔI ---
   const handleDelete = async (id) => {
     if (!token) {
       setError('Vui lòng đăng nhập để xóa trận đấu');
       return;
     }
-    // Hiển thị hộp thoại xác nhận của trình duyệt
     if (window.confirm('Bạn có chắc chắn muốn xóa trận đấu này? Điều này sẽ xóa luôn đội hình và ảnh hưởng kết quả, xếp hạng liên quan.')) {
-      setDeletingId(id); // Bắt đầu hiển thị vòng xoay
+      setDeletingId(id);
       try {
         await axios.delete(`http://localhost:5000/api/matches/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -234,11 +216,10 @@ const Matches = ({
         console.error("Delete error:", err.response?.data || err.message);
         setError(err.response?.data?.message || 'Không thể xóa trận đấu.');
       } finally {
-        setDeletingId(null); // Dừng hiển thị vòng xoay
+        setDeletingId(null);
       }
     }
   };
-  // --- KẾT THÚC THAY ĐỔI ---
 
   const handleToggleLineups = async (match) => {
     const matchId = match.id || match._id;
@@ -409,7 +390,7 @@ const Matches = ({
               />
             </div>
 
-            {/* Goal Scorers - START (Two Columns) */}
+            {/* Goal Scorers - START (SỬA ĐỔI Ở ĐÂY) */}
             {new Date(match.date) <= now && match.score && /^\d+-\d+$/.test(match.score) && match.goalDetails && match.goalDetails.length > 0 && (
               <div className="col-span-12 mt-3 pt-2 border-t border-gray-200">
                 <p className="font-semibold text-sm text-gray-700 mb-2 text-center">Ghi bàn:</p>
@@ -421,8 +402,8 @@ const Matches = ({
                       {match.goalDetails
                         .filter(goal => goal.team_id === match.team1?._id)
                         .map((goal, index) => {
-                          const scorer = allPlayersMap[goal.player_id];
-                          const scorerName = scorer ? scorer.name : 'N/A';
+                          // LẤY TÊN TRỰC TIẾP TỪ DỮ LIỆU ĐÃ POPULATE
+                          const scorerName = goal.player_id?.name || 'N/A';
                           return (
                             <li key={`t1-goal-${index}-${match.id || match._id}`} className="text-gray-600">
                               {scorerName} ({goal.minute}')
@@ -437,7 +418,6 @@ const Matches = ({
                     </ul>
                   </div>
 
-                  {/* Divider (optional, for larger screens) */}
                   <div className="hidden md:block border-l border-gray-300 mx-2"></div>
 
                   {/* Column for Team 2 Scorers */}
@@ -447,8 +427,8 @@ const Matches = ({
                       {match.goalDetails
                         .filter(goal => goal.team_id === match.team2?._id)
                         .map((goal, index) => {
-                          const scorer = allPlayersMap[goal.player_id];
-                          const scorerName = scorer ? scorer.name : 'N/A';
+                          // LẤY TÊN TRỰC TIẾP TỪ DỮ LIỆU ĐÃ POPULATE
+                          const scorerName = goal.player_id?.name || 'N/A';
                           return (
                             <li key={`t2-goal-${index}-${match.id || match._id}`} className="text-gray-600">
                               {scorerName} ({goal.minute}')
@@ -484,7 +464,6 @@ const Matches = ({
                   >
                     Sửa
                   </button>
-                  {/* --- BẮT ĐẦU THAY ĐỔI --- */}
                   {deletingId === (match.id || match._id) ? (
                     <div className="flex justify-center items-center w-14 h-7">
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900"></div>
@@ -498,7 +477,6 @@ const Matches = ({
                       Xóa
                     </button>
                   )}
-                  {/* --- KẾT THÚC THAY ĐỔI --- */}
                 </>
               )}
             </div>

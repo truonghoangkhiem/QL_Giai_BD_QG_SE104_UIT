@@ -1,3 +1,5 @@
+// File: backend/src/api/v1/controllers/season/seasonController.js
+
 import Season from "../../../../models/Season.js";
 import Team from "../../../../models/Team.js";
 import Player from "../../../../models/Player.js";
@@ -7,6 +9,7 @@ import PlayerResult from "../../../../models/PlayerResult.js";
 import Ranking from "../../../../models/Ranking.js";
 import PlayerRanking from "../../../../models/PlayerRanking.js";
 import Regulation from "../../../../models/Regulation.js";
+import MatchLineup from "../../../../models/MatchLineup.js"; // Import MatchLineup
 import { successResponse } from "../../../../utils/responseFormat.js";
 import {
   CreateSeasonSchema,
@@ -15,15 +18,8 @@ import {
   SeasonNameSchema,
 } from "../../../../schemas/seasonSchema.js";
 import mongoose from "mongoose";
-// Import the deleteTeam function if it's not already part of a shared service
-// For now, we'll assume direct model operations or replicate parts of team deletion logic.
-// Ideally, you'd have a TeamService.delete(teamId, session) method.
-import { deleteTeam as deleteTeamService } from "../team/teamController.js"; // Assuming it can be imported and used
 
-// --- Other functions (getSeasons, getSeasonById, createSeason, updateSeason, getSeasonIdBySeasonName) remain the same ---
-// Add them here if you need the full file content.
-
-// Lấy tất cả mùa giải
+// GET all seasons
 const getSeasons = async (req, res, next) => {
   try {
     const seasons = await Season.find();
@@ -33,7 +29,7 @@ const getSeasons = async (req, res, next) => {
   }
 };
 
-// Lấy mùa giải theo ID
+// GET season by ID
 const getSeasonById = async (req, res, next) => {
   try {
     const { success, error } = SeasonIdSchema.safeParse({ id: req.params.id });
@@ -43,7 +39,7 @@ const getSeasonById = async (req, res, next) => {
       return next(validationError);
     }
 
-    const season_id_obj = new mongoose.Types.ObjectId(req.params.id); // Renamed to avoid conflict
+    const season_id_obj = new mongoose.Types.ObjectId(req.params.id);
     const season = await Season.findById(season_id_obj);
     if (!season) {
       const error = new Error("Season not found");
@@ -56,11 +52,10 @@ const getSeasonById = async (req, res, next) => {
   }
 };
 
-// Tạo mùa giải
+// CREATE season
 const createSeason = async (req, res, next) => {
   let { season_name, start_date, end_date, status } = req.body;
   try {
-    // Validate schema với Zod
     const { success, error } = CreateSeasonSchema.safeParse({
       season_name,
       start_date,
@@ -86,15 +81,15 @@ const createSeason = async (req, res, next) => {
       end_date,
       status,
     });
-    const savedSeason = await newSeason.save(); // get the saved season document
+    const savedSeason = await newSeason.save();
 
-    return successResponse(res, savedSeason, "Created season successfully", 201); // return savedSeason
+    return successResponse(res, savedSeason, "Created season successfully", 201);
   } catch (error) {
     return next(error);
   }
 };
 
-// Cập nhật mùa giải
+// UPDATE season
 const updateSeason = async (req, res, next) => {
   const { season_name, start_date, end_date, status } = req.body;
   try {
@@ -119,9 +114,8 @@ const updateSeason = async (req, res, next) => {
       return next(validationError);
     }
 
-    const season_id_obj = new mongoose.Types.ObjectId(req.params.id); // Renamed
+    const season_id_obj = new mongoose.Types.ObjectId(req.params.id);
     
-    // Check if a season with the new name already exists (excluding the current season being updated)
     if (season_name) {
         const checkExist = await Season.findOne({
           season_name,
@@ -140,16 +134,14 @@ const updateSeason = async (req, res, next) => {
     if (end_date !== undefined) updateData.end_date = end_date;
     if (status !== undefined) updateData.status = status;
 
-
     if (Object.keys(updateData).length === 0) {
         const currentSeason = await Season.findById(season_id_obj);
         return successResponse(res, currentSeason, "No changes made to the season.");
     }
 
-
     const updatedSeason = await Season.findByIdAndUpdate(
       season_id_obj,
-      updateData, // Use updateData
+      updateData,
       { new: true }
     );
     if (!updatedSeason) {
@@ -165,86 +157,68 @@ const updateSeason = async (req, res, next) => {
 };
 
 
-// Xóa mùa giải
+// DELETE season - OPTIMIZED
 const deleteSeason = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
     const { success, error } = SeasonIdSchema.safeParse({ id: req.params.id });
     if (!success) {
-      const validationError = new Error(error.errors[0].message);
-      validationError.status = 400;
-      throw validationError;
+      throw Object.assign(new Error(error.errors[0].message), { status: 400 });
     }
 
     const seasonId = new mongoose.Types.ObjectId(req.params.id);
     const seasonToDelete = await Season.findById(seasonId).session(session);
     if (!seasonToDelete) {
-      const error = new Error("Season not found");
-      error.status = 404;
-      throw error;
+      throw Object.assign(new Error("Season not found"), { status: 404 });
     }
 
-    // 1. Find all teams in the season
-    const teamsInSeason = await Team.find({ season_id: seasonId }).session(session);
-
-    for (const team of teamsInSeason) {
-      // For each team, perform cascading deletions similar to deleteTeam logic
-      const teamId = team._id;
-
-      // Delete Players of the team and their PlayerResults/PlayerRankings
-      const playersToDelete = await Player.find({ team_id: teamId }).session(session);
-      const playerIdsToDelete = playersToDelete.map(p => p._id);
-
-      if (playerIdsToDelete.length > 0) {
-        await PlayerResult.deleteMany({ player_id: { $in: playerIdsToDelete }, season_id: seasonId }).session(session);
-        await PlayerRanking.deleteMany({ player_id: { $in: playerIdsToDelete }, season_id: seasonId }).session(session);
-        await Player.deleteMany({ team_id: teamId }).session(session);
-      }
-
-      // Delete Matches involving the team for this season
-      await Match.deleteMany({ season_id: seasonId, $or: [{ team1: teamId }, { team2: teamId }] }).session(session);
-      
-      // Delete TeamResult for this team in this season
-      await TeamResult.deleteMany({ team_id: teamId, season_id: seasonId }).session(session);
-      
-      // Delete Ranking for this team in this season
-      await Ranking.deleteMany({ team_id: teamId, season_id: seasonId }).session(session); // Assuming Ranking has team_id
-
-      // Delete the Team itself
-      await Team.deleteOne({ _id: teamId }).session(session);
-    }
-
-    // 2. Delete all matches that might not have been caught by team deletion (e.g., if a match had invalid team refs)
-    await Match.deleteMany({ season_id: seasonId }).session(session);
-
-    // 3. Delete all remaining TeamResults, PlayerResults, Rankings, PlayerRankings for the season
-    // (Should mostly be covered by team-specific deletions, but this is a fallback)
-    await TeamResult.deleteMany({ season_id: seasonId }).session(session);
-    await Ranking.deleteMany({ season_id: seasonId }).session(session);
-    await PlayerResult.deleteMany({ season_id: seasonId }).session(session);
-    await PlayerRanking.deleteMany({ season_id: seasonId }).session(session);
+    // --- PHASE 1: DELETE ALL RELATED DATA IN A SINGLE TRANSACTION ---
     
-    // 4. Delete Regulations for the season
-    await Regulation.deleteMany({ season_id: seasonId }).session(session);
+    // 1. Find all teams and players to determine which sub-documents to delete
+    const teamsInSeason = await Team.find({ season_id: seasonId }).select('_id').session(session);
+    const teamIdsInSeason = teamsInSeason.map(t => t._id);
+    
+    const playersInSeason = await Player.find({ team_id: { $in: teamIdsInSeason } }).select('_id').session(session);
+    const playerIdsInSeason = playersInSeason.map(p => p._id);
 
-    // 5. Delete the Season itself
-    await Season.deleteOne({ _id: seasonId }).session(session);
+    // 2. Delete all documents related to the season
+    await Regulation.deleteMany({ season_id: seasonId }, { session });
+    await MatchLineup.deleteMany({ season_id: seasonId }, { session });
+    await Match.deleteMany({ season_id: seasonId }, { session });
+    await PlayerRanking.deleteMany({ season_id: seasonId }, { session });
+    await PlayerResult.deleteMany({ season_id: seasonId }, { session });
+    await Ranking.deleteMany({ season_id: seasonId }, { session });
+    await TeamResult.deleteMany({ season_id: seasonId }, { session });
+    if (playerIdsInSeason.length > 0) {
+        await Player.deleteMany({ _id: { $in: playerIdsInSeason } }, { session });
+    }
+    if (teamIdsInSeason.length > 0) {
+        await Team.deleteMany({ _id: { $in: teamIdsInSeason } }, { session });
+    }
+    
+    // 3. Finally, delete the Season itself
+    await Season.deleteOne({ _id: seasonId }, { session });
 
     await session.commitTransaction();
-    return successResponse(res, null, "Deleted season and all related data successfully", 200); // Changed to 200
+    session.endSession();
+
+    // --- PHASE 2: IMMEDIATE RESPONSE ---
+    // No background task is needed because we deleted EVERYTHING. There's nothing left to recalculate.
+    return successResponse(res, null, "Deleted season and all related data successfully.", 200);
 
   } catch (error) {
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+        await session.abortTransaction();
+    }
+    session.endSession();
     console.error("Error in deleteSeason:", error);
     return next(error);
-  } finally {
-    session.endSession();
   }
 };
 
 
-// Lấy ID mùa giải theo tên
+// GET season ID by name
 const getSeasonIdBySeasonName = async (req, res, next) => {
   const { season_name } = req.params;
   try {
