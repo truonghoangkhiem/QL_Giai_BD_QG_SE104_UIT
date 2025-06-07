@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
-// --- BẮT ĐẦU THAY ĐỔI: Thêm hàm helper để chuyển đổi vị trí ---
 const getPositionAbbreviation = (position) => {
   if (!position) return 'SUB'; // Mặc định nếu không có vị trí
   const lowerPos = position.toLowerCase();
@@ -14,7 +13,6 @@ const getPositionAbbreviation = (position) => {
 
   return 'SUB'; // Mặc định cho các trường hợp khác
 };
-// --- KẾT THÚC THAY ĐỔI ---
 
 const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, token }) => {
   const initialFormData = {
@@ -40,9 +38,7 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  // --- BẮT ĐẦU THAY ĐỔI ---
-  const [isSubmitting, setIsSubmitting] = useState(false); // Đổi tên `loading` thành `isSubmitting` cho rõ nghĩa
-  // --- KẾT THÚC THAY ĐỔI ---
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingPlayers, setLoadingPlayers] = useState(false);
   const [loadingLineups, setLoadingLineups] = useState(false);
 
@@ -253,7 +249,6 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
     setGoalDetails(goalDetails.filter((_, i) => i !== index));
   };
 
-  // --- BẮT ĐẦU THAY ĐỔI: Chỉnh sửa Lineup Handlers ---
   const handleLineupPlayerChange = (teamLineup, setTeamLineup, index, field, value) => {
     const newLineup = [...teamLineup];
   
@@ -289,18 +284,16 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
     // Thêm một slot trống, vị trí sẽ được điền tự động khi người dùng chọn cầu thủ
     setTeamLineup([...teamLineup, { player_id: '', position: '', jersey_number: '' }]);
   };
-  // --- KẾT THÚC THAY ĐỔI ---
 
   const removeLineupPlayer = (teamLineup, setTeamLineup, index) => {
     setTeamLineup(teamLineup.filter((_, i) => i !== index));
   };
 
-  // --- BẮT ĐẦU THAY ĐỔI ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
-    setIsSubmitting(true); // Bắt đầu tải
+    setIsSubmitting(true);
 
     if (!token) {
       setError('Vui lòng đăng nhập.'); setIsSubmitting(false); return;
@@ -309,9 +302,6 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
       setError('Không có thông tin trận đấu để sửa.'); setIsSubmitting(false); return;
     }
     
-    const matchId = editingMatch.id || editingMatch._id;
-    const seasonId = editingMatch.season_id?._id || editingMatch.season_id;
-
     const currentScore = formData.score.trim();
     if (!validateScore(currentScore)) {
       setError('Tỉ số phải dạng số-số (vd: 2-1) hoặc để trống.'); setIsSubmitting(false); return;
@@ -339,64 +329,69 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
     }
 
     try {
-      const [hours, minutes] = formData.time.split(':').map(Number);
-      const matchDateTime = new Date(formData.date);
-      matchDateTime.setHours(hours, minutes, 0, 0);
-
-      const matchPayload = {
-        date: matchDateTime.toISOString(),
-        stadium: formData.stadium,
-        score: currentScore === '' ? null : currentScore,
-        goalDetails: (currentScore === '' || currentScore === null) ? [] : goalDetails.map(goal => ({
-          player_id: goal.playerId,
-          team_id: goal.beneficiaryTeamId, 
-          minute: parseInt(goal.minute, 10),
-          goalType: goal.goalType,
-        })),
-      };
-      const matchUpdateResponse = await axios.put(`http://localhost:5000/api/matches/${matchId}`, matchPayload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const lineupTeam1Payload = { match_id: matchId, team_id: editingMatch.team1._id, season_id: seasonId, players: lineupTeam1Players };
-      if (lineupTeam1Players.length > 0) {
-        await axios.post(`http://localhost:5000/api/matchlineups`, lineupTeam1Payload, { headers: { Authorization: `Bearer ${token}` } });
-      }
-
-      const lineupTeam2Payload = { match_id: matchId, team_id: editingMatch.team2._id, season_id: seasonId, players: lineupTeam2Players };
-      if (lineupTeam2Players.length > 0) {
-        await axios.post(`http://localhost:5000/api/matchlineups`, lineupTeam2Payload, { headers: { Authorization: `Bearer ${token}` } });
-      }
-      
-      if (matchPayload.score !== null && /^\d+-\d+$/.test(matchPayload.score)) {
-        await axios.put(`http://localhost:5000/api/team_results/${matchId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
-        await axios.put(`http://localhost:5000/api/player_results/match/${matchId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
-        await axios.put(`http://localhost:5000/api/rankings/${seasonId}`,
-          { match_date: matchDateTime.toISOString().split('T')[0] }, 
-          { headers: { Authorization: `Bearer ${token}` } }
+        const matchId = editingMatch.id || editingMatch._id;
+        const seasonId = editingMatch.season_id?._id || editingMatch.season_id;
+        const [hours, minutes] = formData.time.split(':').map(Number);
+        const matchDateTime = new Date(formData.date);
+        matchDateTime.setHours(hours, minutes, 0, 0);
+  
+        const headers = { Authorization: `Bearer ${token}` };
+  
+        // BƯỚC 1: LƯU ĐỘI HÌNH TRƯỚC
+        if (lineupTeam1Players.length > 0) {
+            const lineupTeam1Payload = { match_id: matchId, team_id: editingMatch.team1._id, season_id: seasonId, players: lineupTeam1Players };
+            await axios.post(`http://localhost:5000/api/matchlineups`, lineupTeam1Payload, { headers });
+        }
+    
+        if (lineupTeam2Players.length > 0) {
+            const lineupTeam2Payload = { match_id: matchId, team_id: editingMatch.team2._id, season_id: seasonId, players: lineupTeam2Players };
+            await axios.post(`http://localhost:5000/api/matchlineups`, lineupTeam2Payload, { headers });
+        }
+        
+        // BƯỚC 2: SAU KHI LƯU ĐỘI HÌNH, MỚI CẬP NHẬT TRẬN ĐẤU
+        const matchPayload = {
+            date: matchDateTime.toISOString(),
+            stadium: formData.stadium,
+            score: currentScore === '' ? null : currentScore,
+            goalDetails: (currentScore === '' || currentScore === null) ? [] : goalDetails.map(goal => ({
+              player_id: goal.playerId,
+              team_id: goal.beneficiaryTeamId, 
+              minute: parseInt(goal.minute, 10),
+              goalType: goal.goalType,
+            })),
+        };
+  
+        const matchUpdateResponse = await axios.put(`http://localhost:5000/api/matches/${matchId}`, matchPayload, { headers });
+        
+        // BƯỚC 3: Cập nhật kết quả, xếp hạng (giữ nguyên)
+        if (matchPayload.score !== null && /^\d+-\d+$/.test(matchPayload.score)) {
+            await axios.put(`http://localhost:5000/api/team_results/${matchId}`, {}, { headers });
+            await axios.put(`http://localhost:5000/api/player_results/match/${matchId}`, {}, { headers });
+            await axios.put(`http://localhost:5000/api/rankings/${seasonId}`,
+              { match_date: matchDateTime.toISOString().split('T')[0] }, 
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            await axios.put(`http://localhost:5000/api/player_rankings/match/${matchId}`, {}, { headers });
+            setSuccess('Cập nhật trận đấu, đội hình và các kết quả liên quan thành công!');
+        } else {
+            setSuccess('Cập nhật thông tin trận đấu và đội hình thành công (không có tỉ số để cập nhật kết quả).');
+        }
+        
+        setMatches((prevMatches) =>
+            prevMatches.map((m) => (m.id === matchId || m._id === matchId) ? { ...m, ...matchUpdateResponse.data.data } : m)
         );
-        await axios.put(`http://localhost:5000/api/player_rankings/match/${matchId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
-        setSuccess('Cập nhật trận đấu, đội hình và các kết quả liên quan thành công!');
-      } else {
-        setSuccess('Cập nhật thông tin trận đấu và đội hình thành công (không có tỉ số để cập nhật kết quả).');
-      }
-      
-      setMatches((prevMatches) =>
-        prevMatches.map((m) => (m.id === matchId || m._id === matchId) ? { ...m, ...matchUpdateResponse.data.data } : m)
-      );
-
-      setTimeout(() => {
-        setShowForm(false); setEditingMatch(null); setSuccess('');
-      }, 2000);
-
+  
+        setTimeout(() => {
+            setShowForm(false); setEditingMatch(null); setSuccess('');
+        }, 2000);
+  
     } catch (err) {
-      console.error('Submit error:', err.response?.data || err.message, err.stack);
-      setError(err.response?.data?.message || 'Không thể lưu trận đấu hoặc đội hình.');
+        console.error('Submit error:', err.response?.data || err.message, err.stack);
+        setError(err.response?.data?.message || 'Không thể lưu trận đấu hoặc đội hình.');
     } finally {
-      setIsSubmitting(false); // Dừng tải
+        setIsSubmitting(false);
     }
   };
-  // --- KẾT THÚC THAY ĐỔI ---
   
   const renderLineupInputs = (teamLabel, lineupPlayers, setTeamLineup, allTeamPlayers) => (
     <div>
@@ -461,7 +456,6 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
       {error && <p className="text-red-600 bg-red-100 p-3 rounded-lg mb-4 text-center font-medium">{error}</p>}
       {success && <p className="text-green-600 bg-green-100 p-3 rounded-lg mb-4 text-center font-medium">{success}</p>}
       
-      {/* --- BẮT ĐẦU THAY ĐỔI --- */}
       <form onSubmit={handleSubmit} className="space-y-6">
         <fieldset disabled={isSubmitting || loadingPlayers || loadingLineups} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -568,7 +562,6 @@ const MatchForm = ({ editingMatch, setEditingMatch, setShowForm, setMatches, tok
           </div>
         </fieldset>
       </form>
-      {/* --- KẾT THÚC THAY ĐỔI --- */}
     </div>
   );
 };
