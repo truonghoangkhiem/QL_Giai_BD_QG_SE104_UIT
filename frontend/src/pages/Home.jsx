@@ -167,15 +167,6 @@ const Home = () => {
                     <p className="text-xl text-white drop-shadow-md font-light mt-2">
                         Quản lý đội bóng, trận đấu, cầu thủ, mùa giải, và hơn thế nữa!
                     </p>
-                    {/* NÚT ĐĂNG NHẬP ĐƯỢC THÊM Ở ĐÂY */}
-                    <div className="mt-8">
-                        <Link
-                            to="/login" // Thay đổi "/login" thành route đăng nhập của bạn
-                            className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-lg inline-block"
-                        >
-                            Đăng nhập
-                        </Link>
-                    </div>
                 </div>
             </div>
 
