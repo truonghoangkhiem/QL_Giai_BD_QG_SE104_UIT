@@ -7,7 +7,7 @@ const TeamsPage = ({ token }) => {
     const [showForm, setShowForm] = useState(false);
     const [editingTeam, setEditingTeam] = useState(null);
     const [seasons, setSeasons] = useState([]);
-    const [selectedSeason, setSelectedSeason] = useState('');
+    const [selectedSeason, setSelectedSeason] = useState(() => localStorage.getItem('selectedSeasonId') || '');
     const [refreshKey, setRefreshKey] = useState(0); // State để trigger tải lại
     const [pageError, setPageError] = useState('');
     const [pageSuccess, setPageSuccess] = useState('');
@@ -25,7 +25,7 @@ const TeamsPage = ({ token }) => {
                 const response = await axios.get('http://localhost:5000/api/seasons');
                 const activeSeasons = response.data.data.filter(s => s.status === true);
                 setSeasons(activeSeasons);
-                if (activeSeasons.length > 0) {
+                if (activeSeasons.length > 0 && !localStorage.getItem('selectedSeasonId')) {
                     setSelectedSeason(activeSeasons[0]._id);
                 }
             } catch (err) {
@@ -35,6 +35,12 @@ const TeamsPage = ({ token }) => {
         };
         fetchSeasons();
     }, []);
+
+    useEffect(() => {
+        if (selectedSeason) {
+            localStorage.setItem('selectedSeasonId', selectedSeason);
+        }
+    }, [selectedSeason]);
 
     // Xử lý khi form được submit thành công
     const handleFormSuccess = () => {

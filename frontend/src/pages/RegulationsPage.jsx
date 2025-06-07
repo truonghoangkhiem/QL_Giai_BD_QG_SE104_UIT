@@ -9,7 +9,7 @@ const RegulationsPage = ({ token }) => {
     const [showForm, setShowForm] = useState(false);
     const [editingRegulation, setEditingRegulation] = useState(null);
     const [seasons, setSeasons] = useState([]);
-    const [selectedSeasonId, setSelectedSeasonId] = useState('');
+    const [selectedSeasonId, setSelectedSeasonId] = useState(() => localStorage.getItem('selectedSeasonId') || '');
     const [refreshKey, setRefreshKey] = useState(0);
     const [pageError, setPageError] = useState(''); // Trạng thái lỗi tập trung cho trang
 
@@ -17,9 +17,21 @@ const RegulationsPage = ({ token }) => {
         const fetchSeasons = async () => {
             try {
                 const seasonsRes = await axios.get('http://localhost:5000/api/seasons');
-                setSeasons(seasonsRes.data.data);
-                if (seasonsRes.data.data.length > 0) {
-                    setSelectedSeasonId(seasonsRes.data.data[0]._id);
+                const seasonsData = seasonsRes.data.data || [];
+                setSeasons(seasonsData);
+
+                const storedSeasonId = localStorage.getItem('selectedSeasonId');
+                // Kiểm tra xem ID đã lưu có tồn tại trong danh sách mùa giải không
+                const storedSeasonIsValid = storedSeasonId && seasonsData.some(s => s._id === storedSeasonId);
+
+                if (storedSeasonIsValid) {
+                    // Nếu hợp lệ, đảm bảo state được cập nhật đúng
+                    setSelectedSeasonId(storedSeasonId);
+                } else if (seasonsData.length > 0) {
+                    // Nếu không hợp lệ hoặc không có, đặt giá trị mặc định và lưu lại
+                    const defaultSeason = seasonsData[0]._id;
+                    setSelectedSeasonId(defaultSeason);
+                    localStorage.setItem('selectedSeasonId', defaultSeason);
                 }
             } catch (err) {
                 console.error('Không thể tải danh sách mùa giải', err);
@@ -27,8 +39,16 @@ const RegulationsPage = ({ token }) => {
             }
         };
         fetchSeasons();
-    }, []);
+    }, []); // Chỉ chạy một lần khi component được tạo
 
+    const handleSeasonChange = (seasonId) => {
+        setSelectedSeasonId(seasonId);
+        if (seasonId) {
+            localStorage.setItem('selectedSeasonId', seasonId);
+        } else {
+            localStorage.removeItem('selectedSeasonId');
+        }
+    };
     const handleFormSuccess = () => {
         setShowForm(false);
         setEditingRegulation(null);
@@ -103,7 +123,7 @@ const RegulationsPage = ({ token }) => {
                                     <select
                                         id="page-season-select"
                                         value={selectedSeasonId}
-                                        onChange={(e) => setSelectedSeasonId(e.target.value)}
+                                        onChange={(e) => handleSeasonChange (e.target.value)}
                                         className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 shadow-sm"
                                     >
                                         <option value="">Chọn mùa giải</option>

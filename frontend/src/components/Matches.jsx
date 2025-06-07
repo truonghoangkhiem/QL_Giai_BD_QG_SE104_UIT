@@ -19,7 +19,7 @@ const Matches = ({
   const [seasons, setSeasons] = useState([]);
   const [teams, setTeams] = useState([]);
   const [filteredTeamsForDropdown, setFilteredTeamsForDropdown] = useState([]);
-  const [selectedSeasonId, setSelectedSeasonId] = useState(initialSeasonId || '');
+  const [selectedSeasonId, setSelectedSeasonId] = useState(() => localStorage.getItem('selectedSeasonId') || '');
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [loading, setLoading] = useState(true);
@@ -79,10 +79,17 @@ const Matches = ({
         const response = await axios.get('http://localhost:5000/api/seasons');
         const seasonsData = response.data.data || [];
         setSeasons(seasonsData);
-        if (!initialSeasonId && seasonsData.length > 0) {
-          setSelectedSeasonId(seasonsData[0]._id);
-        } else if (initialSeasonId) {
-          setSelectedSeasonId(initialSeasonId);
+        const storedSeasonId = localStorage.getItem('selectedSeasonId');
+        const storedSeasonIsValid = storedSeasonId && seasonsData.some(s => s._id === storedSeasonId);
+
+        if (initialSeasonId) {
+            setSelectedSeasonId(initialSeasonId);
+        } else if (storedSeasonIsValid) {
+            setSelectedSeasonId(storedSeasonId);
+        } else if (seasonsData.length > 0) {
+            const defaultSeason = seasonsData[0]._id;
+            setSelectedSeasonId(defaultSeason);
+            localStorage.setItem('selectedSeasonId', defaultSeason);
         }
       } catch (err) {
         console.error('Lỗi lấy mùa giải:', err);
@@ -270,6 +277,11 @@ const Matches = ({
 
   const handleSeasonChange = useCallback((value) => {
     setSelectedSeasonId(value);
+    if (value) {
+      localStorage.setItem('selectedSeasonId', value);
+    } else {
+      localStorage.removeItem('selectedSeasonId');
+    }
     setSelectedDate('');
     setSelectedTeamId('');
     setCurrentPage(1);

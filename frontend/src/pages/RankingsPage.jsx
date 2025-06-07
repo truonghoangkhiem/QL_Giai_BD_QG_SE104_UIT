@@ -4,7 +4,7 @@ import Rankings from '../components/Rankings';
 
 const RankingsPage = ({ token }) => {
     const [seasons, setSeasons] = useState([]);
-    const [selectedSeasonId, setSelectedSeasonId] = useState(null);
+    const [selectedSeasonId, setSelectedSeasonId] = useState(() => localStorage.getItem('selectedSeasonId') || null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -26,9 +26,10 @@ const RankingsPage = ({ token }) => {
                 const activeSeasons = response.data.data.filter(season => season.status === true);
                 setSeasons(activeSeasons);
 
-                if (activeSeasons.length > 0) {
+                if (activeSeasons.length > 0 && !localStorage.getItem('selectedSeasonId') ) {
                     setSelectedSeasonId(activeSeasons[0]._id);
-                } else {
+                } else 
+                if (activeSeasons.length === 0) {
                     setError('Không có mùa giải nào đang hoạt động.');
                 }
             } catch (err) {
@@ -60,6 +61,15 @@ const RankingsPage = ({ token }) => {
 
         fetchSeasons();
     }, [token]);
+
+    const handleSetSelectedSeason = (id) => {
+        if (id) {
+            localStorage.setItem('selectedSeasonId', id);
+        } else {
+            localStorage.removeItem('selectedSeasonId');
+        }
+        setSelectedSeasonId(id);
+    }
 
     // Định dạng ngày
     const formatDate = (dateString) => {
@@ -107,7 +117,7 @@ const RankingsPage = ({ token }) => {
                     token={token}
                     seasons={seasons}
                     formatDate={formatDate}
-                    setSelectedSeasonId={setSelectedSeasonId} // Truyền setSelectedSeasonId vào Rankings
+                    setSelectedSeasonId={handleSetSelectedSeason} // Truyền setSelectedSeasonId vào Rankings
                 />
             </div>
         </div>

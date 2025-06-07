@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 const PlayerRankingPage = ({ token }) => {
     const [seasons, setSeasons] = useState([]);
-    const [selectedSeasonId, setSelectedSeasonId] = useState(null);
+    const [selectedSeasonId, setSelectedSeasonId] = useState(() => localStorage.getItem('selectedSeasonId') || null);
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [teams, setTeams] = useState([]);
     const [playerResults, setPlayerResults] = useState([]);
@@ -17,24 +17,24 @@ const PlayerRankingPage = ({ token }) => {
 
     // Lấy danh sách mùa giải
     useEffect(() => {
-        const fetchSeasons = async (retryCount = 1) => {
+        const fetchSeasons = async () => {
             setLoading(true);
             setError(null);
-
             try {
                 const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
                 const response = await axios.get(`${API_URL}/api/seasons`, config);
-
-                const isSuccess = response.data.success === true || response.data.status === 'success';
-                if (!isSuccess || !Array.isArray(response.data.data)) {
-                    throw new Error('Dữ liệu mùa giải không hợp lệ.');
-                }
-
                 const activeSeasons = response.data.data.filter((season) => season.status === true);
                 setSeasons(activeSeasons);
 
-                if (activeSeasons.length > 0) {
-                    setSelectedSeasonId(activeSeasons[0]._id);
+                const storedSeasonId = localStorage.getItem('selectedSeasonId');
+                const storedSeasonIsValid = storedSeasonId && activeSeasons.some(s => s._id === storedSeasonId);
+
+                if (storedSeasonIsValid) {
+                    setSelectedSeasonId(storedSeasonId);
+                } else if (activeSeasons.length > 0) {
+                    const defaultSeason = activeSeasons[0]._id;
+                    setSelectedSeasonId(defaultSeason);
+                    localStorage.setItem('selectedSeasonId', defaultSeason);
                 } else {
                     setError('Không có mùa giải nào đang hoạt động.');
                 }
@@ -67,6 +67,7 @@ const PlayerRankingPage = ({ token }) => {
 
         fetchSeasons();
     }, [token]);
+    
 
     // Lấy danh sách đội bóng và kết quả cầu thủ
     useEffect(() => {
@@ -141,9 +142,13 @@ const PlayerRankingPage = ({ token }) => {
     };
 
     const handleSeasonChange = (e) => {
-        setSelectedSeasonId(e.target.value);
-        // Optionally reset date to current date when season changes, or keep existing date
-        // setSelectedDate(new Date().toISOString().split('T')[0]);
+        const seasonId = e.target.value;
+        setSelectedSeasonId(seasonId);
+        if (seasonId) {
+            localStorage.setItem('selectedSeasonId', seasonId);
+        } else {
+            localStorage.removeItem('selectedSeasonId');
+        }
     };
 
     // Tên mùa giải được chọn

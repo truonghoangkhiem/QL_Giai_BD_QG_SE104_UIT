@@ -123,188 +123,152 @@ const getMatchesById = async (req, res, next) => {
 
 // CREATE match schedule
 const createMatch = async (req, res, next) => {
-  const parseResult = createMatchSchema.safeParse(req.body);
-  if (!parseResult.success) {
-    return next(
-      Object.assign(new Error(parseResult.error.errors[0].message), {
-        status: 400,
-      })
-    );
-  }
-
-  const { season_id, matchperday } = parseResult.data;
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    const season = await Season.findById(season_id).session(session);
-    if (!season) {
-      throw Object.assign(new Error("Season not found"), { status: 404 });
+    const parseResult = createMatchSchema.safeParse(req.body);
+    if (!parseResult.success) {
+        return next(Object.assign(new Error(parseResult.error.errors[0].message), { status: 400 }));
     }
 
-    const teamsInSeason = await Team.find({ season_id }).session(session);
-    if (teamsInSeason.length < 2) {
-      throw Object.assign(new Error("Không đủ đội trong mùa giải để tạo lịch thi đấu (yêu cầu tối thiểu 2 đội)."), {
-        status: 400,
-      });
-    }
+    const { season_id, matchperday } = parseResult.data;
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    const ageRegulation = await Regulation.findOne({
-      season_id: season_id,
-      regulation_name: "Age Regulation",
-    }).session(session);
+    try {
+        const season = await Season.findById(season_id).session(session);
+        if (!season) {
+            throw Object.assign(new Error("Season not found"), { status: 404 });
+        }
 
-    if (!ageRegulation || !ageRegulation.rules || typeof ageRegulation.rules.minPlayersPerTeam !== 'number') {
-      throw Object.assign(new Error("Age Regulation with minPlayersPerTeam not found or invalid for this season."), {
-        status: 400,
-      });
-    }
-    const minPlayersRequiredForTeam = ageRegulation.rules.minPlayersPerTeam;
+        const teamsInSeason = await Team.find({ season_id }).session(session);
+        const numTeams = teamsInSeason.length;
+        if (numTeams < 2) {
+            throw Object.assign(new Error("Không đủ đội trong mùa giải để tạo lịch thi đấu."), { status: 400 });
+        }
 
-    const nonCompliantTeams = [];
-    for (const team of teamsInSeason) {
-      const playerCount = await Player.countDocuments({ team_id: team._id }).session(session);
-      if (playerCount < minPlayersRequiredForTeam) {
-        nonCompliantTeams.push(team.team_name);
-      }
-    }
-
-    if (nonCompliantTeams.length > 0) {
-      throw Object.assign(
-        new Error(
-          `Không thể tạo lịch. Các đội sau chưa đăng ký đủ số lượng cầu thủ tối thiểu theo quy định: ${nonCompliantTeams.join(", ")}.`
-        ),
-        { status: 400 }
-      );
-    }
-
-    const matchRegulation = await Regulation.findOne({
-      season_id: season_id,
-      regulation_name: "Match Rules",
-    }).session(session);
-
-    let actualMatchRounds = 2;
-    if (matchRegulation && typeof matchRegulation.rules?.matchRounds === 'number' && matchRegulation.rules.matchRounds > 0) {
-      actualMatchRounds = matchRegulation.rules.matchRounds;
-    } else {
-      console.warn(`Match Rules regulation not found or 'matchRounds' not specified/invalid for season ${season_id}. Defaulting to ${actualMatchRounds} rounds.`);
-    }
-     if (actualMatchRounds <= 0) {
-        throw Object.assign(new Error("Match rounds from regulation must be a positive number."), { status: 400 });
-    }
-
-    const schedule = [];
-    const dailyMatchCount = {};
-    const teamPlayedOnDate = {};
-
-    let scheduleStartDate = new Date(season.start_date);
-    scheduleStartDate.setUTCHours(0, 0, 0, 0);
-    const seasonEndDate = new Date(season.end_date);
-    seasonEndDate.setUTCHours(0, 0, 0, 0);
-
-    const allPairings = [];
-    if (actualMatchRounds === 1) {
-        for (let i = 0; i < teamsInSeason.length; i++) {
-            for (let j = i + 1; j < teamsInSeason.length; j++) {
-                allPairings.push({ homeTeam: teamsInSeason[i], awayTeam: teamsInSeason[j] });
+        const ageRegulation = await Regulation.findOne({ season_id: season_id, regulation_name: "Age Regulation" }).session(session);
+        if (!ageRegulation || !ageRegulation.rules || typeof ageRegulation.rules.minPlayersPerTeam !== 'number') {
+            throw Object.assign(new Error("Quy định về 'Số cầu thủ tối thiểu mỗi đội' không được tìm thấy hoặc không hợp lệ."), { status: 400 });
+        }
+        const minPlayersRequiredForTeam = ageRegulation.rules.minPlayersPerTeam;
+        for (const team of teamsInSeason) {
+            const playerCount = await Player.countDocuments({ team_id: team._id }).session(session);
+            if (playerCount < minPlayersRequiredForTeam) {
+                throw Object.assign(new Error(`Đội ${team.team_name} chưa đăng ký đủ số lượng cầu thủ tối thiểu (${minPlayersRequiredForTeam} cầu thủ).`), { status: 400 });
             }
         }
-    } else {
+        
+        const matchRegulation = await Regulation.findOne({ season_id: season_id, regulation_name: "Match Rules" }).session(session);
+        let actualMatchRounds = 2;
+        if (matchRegulation && typeof matchRegulation.rules?.matchRounds === 'number' && matchRegulation.rules.matchRounds > 0) {
+            actualMatchRounds = matchRegulation.rules.matchRounds;
+        }
+
+        // =========================================================================
+        // PHẦN KIỂM TRA SỐ NGÀY TỐI THIỂU (ĐÁP ỨNG YÊU CẦU CỦA BẠN)
+        // =========================================================================
+        
+        let totalMatchesToSchedule = 0;
+        if (actualMatchRounds === 1) {
+            totalMatchesToSchedule = numTeams * (numTeams - 1) / 2;
+        } else {
+            totalMatchesToSchedule = numTeams * (numTeams - 1);
+        }
+        
+        const maxMatchesPerDayPossible = Math.floor(numTeams / 2);
+        const effectiveMatchesPerDay = Math.min(matchperday, maxMatchesPerDayPossible);
+        
+        if (effectiveMatchesPerDay === 0) {
+            throw Object.assign(new Error(`Không thể xếp lịch với ${numTeams} đội và ${matchperday} trận mỗi ngày.`), { status: 400 });
+        }
+
+        const daysRequired = Math.ceil(totalMatchesToSchedule / effectiveMatchesPerDay);
+
+        const startDate = new Date(season.start_date);
+        const endDate = new Date(season.end_date);
+        const seasonDurationInDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+        
+        if (seasonDurationInDays < daysRequired) {
+            throw Object.assign(new Error(`Mùa giải không đủ ngày để sắp lịch. Cần ít nhất ${daysRequired} ngày, nhưng mùa giải chỉ kéo dài ${seasonDurationInDays} ngày. Vui lòng kéo dài thời gian mùa giải.`), { status: 400 });
+        }
+
+        // =========================================================================
+        // BẮT ĐẦU THUẬT TOÁN XẾP LỊCH CHI TIẾT
+        // =========================================================================
+
+        let matchesPool = [];
         for (let i = 0; i < teamsInSeason.length; i++) {
             for (let j = 0; j < teamsInSeason.length; j++) {
                 if (i === j) continue;
-                allPairings.push({ homeTeam: teamsInSeason[i], awayTeam: teamsInSeason[j] });
+                matchesPool.push({ team1: teamsInSeason[i], team2: teamsInSeason[j], stadium: teamsInSeason[i].stadium });
             }
         }
-    }
+        
+        if (actualMatchRounds === 1) {
+            const uniquePairs = new Set();
+            matchesPool = matchesPool.filter(match => {
+                const sortedIds = [match.team1._id.toString(), match.team2._id.toString()].sort().join('-');
+                if (uniquePairs.has(sortedIds)) return false;
+                uniquePairs.add(sortedIds);
+                return true;
+            });
+        }
+        
+        for (let i = matchesPool.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [matchesPool[i], matchesPool[j]] = [matchesPool[j], matchesPool[i]];
+        }
+        
+        const schedule = [];
+        let currentDate = new Date(startDate);
+        
+        while (currentDate <= endDate && matchesPool.length > 0) {
+            const teamsBusyToday = new Set();
+            let matchesScheduledToday = 0;
+            
+            for (let i = matchesPool.length - 1; i >= 0; i--) {
+                if(matchesScheduledToday >= matchperday) break;
 
-    for (let i = allPairings.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [allPairings[i], allPairings[j]] = [allPairings[j], allPairings[i]];
-    }
+                const match = matchesPool[i];
+                const team1Id = match.team1._id.toString();
+                const team2Id = match.team2._id.toString();
 
-    let currentSchedulingDateAttempt = new Date(scheduleStartDate);
-
-    for (const pairing of allPairings) {
-        const homeTeam = pairing.homeTeam;
-        const awayTeam = pairing.awayTeam;
-        let scheduledMatchDate = null;
-        let searchDate = new Date(currentSchedulingDateAttempt);
-
-        while (searchDate <= seasonEndDate) {
-            const dateString = searchDate.toISOString().split('T')[0];
-            const matchesTodayCount = dailyMatchCount[dateString] || 0;
-            const teamsPlayingToday = teamPlayedOnDate[dateString] || new Set();
-
-            if (matchesTodayCount < matchperday &&
-                !teamsPlayingToday.has(homeTeam._id.toString()) &&
-                !teamsPlayingToday.has(awayTeam._id.toString())) {
-
-                scheduledMatchDate = new Date(searchDate);
-
-                schedule.push({
-                    season_id,
-                    team1: homeTeam._id,
-                    team2: awayTeam._id,
-                    date: scheduledMatchDate,
-                    stadium: homeTeam.stadium,
-                    score: null,
-                    goalDetails: [],
-                });
-
-                dailyMatchCount[dateString] = matchesTodayCount + 1;
-                if (!teamPlayedOnDate[dateString]) teamPlayedOnDate[dateString] = new Set();
-                teamPlayedOnDate[dateString].add(homeTeam._id.toString());
-                teamPlayedOnDate[dateString].add(awayTeam._id.toString());
-
-                if ((dailyMatchCount[dateString] || 0) >= matchperday) {
-                     currentSchedulingDateAttempt = new Date(searchDate);
-                     currentSchedulingDateAttempt.setDate(currentSchedulingDateAttempt.getDate() + 1);
-                } else {
-                    currentSchedulingDateAttempt = new Date(searchDate);
+                if (!teamsBusyToday.has(team1Id) && !teamsBusyToday.has(team2Id)) {
+                    schedule.push({
+                        season_id,
+                        team1: match.team1._id,
+                        team2: match.team2._id,
+                        date: new Date(currentDate),
+                        stadium: match.stadium,
+                        score: null,
+                        goalDetails: [],
+                    });
+                    teamsBusyToday.add(team1Id);
+                    teamsBusyToday.add(team2Id);
+                    matchesScheduledToday++;
+                    matchesPool.splice(i, 1);
                 }
-                break;
             }
-            searchDate.setDate(searchDate.getDate() + 1);
+            
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        
+        if (schedule.length < totalMatchesToSchedule) {
+             throw Object.assign(new Error(`Tạo lịch thất bại. Đã xếp được ${schedule.length}/${totalMatchesToSchedule} trận. Có thể do cài đặt 'Số trận mỗi ngày' quá thấp hoặc một lỗi không mong muốn.`), { status: 400 });
         }
 
-        if (!scheduledMatchDate) {
-            console.warn(`Could not schedule match for ${homeTeam.team_name} (H) vs ${awayTeam.team_name} (A).`);
-        }
-    }
-
-    const expectedTotalMatches = actualMatchRounds === 1
-                             ? teamsInSeason.length * (teamsInSeason.length - 1) / 2
-                             : teamsInSeason.length * (teamsInSeason.length - 1);
-
-    if (schedule.length === 0 && teamsInSeason.length >=2 && allPairings.length > 0) {
-         throw Object.assign(new Error(`Tạo lịch thi đấu tự động thất bại. Vui lòng kiểm tra lại các quy định hoặc thử lại sau.`), { status: 400 });
-    }
-
-    let responseMessage = `Created ${schedule.length} matches successfully.`;
-    let responseData = { createdMatchesCount: schedule.length, schedule };
-
-    if (schedule.length < expectedTotalMatches) {
-         const warning = `Warning: Only ${schedule.length} out of ${expectedTotalMatches} expected matches could be scheduled.`;
-         console.warn(warning);
-         responseMessage = `Created ${schedule.length} matches with warnings. Expected ${expectedTotalMatches}.`;
-         responseData.warning = warning;
-    }
-
-    if (schedule.length > 0) {
         await Match.insertMany(schedule, { session });
+
+        await session.commitTransaction();
+        session.endSession();
+        return successResponse(res, { createdMatchesCount: schedule.length }, `Tạo thành công ${schedule.length} trận đấu.`, 201);
+
+    } catch (error) {
+        if (session.inTransaction()) {
+            await session.abortTransaction();
+        }
+        session.endSession();
+        console.error("Error in createMatch:", error);
+        return next(error);
     }
-
-    await session.commitTransaction();
-    session.endSession();
-    return successResponse(res, responseData, responseMessage, 201);
-
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    console.error("Error in createMatch:", error);
-    return next(error);
-  }
 };
 
 
