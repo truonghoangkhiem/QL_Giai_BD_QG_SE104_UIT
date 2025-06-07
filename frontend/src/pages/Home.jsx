@@ -167,7 +167,6 @@ const Home = () => {
                     <p className="text-xl text-white drop-shadow-md font-light mt-2">
                         Quản lý đội bóng, trận đấu, cầu thủ, mùa giải, và hơn thế nữa!
                     </p>
-
                 </div>
             </div>
 
