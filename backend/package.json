@@ -1,0 +1,39 @@
+{
+  "name": "api",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A simple API for a web application",
+  "main": "server.js",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/truonghoangkhiem/QL_Giai_BD_QG_SE104_UIT.git"
+  },
+  "keywords": [
+    "api",
+    "web",
+    "application",
+    "nodejs",
+    "mongodb"
+  ],
+  "author": "truongkhiemhoang@gmail.com",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.13.1",
+    "mongoose": "8.13.1",
+    "swagger-ui-express": "^5.0.1",
+    "yaml": "^2.7.1",
+    "zod": "3.24.2"
+  }
+}

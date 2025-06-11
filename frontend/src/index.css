@@ -1,3 +1,27 @@
-:root {
-  font-family: "Roboto", sans-serif;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Đã xóa body { font-family: Arial, sans-serif; } từ đây */
+/* Tailwind sẽ áp dụng font-sans từ config cho body */
+
+.swiper-button-next,
+.swiper-button-prev {
+    color: #f97316;
+    /* Giữ nguyên màu cam cho swiper hoặc đổi sang màu nhấn chính */
+}
+
+.swiper-pagination-bullet-active {
+    background-color: #f97316;
+    /* Giữ nguyên hoặc đổi */
+}
+
+.swiper-slide {
+    width: 320px !important;
+    margin-right: 16px;
+}
+
+.swiper-slide img {
+    max-width: 32px;
+    max-height: 32px;
 }
