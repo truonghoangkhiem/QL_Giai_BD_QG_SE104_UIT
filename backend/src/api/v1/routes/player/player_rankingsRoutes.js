@@ -12,14 +12,16 @@ import { errorMiddleware } from "../../middleware/errorMiddleware.js";
 
 const router = express.Router();
 
-router.post("/", authenticateToken, createPlayerRankings);
+// HOÀN TRẢ LẠI PHƯƠNG THỨC GET
 router.get("/season/:seasonid", getPlayerRankingsbySeasonIdAndDate);
+
+router.post("/", authenticateToken, createPlayerRankings);
 router.put(
   "/match/:matchid",
   authenticateToken,
   updatePlayerRankingsafterMatch
 );
 router.delete("/:id", authenticateToken, deletePlayerRankings);
-router.use(errorMiddleware); // Đảm bảo mọi lỗi đều được xử lý bởi errorMiddleware
+router.use(errorMiddleware);
 
 export default router;

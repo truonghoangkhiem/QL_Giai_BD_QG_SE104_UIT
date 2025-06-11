@@ -255,7 +255,8 @@ const deletePlayerRankings = async (req, res, next) => {
 // Lấy bảng xếp hạng cầu thủ theo season_id và ngày
 const getPlayerRankingsbySeasonIdAndDate = async (req, res, next) => {
   const { seasonid } = req.params;
-  const { date } = req.body; // Lấy date từ body thay vì params
+  const { date } = req.query;
+
   try {
     const { success, error } =
       GetPlayerRankingsBySeasonIdAndDateSchema.safeParse({ seasonid, date });
@@ -269,32 +270,28 @@ const getPlayerRankingsbySeasonIdAndDate = async (req, res, next) => {
     const queryDate = new Date(date);
     queryDate.setUTCHours(0, 0, 0, 0);
 
-    // Trước tiên, đảm bảo rằng bảng xếp hạng cho ngày này là mới nhất.
-    // Không cần gọi calculateAndSavePlayerRankings ở đây nữa vì nó sẽ được gọi khi dữ liệu thay đổi.
-    // await calculateAndSavePlayerRankings(SeasonID, queryDate);
-
-
+    // Sử dụng aggregate để join các collection và lấy dữ liệu cần thiết
     const playerRankings = await PlayerRanking.aggregate([
       {
         $match: {
           season_id: SeasonID,
-          date: { $lte: queryDate }, // Lấy tất cả ranking cho đến ngày truy vấn
+          date: { $lte: queryDate },
         },
       },
       {
-        $sort: { date: -1, rank: 1 }, // Sắp xếp theo ngày mới nhất, rồi đến rank
+        $sort: { date: -1, rank: 1 },
       },
       {
         $group: {
-          _id: "$player_id", // Nhóm theo player_id
-          latestRankingDoc: { $first: "$$ROOT" }, // Lấy bản ghi ranking mới nhất cho mỗi cầu thủ
+          _id: "$player_id",
+          latestRankingDoc: { $first: "$$ROOT" },
         },
       },
       {
         $replaceRoot: { newRoot: "$latestRankingDoc" },
       },
       {
-        $lookup: { // Join với PlayerResult để lấy thông tin chi tiết
+        $lookup: { // Join với PlayerResult
           from: "playerresults",
           localField: "player_results_id",
           foreignField: "_id",
@@ -304,8 +301,8 @@ const getPlayerRankingsbySeasonIdAndDate = async (req, res, next) => {
       {
         $unwind: { path: "$playerResultInfo", preserveNullAndEmptyArrays: true }
       },
-       {
-        $lookup: { // Join với Player để lấy tên cầu thủ
+      {
+        $lookup: { // Join với Player để lấy avatar và các thông tin khác
           from: "players",
           localField: "player_id",
           foreignField: "_id",
@@ -316,9 +313,9 @@ const getPlayerRankingsbySeasonIdAndDate = async (req, res, next) => {
         $unwind: { path: "$playerInfo", preserveNullAndEmptyArrays: true }
       },
       {
-        $lookup: { // Join với Team để lấy tên đội
+        $lookup: { // Join với Team
           from: "teams",
-          localField: "playerResultInfo.team_id", // Giả sử PlayerResult có team_id
+          localField: "playerResultInfo.team_id",
           foreignField: "_id",
           as: "teamInfo"
         }
@@ -327,17 +324,17 @@ const getPlayerRankingsbySeasonIdAndDate = async (req, res, next) => {
         $unwind: { path: "$teamInfo", preserveNullAndEmptyArrays: true }
       },
       {
-        $project: {
+        $project: { // Định dạng lại dữ liệu trả về cho frontend
           _id: 1,
           rank: 1,
           date: 1,
           season_id: 1,
           player_id: 1,
-          player_results_id:1,
           playerName: { $ifNull: ["$playerInfo.name", "N/A"] },
-          playerNumber: {$ifNull: ["$playerInfo.number", "N/A"]},
+          playerNumber: { $ifNull: ["$playerInfo.number", "N/A"] },
+          playerInfo: "$playerInfo", // Quan trọng: Gửi cả object playerInfo
+          team_id: "$playerResultInfo.team_id",
           teamName: { $ifNull: ["$teamInfo.team_name", "N/A"] },
-          teamLogo: { $ifNull: ["$teamInfo.logo", "URL_LOGO_MAC_DINH"] },
           matchesPlayed: { $ifNull: ["$playerResultInfo.matchesplayed", 0] },
           goals: { $ifNull: ["$playerResultInfo.totalGoals", 0] },
           assists: { $ifNull: ["$playerResultInfo.assists", 0] },
@@ -346,11 +343,10 @@ const getPlayerRankingsbySeasonIdAndDate = async (req, res, next) => {
         }
       },
       {
-        $sort: { rank: 1 } // Sắp xếp lại theo rank sau khi đã lấy document mới nhất
+        $sort: { rank: 1 }
       }
     ]);
     
-
     if (!playerRankings.length) {
        return successResponse(res, [], "No player rankings found for this season and date");
     }
