@@ -1,10 +1,24 @@
-# National Football League Management (SE104_UIT)
+# National Football League Management System (SE104_UIT)
 
-This is a full-stack web application built to comprehensively manage a football league. The system allows administrators to manage seasons, teams, players, match schedules, results, and rankings in a detailed and automated manner.
+A full-stack web application designed to comprehensively manage a football league. This system allows administrators to handle seasons, teams, players, match schedules, results, and rankings in a detailed and automated manner.
 
-The project includes a backend API built with Node.js/Express and a frontend built with React (Vite).
+## 📸 Application Screenshots
 
-## Key Features
+Here are some screenshots showcasing the main features of the application.
+
+| Home Page | Team Ranking | Player Ranking |
+| :---: | :---: | :---: |
+| ![Home Page](images/trangchu.png) | ![Team Ranking](images/bxhdoibong.png) | ![Player Ranking](images/bxhcauthu.png) |
+
+| Team Management | Player Management | Match Management |
+| :---: | :---: | :---: |
+| ![Team Management](images/doibong.png) | ![Player Management](images/cauthu.png) | ![Match Management](images/trandau.png) |
+
+| Season Management | Regulation Management |
+| :---: | :---: |
+| ![Season Management](images/muagiai.png) | ![Regulation Management](images/quydinh.png) |
+
+## ✨ Key Features
 
 The project provides a robust set of features for league management:
 
@@ -22,7 +36,7 @@ The project provides a robust set of features for league management:
     -   Player rankings (top scorers) are also updated automatically.
 -   **User Authentication**: Secure registration and login for administrators to perform management tasks.
 
-## Technology Stack
+## 🛠️ Technology Stack
 
 ### Backend
 -   **Node.js & Express.js**: Platform and framework for building the API.
@@ -38,15 +52,17 @@ The project provides a robust set of features for league management:
 -   **Axios**: For making HTTP requests to the backend API.
 -   **React Router**: For client-side routing.
 
-## Prerequisites
+## 🚀 Getting Started
+
+### Prerequisites
 
 Before you begin, ensure you have the following installed:
--   Node.js (v22.x is specified in `package.json`).
+-   Node.js (v22.x is specified in `backend/package.json`).
 -   npm or yarn
 -   MongoDB
 -   A code editor (like Visual Studio Code)
 
-## Installation and Setup
+### Installation and Setup
 
 1.  **Clone the repository**:
     ```bash
@@ -57,11 +73,11 @@ Before you begin, ensure you have the following installed:
 2.  **Backend Setup**:
     -   Navigate to the `backend` directory: `cd backend`
     -   Install dependencies: `npm install`
-    -   Create a `.env` file in the `backend` root and add the following environment variables (see `.env.example` if available):
+    -   Create a `.env` file in the `backend` directory and add your environment variables:
         ```env
         MONGODB_URI=your_mongodb_connection_string
         DATABASE_NAME=your_database_name
-        JWT_SECRET=your_jwt_secret_key
+        JWT_SECRET=your_super_secret_jwt_key
         PORT=5000
         ```
     -   Start the backend server: `npm run dev`
@@ -73,16 +89,16 @@ Before you begin, ensure you have the following installed:
     -   Start the frontend development server: `npm run dev`
     -   The frontend will be running on `http://localhost:5173`.
 
-## API Documentation
+## 📄 API Documentation
 
 API documentation is available via Swagger UI. Once the backend server is running, you can access it at:
 [http://localhost:5000/api-docs](http://localhost:5000/api-docs)
 
-## Contact
+## 👤 Contact
 
 -   **Author**: Truong Hoang Khiem
 -   **Email**: truongkhiemhoang@gmail.com
 
-## License
+## ⚖️ License
 
 This project is licensed under the MIT License. See the `LICENSE` file for details.
