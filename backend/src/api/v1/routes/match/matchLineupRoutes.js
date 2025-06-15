@@ -4,7 +4,7 @@ import {
   getLineupsByMatchId,
   getLineupByMatchAndTeamId,
   deleteLineup,
-} from "../../controllers/match/matchLineupController.js"; // Đảm bảo tên hàm khớp
+} from "../../controllers/match/matchLineupController.js"; 
 import { authenticateToken } from "../../middleware/authMiddleware.js";
 import { errorMiddleware } from "../../middleware/errorMiddleware.js";
 
@@ -13,7 +13,7 @@ const router = express.Router();
 router.post("/", authenticateToken, createOrUpdateLineup);
 router.put("/match/:match_id/team/:team_id", authenticateToken, createOrUpdateLineup);
 
-router.get("/match/:match_id", getLineupsByMatchId);
+router.get("/match/:match_id", getLineupsByMatchId); //Dư
 router.get("/match/:match_id/team/:team_id", getLineupByMatchAndTeamId);
 
 router.delete("/match/:match_id/team/:team_id", authenticateToken, deleteLineup);
