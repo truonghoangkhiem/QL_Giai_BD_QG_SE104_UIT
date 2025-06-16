@@ -174,10 +174,34 @@ const PlayerRanking = ({ playerResults, teams, token, searchTerm }) => {
                         </table>
                     </div>
                     {totalPages > 1 && (
-                        <div className="flex justify-between items-center mt-6">
-                           {/* Pagination controls */}
-                        </div>
-                    )}
+    <div className="flex justify-between items-center mt-6">
+        <button
+            onClick={handlePrevPage}
+            disabled={currentPage === 1}
+            className={`px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium transition duration-200 ${
+                currentPage === 1
+                    ? 'bg-gray-200 cursor-not-allowed'
+                    : 'bg-white hover:bg-gray-100 hover:shadow-sm'
+            }`}
+        >
+            Trang trước
+        </button>
+        <span className="text-gray-700 font-medium">
+            Trang {currentPage} / {totalPages}
+        </span>
+        <button
+            onClick={handleNextPage}
+            disabled={currentPage >= totalPages}
+            className={`px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium transition duration-200 ${
+                currentPage >= totalPages
+                    ? 'bg-gray-200 cursor-not-allowed'
+                    : 'bg-white hover:bg-gray-100 hover:shadow-sm'
+            }`}
+        >
+            Trang tiếp theo
+        </button>
+    </div>
+)}
                 </>
             )}
         </div>
